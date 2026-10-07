@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-obsidian: #07090C;
+    --bg-graphite: #0D1117;
+    --bg-steel: #171B21;
+    --accent-orange: #FF6A00;
+    --accent-amber: #FF8A2A;
+    --text-primary: #F5F5F5;
+    --text-secondary: #9BA3AE;
+  }
+
+  html {
+    direction: rtl;
+    scroll-behavior: smooth;
+    background-color: #07090C;
+    color: #F5F5F5;
+  }
+
+  body {
+    background-color: #07090C;
+    color: #F5F5F5;
+    overflow-x: hidden;
+    font-feature-settings: "ss01", "ss02";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(255, 106, 0, 0.35);
+    color: #F5F5F5;
+  }
+}
+
+/* Custom Dark Automotive Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07090C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #171B21;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 106, 0, 0.25);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF6A00;
+}
+
+/* Subtle metallic card border sheen */
+.luxury-border {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.005) 50%,
+    rgba(255, 106, 0, 0.03) 100%
+  );
+}
