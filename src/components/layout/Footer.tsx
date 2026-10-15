@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { PerspectiveGrid } from "@/components/react-bits/PerspectiveGrid";
 import { NAV_ITEMS, FREE_ZONES_LIST } from "@/data/khodroyab-data";
 import {
@@ -18,6 +19,8 @@ import {
 } from "lucide-react";
 
 export const Footer: React.FC = () => {
+  const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
   return (
     <footer className="relative border-t border-white/[0.08] bg-[#07090C] text-[#F5F5F5] overflow-hidden pb-24 lg:pb-0">
       {/* React Bits Pro — Perspective Grid Background */}

@@ -20,6 +20,9 @@ export const Navbar: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Admin routes own their shell — never render the public navbar on them.
+  if (pathname.startsWith("/admin")) return null;
+
   return (
     <header
       className={cn(

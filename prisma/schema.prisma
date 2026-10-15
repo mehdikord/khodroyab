@@ -1,0 +1,240 @@
+// Khodroyab — Prisma schema (MySQL)
+// Phase 1: complete database foundation (11 tables, Section 4 of the spec).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum OptionType {
+  text
+  select
+  checkbox
+}
+
+/// Moderation state of a user's sale ad (`user_cars`).
+/// Ads created by an administrator are approved automatically; ads created by
+/// users from their own panel start as `pending`.
+enum UserCarStatus {
+  pending
+  approved
+  rejected
+}
+
+// ─── Table 1: admins ─────────────────────────────────────────────────────────
+model Admin {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(255)
+  phone     String   @unique @db.VarChar(255)
+  email     String?  @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("admins")
+}
+
+// ─── Table 2: users ──────────────────────────────────────────────────────────
+// NOTE: `name` is BigInt per the source design. See SCHEMA_REVIEW.md.
+model User {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name         String   @db.VarChar(255)
+  phone        String   @db.VarChar(255)
+  email        String?  @db.VarChar(255)
+  image        String?  @db.VarChar(255)
+  bio          String?  @db.Text
+  password     String   @db.VarChar(255)
+  nationalCode String?  @default("1") @map("national_code") @db.VarChar(255)
+  address      String?  @db.VarChar(255)
+  postalCode   String?  @map("postal_code") @db.VarChar(255)
+  tel          String?  @db.VarChar(255)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  userCars UserCar[]
+
+  @@map("users")
+}
+
+// ─── Table 3: brands ─────────────────────────────────────────────────────────
+model Brand {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(255)
+  slug      String   @db.VarChar(255)
+  image     String?  @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  cars Car[]
+
+  @@map("brands")
+}
+
+// ─── Table 5: car_types ──────────────────────────────────────────────────────
+model CarType {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String   @db.VarChar(255)
+  slug        String   @db.VarChar(255)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  cars Car[]
+
+  @@map("car_types")
+}
+
+// ─── Table 4: cars ───────────────────────────────────────────────────────────
+model Car {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandId   BigInt   @map("brand_id") @db.UnsignedBigInt
+  carTypeId BigInt   @map("car_type_id") @db.UnsignedBigInt
+  name      String   @db.VarChar(255)
+  slug      String   @db.VarChar(255)
+  model     String   @db.VarChar(255)
+  year      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  carType CarType @relation(fields: [carTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  carOptions CarOption[]
+  userCars   UserCar[]
+  carImages  CarImage[]
+
+  @@index([brandId])
+  @@index([carTypeId])
+  @@map("cars")
+}
+
+// ─── Table 7: car_images ─────────────────────────────────────────────────────
+model CarImage {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  carId     BigInt   @map("car_id") @db.UnsignedBigInt
+  imageUrl  String   @map("image_url") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([carId])
+  @@map("car_images")
+}
+
+// ─── Table 6: options ────────────────────────────────────────────────────────
+model Option {
+  id          BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String     @db.VarChar(255)
+  type        OptionType @default(text)
+  placeholder String     @db.VarChar(255)
+  description String     @db.VarChar(255)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  optionItems OptionItem[]
+  carOptions  CarOption[]
+
+  @@map("options")
+}
+
+// ─── Table 7: option_items ───────────────────────────────────────────────────
+model OptionItem {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  optionId  BigInt   @map("option_id") @db.UnsignedBigInt
+  title     String   @db.VarChar(255)
+  item      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  option Option @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([optionId])
+  @@map("option_items")
+}
+
+// ─── Table 8: car_options ────────────────────────────────────────────────────
+model CarOption {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  carId     BigInt   @map("car_id") @db.UnsignedBigInt
+  optionId  BigInt   @map("option_id") @db.UnsignedBigInt
+  val       String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  car    Car    @relation(fields: [carId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  option Option @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([carId])
+  @@index([optionId])
+  @@map("car_options")
+}
+
+// ─── Table 9: sale_terms ─────────────────────────────────────────────────────
+model SaleTerm {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  title       String   @db.VarChar(255)
+  description String?  @db.VarChar(255)
+  image       String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  userCarSaleTerms UserCarSaleTerm[]
+
+  @@map("sale_terms")
+}
+
+// ─── Table 10: user_cars ─────────────────────────────────────────────────────
+// NOTE: `qautity` spelling preserved per spec. See SCHEMA_REVIEW.md.
+model UserCar {
+  id          BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt        @map("user_id") @db.UnsignedBigInt
+  carId       BigInt        @map("car_id") @db.UnsignedBigInt
+  /// Public, unique 6-digit ad code generated by the system on creation.
+  code        String        @unique @db.VarChar(6)
+  status      UserCarStatus @default(pending)
+  qautity     String        @db.VarChar(255)
+  description String        @db.VarChar(255)
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  car  Car  @relation(fields: [carId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  saleTerms UserCarSaleTerm[]
+
+  @@index([userId])
+  @@index([carId])
+  @@index([status])
+  @@map("user_cars")
+}
+
+// ─── Table 11: user_car_sale_terms ───────────────────────────────────────────
+// NOTE: `perecentage` spelling preserved per spec. See SCHEMA_REVIEW.md.
+model UserCarSaleTerm {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userCarId   BigInt   @map("user_car_id") @db.UnsignedBigInt
+  saleTermId  BigInt   @map("sale_term_id") @db.UnsignedBigInt
+  price       String   @db.VarChar(255)
+  sale        String?  @db.VarChar(255)
+  perecentage String?  @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  userCar  UserCar  @relation(fields: [userCarId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  saleTerm SaleTerm @relation(fields: [saleTermId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userCarId])
+  @@index([saleTermId])
+  @@map("user_car_sale_terms")
+}

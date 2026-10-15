@@ -30,12 +30,19 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (keep local secrets out of Git, but allow the documented example)
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel
 
+# admin uploads (local filesystem storage for brand images)
+public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.opencode
+/.opencode

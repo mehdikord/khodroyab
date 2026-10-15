@@ -25,6 +25,8 @@ const DOCK_ITEMS = [
 export const MobileBottomDock: React.FC = () => {
   const pathname = usePathname();
 
+  if (pathname.startsWith("/admin")) return null;
+
   return (
     <nav
       aria-label="ناوبری موبایل"

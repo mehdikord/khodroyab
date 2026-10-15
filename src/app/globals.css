@@ -65,3 +65,142 @@
     rgba(255, 106, 0, 0.03) 100%
   );
 }
+
+/* =====================================================================
+   ADMIN PANEL DESIGN SYSTEM
+   Scoped under `.admin-root` so admin styling never leaks into the
+   public website (and vice-versa).
+   ===================================================================== */
+.admin-root {
+  --admin-bg: #07090c;
+  --admin-surface: #0d1117;
+  --admin-surface-2: #12161d;
+  --admin-elevated: #171b21;
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-border-strong: rgba(255, 255, 255, 0.14);
+  --admin-primary: #ff6a00;
+  --admin-primary-2: #ff8a2a;
+  --admin-text: #f5f5f5;
+  --admin-muted: #9ba3ae;
+  --admin-faint: #5e6672;
+
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+  min-height: 100vh;
+}
+
+.admin-root ::selection {
+  background-color: rgba(255, 106, 0, 0.35);
+  color: #f5f5f5;
+}
+
+/* Ambient background layers used on the login screen. */
+.admin-ambient {
+  background-image:
+    radial-gradient(
+      circle at 82% 12%,
+      rgba(255, 106, 0, 0.14),
+      transparent 46%
+    ),
+    radial-gradient(
+      circle at 8% 92%,
+      rgba(255, 138, 42, 0.08),
+      transparent 44%
+    );
+}
+
+.admin-grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 40%,
+    #000 30%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 40%,
+    #000 30%,
+    transparent 100%
+  );
+}
+
+/* Slim, themed scrollbars inside the panel. */
+.admin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.admin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 106, 0, 0.45);
+}
+
+/* Entrance motion for auth + panel surfaces. */
+@keyframes adminFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.admin-animate-in {
+  animation: adminFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes adminFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.admin-animate-fade {
+  animation: adminFadeIn 0.4s ease both;
+}
+
+@keyframes adminSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.admin-animate-drawer {
+  animation: adminSlideInRight 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-animate-in,
+  .admin-animate-fade,
+  .admin-animate-drawer {
+    animation: none;
+  }
+}
+
+/* Premium loading shimmer for in-flight actions. */
+@keyframes adminBarSlide {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+.admin-bar-slide {
+  animation: adminBarSlide 1.1s linear infinite;
+}
+
