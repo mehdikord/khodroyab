@@ -1,8 +1,5 @@
 "use server";
 
-import crypto from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -10,18 +7,10 @@ import { saleTermToRecord, type SaleTermRecord } from "@/lib/sale-terms";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
+import { removeUpload, saveUpload } from "@/lib/uploads";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
-
-const MIME_TO_EXTENSION: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/avif": "avif",
-};
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "sale-terms");
 
 export type SaleTermActionResult =
   | { ok: true; record: SaleTermRecord }
@@ -30,22 +19,6 @@ export type SaleTermActionResult =
 export type SaleTermSimpleActionResult =
   | { ok: true }
   | { ok: false; message: string };
-
-async function saveSaleTermImage(file: File): Promise<string> {
-  const extension = MIME_TO_EXTENSION[file.type] ?? "jpg";
-  const fileName = `sale-term-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${extension}`;
-
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(UPLOAD_DIR, fileName), bytes);
-
-  return `/uploads/sale-terms/${fileName}`;
-}
-
-async function removeUploadedFile(publicPath: string | null): Promise<void> {
-  if (!publicPath || !publicPath.startsWith("/uploads/sale-terms/")) return;
-  await fs.unlink(path.join(process.cwd(), "public", publicPath)).catch(() => undefined);
-}
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
@@ -87,7 +60,7 @@ export async function createSaleTermAction(
     if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
       return { ok: false, message: "حجم تصویر نباید بیشتر از ۲ مگابایت باشد" };
     }
-    image = await saveSaleTermImage(imageFile);
+    image = await saveUpload("sale-terms", imageFile, "sale-term");
   }
 
   try {
@@ -141,10 +114,8 @@ export async function updateSaleTermAction(
     if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
       return { ok: false, message: "حجم تصویر نباید بیشتر از ۲ مگابایت باشد" };
     }
-    if (image && image.startsWith("/uploads/sale-terms/")) {
-      await removeUploadedFile(image);
-    }
-    image = await saveSaleTermImage(imageFile);
+    await removeUpload(image, "sale-terms");
+    image = await saveUpload("sale-terms", imageFile, "sale-term");
   }
 
   try {
@@ -226,7 +197,7 @@ export async function deleteSaleTermAction(
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 
-  await removeUploadedFile(current.image);
+  await removeUpload(current.image, "sale-terms");
   revalidatePath("/admin/sale-terms");
   return { ok: true };
 }

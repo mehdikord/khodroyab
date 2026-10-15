@@ -1,8 +1,5 @@
 "use server";
 
-import crypto from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -10,34 +7,10 @@ import { userToRecord, type UserRecord } from "@/lib/users";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
+import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
-
-const MIME_TO_EXTENSION: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/avif": "avif",
-};
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "users");
-
-async function saveUserImage(file: File): Promise<string> {
-  const extension = MIME_TO_EXTENSION[file.type] ?? "jpg";
-  const fileName = `user-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${extension}`;
-
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(UPLOAD_DIR, fileName), bytes);
-
-  return `/uploads/users/${fileName}`;
-}
-
-async function removeUploadedFile(publicPath: string | null): Promise<void> {
-  if (!publicPath || !publicPath.startsWith("/uploads/users/")) return;
-  await fs.unlink(path.join(process.cwd(), "public", publicPath)).catch(() => undefined);
-}
 
 async function guardRequest() {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
@@ -76,7 +49,7 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
     if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
       return { ok: false, message: "حجم تصویر نباید بیشتر از ۲ مگابایت باشد" };
     }
-    image = await saveUserImage(imageFile);
+    image = await saveUpload("users", imageFile, "user");
   }
 
   try {
@@ -126,8 +99,8 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
 
   let image = current.image;
   if (imageFile && imageFile.size > 0) {
-    if (image && image.startsWith("/uploads/users/")) await removeUploadedFile(image);
-    image = await saveUserImage(imageFile);
+    await removeUpload(image, "users");
+    image = await saveUpload("users", imageFile, "user");
   }
 
   try {
@@ -168,7 +141,7 @@ export async function deleteUserAction(id: string): Promise<{ ok: true } | { ok:
 
   try {
     await prisma.user.delete({ where: { id: userId } });
-    if (current.image && current.image.startsWith("/uploads/users/")) await removeUploadedFile(current.image);
+    if (isManagedUpload(current.image)) await removeUpload(current.image, "users");
     revalidatePath("/admin/users");
     return { ok: true };
   } catch (error) {

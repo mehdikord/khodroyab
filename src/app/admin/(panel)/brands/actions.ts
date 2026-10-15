@@ -1,20 +1,13 @@
 "use server";
 
-import crypto from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
 import { brandToRecord, type BrandRecord } from "@/lib/brands";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
-import {
-  ALLOWED_IMAGE_MIME_TYPES,
-  parseBrandForm,
-  slugify,
-} from "@/lib/validation/brands";
+import { parseBrandForm, slugify } from "@/lib/validation/brands";
+import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 
 const UNAUTHENTICATED_MESSAGE =
   "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
@@ -31,50 +24,11 @@ export type BrandSimpleActionResult =
   | { ok: true }
   | { ok: false; message: string };
 
-const MIME_TO_EXTENSION: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/avif": "avif",
-};
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "brands");
-
 function isPrismaCode(error: unknown, code: string): boolean {
   if (typeof error === "object" && error !== null && "code" in error) {
     return (error as { code?: unknown }).code === code;
   }
   return false;
-}
-
-/**
- * Persist an uploaded brand image to the local filesystem and return its
- * public URL path. Filenames are randomized to prevent collisions.
- */
-async function saveBrandImage(file: File, baseName: string): Promise<string> {
-  const extension =
-    MIME_TO_EXTENSION[file.type] ?? ALLOWED_IMAGE_MIME_TYPES[0].split("/")[1];
-  const safeBase =
-    slugify(baseName) || "brand";
-  const fileName = `${safeBase}-${Date.now()}-${crypto
-    .randomBytes(4)
-    .toString("hex")}.${extension}`;
-
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(UPLOAD_DIR, fileName), bytes);
-
-  return `/uploads/brands/${fileName}`;
-}
-
-/** Best-effort removal of a previously uploaded file. */
-async function removeUploadedFile(publicPath: string | null): Promise<void> {
-  if (!publicPath || !publicPath.startsWith("/uploads/")) {
-    return;
-  }
-  await fs
-    .unlink(path.join(process.cwd(), "public", publicPath))
-    .catch(() => undefined);
 }
 
 /** Enforce an authenticated, same-origin request for every mutation. */
@@ -120,7 +74,7 @@ export async function createBrandAction(
 
   let image: string | null = null;
   if (parsed.file) {
-    image = await saveBrandImage(parsed.file, parsed.data.name);
+    image = await saveUpload("brands", parsed.file, slugify(parsed.data.name) || "brand");
   } else if (parsed.data.image) {
     image = parsed.data.image;
   }
@@ -189,7 +143,7 @@ export async function updateBrandAction(
 
   let image: string | null;
   if (parsed.file) {
-    image = await saveBrandImage(parsed.file, parsed.data.name);
+    image = await saveUpload("brands", parsed.file, slugify(parsed.data.name) || "brand");
   } else if (parsed.data.image) {
     image = parsed.data.image;
   } else {
@@ -211,7 +165,7 @@ export async function updateBrandAction(
       current.image &&
       current.image.startsWith("/uploads/")
     ) {
-      await removeUploadedFile(current.image);
+      await removeUpload(current.image, "brands");
     }
     revalidatePath("/admin/brands");
     return { ok: true, record: brandToRecord(brand) };
@@ -299,7 +253,7 @@ export async function deleteBrandAction(
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 
-  await removeUploadedFile(current.image);
+  await removeUpload(current.image, "brands");
   revalidatePath("/admin/brands");
   return { ok: true };
 }

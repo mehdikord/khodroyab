@@ -1,8 +1,5 @@
 "use server";
 
-import crypto from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -10,6 +7,7 @@ import { carImageToRecord, type CarImageRecord } from "@/lib/car-images";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
+import { removeUpload, saveUpload } from "@/lib/uploads";
 
 const UNAUTHENTICATED_MESSAGE =
   "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
@@ -22,38 +20,6 @@ export type CarImageActionResult =
 export type CarImageSimpleActionResult =
   | { ok: true }
   | { ok: false; message: string };
-
-const MIME_TO_EXTENSION: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/avif": "avif",
-};
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "cars");
-
-async function saveCarImage(file: File): Promise<string> {
-  const extension =
-    MIME_TO_EXTENSION[file.type] ?? "jpg";
-  const fileName = `car-${Date.now()}-${crypto
-    .randomBytes(4)
-    .toString("hex")}.${extension}`;
-
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(UPLOAD_DIR, fileName), bytes);
-
-  return `/uploads/cars/${fileName}`;
-}
-
-async function removeUploadedFile(publicPath: string | null): Promise<void> {
-  if (!publicPath || !publicPath.startsWith("/uploads/cars/")) {
-    return;
-  }
-  await fs
-    .unlink(path.join(process.cwd(), "public", publicPath))
-    .catch(() => undefined);
-}
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
   if (!isTrustedOrigin()) {
@@ -92,7 +58,7 @@ export async function addCarImageAction(
       return { ok: false, message: "حجم تصویر نباید بیشتر از ۲ مگابایت باشد" };
     }
     try {
-      imageUrl = await saveCarImage(file);
+      imageUrl = await saveUpload("cars", file, "car");
     } catch (e) {
       console.error(e);
       return { ok: false, message: "خطا در ذخیره فایل تصویر" };
@@ -146,7 +112,7 @@ export async function deleteCarImageAction(
     }
 
     await prisma.carImage.delete({ where: { id: imageId } });
-    await removeUploadedFile(current.imageUrl);
+    await removeUpload(current.imageUrl, "cars");
 
     revalidatePath(`/admin/cars/${carId}/images`);
     return { ok: true };
