@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, Users, Edit2, Trash2, UserCircle2 } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { UserFormModal } from "@/components/admin/users/UserFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
-import { deleteUserAction } from "@/app/admin/(panel)/users/actions";
+import { deleteUserAction, toggleUserActiveAction } from "@/app/admin/(panel)/users/actions";
 import type { UserRecord } from "@/lib/users";
 import { toPersianDigits } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
   const [modalUser, setModalUser] = useState<UserRecord | null | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
+  const [, startToggleTransition] = useTransition();
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -48,6 +50,32 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
     } else {
       showToast("error", result.message);
     }
+  }
+
+  function handleToggleActive(user: UserRecord) {
+    if (pendingToggleId) return;
+    setPendingToggleId(user.id);
+
+    // Optimistic update for instant feedback.
+    setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isActive: !u.isActive } : u)));
+
+    startToggleTransition(async () => {
+      const result = await toggleUserActiveAction(user.id);
+      setPendingToggleId(null);
+      if (result.ok) {
+        setUsers((prev) => prev.map((u) => (u.id === result.record.id ? result.record : u)));
+        showToast(
+          "success",
+          result.record.isActive
+            ? `حساب کاربر «${result.record.name}» فعال شد`
+            : `حساب کاربر «${result.record.name}» غیرفعال شد`
+        );
+      } else {
+        // Roll back the optimistic update on failure.
+        setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
+        showToast("error", result.message);
+      }
+    });
   }
 
   return (
@@ -138,9 +166,21 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
                 <td className="px-6 py-4 text-[#D2D7DF]">{user.postalCode || "-"}</td>
                 <td className="px-6 py-4 max-w-[220px] truncate text-[#D2D7DF]" title={user.address ?? ""}>{user.address || "-"}</td>
                 <td className="px-6 py-4 text-center">
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${user.isActive ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(user)}
+                    disabled={pendingToggleId === user.id}
+                    title={user.isActive ? "برای غیرفعال کردن حساب کلیک کنید" : "برای فعال کردن حساب کلیک کنید"}
+                    aria-pressed={user.isActive}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                      user.isActive
+                        ? "border-green-500/30 bg-green-500/10 text-green-400 hover:border-green-500/60 hover:bg-green-500/20"
+                        : "border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500/60 hover:bg-red-500/20"
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? "bg-green-400" : "bg-red-400"}`} />
                     {user.isActive ? "فعال" : "غیرفعال"}
-                  </span>
+                  </button>
                 </td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex items-center justify-center gap-1.5">

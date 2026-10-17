@@ -79,7 +79,22 @@ export function UserFormModal({ user, onClose, onSuccess, onError }: UserFormMod
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-[#F5F5F5]">رمز عبور {!isEdit && <span className="text-[#FF6A00]">*</span>}</label>
-            <input name="password" type="password" required={!isEdit} className={inputClassName(!!fieldErrors.password)} />
+            <input
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required={!isEdit}
+              minLength={6}
+              placeholder={isEdit ? "برای تغییر، رمز جدید را وارد کنید" : "حداقل ۶ کاراکتر"}
+              className={inputClassName(!!fieldErrors.password)}
+            />
+            {fieldErrors.password ? (
+              <p className="text-xs text-red-400">{fieldErrors.password}</p>
+            ) : (
+              <p className="text-[11px] text-[#5E6672]">
+                {isEdit ? "خالی بگذارید تا رمز فعلی حفظ شود. رمز به‌صورت هش‌شده ذخیره می‌شود." : "کاربر با این رمز وارد پنل کاربری خود می‌شود."}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-[#F5F5F5]">کد ملی</label>

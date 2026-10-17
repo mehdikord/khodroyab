@@ -65,6 +65,19 @@ function toSaleTermData(entry: UserCarSaleTermInput) {
   };
 }
 
+const PRICE_CHANGE_SOURCE = "admin" as const;
+
+/** Nested-create payload that logs the listing price as the first history row. */
+function withInitialPriceHistory<T extends object>(data: T, entry: UserCarSaleTermInput) {
+  return { ...data, priceHistory: { create: { price: entry.price, source: PRICE_CHANGE_SOURCE } } };
+}
+
+/** Update payload that appends a history row only when the price actually changed. */
+function withPriceChangeHistory<T extends object>(data: T, entry: UserCarSaleTermInput, previousPrice: string | undefined) {
+  if (previousPrice === undefined || previousPrice === entry.price) return data;
+  return { ...data, priceHistory: { create: { price: entry.price, source: PRICE_CHANGE_SOURCE } } };
+}
+
 /** Validate that every referenced sale-term id exists (clear error instead of FK failure). */
 async function validateSaleTermIds(entries: UserCarSaleTermInput[]): Promise<Record<string, string> | null> {
   const ids = Array.from(new Set(entries.map((e) => e.saleTermId)));
@@ -131,7 +144,7 @@ export async function createUserCarAction(userIdRaw: string, formData: FormData)
           qautity: parsed.data.qautity,
           description: parsed.data.description,
           isActive: parsed.data.isActive,
-          saleTerms: { create: parsed.data.saleTerms.map(toSaleTermData) },
+          saleTerms: { create: parsed.data.saleTerms.map((entry) => withInitialPriceHistory(toSaleTermData(entry), entry)) },
         },
         include: userCarInclude,
       });
@@ -172,7 +185,7 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
   const [existing, car] = await Promise.all([
     prisma.userCar.findUnique({
       where: { id: userCarId },
-      select: { id: true, userId: true, saleTerms: { select: { id: true } } },
+      select: { id: true, userId: true, saleTerms: { select: { id: true, price: true } } },
     }),
     prisma.car.findUnique({ where: { id: carId }, select: { id: true } }),
   ]);
@@ -183,6 +196,7 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
   if (termErrors) return { ok: false, message: "شرایط فروش انتخاب‌شده نامعتبر است", fieldErrors: termErrors };
 
   const existingTermIds = new Set(existing.saleTerms.map((t) => t.id.toString()));
+  const existingPriceById = new Map(existing.saleTerms.map((t) => [t.id.toString(), t.price]));
   const submittedExistingIds = new Set(
     parsed.data.saleTerms.map((t) => t.id).filter((id): id is string => Boolean(id && existingTermIds.has(id)))
   );
@@ -208,9 +222,13 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
       for (const entry of parsed.data.saleTerms) {
         const data = toSaleTermData(entry);
         if (entry.id && existingTermIds.has(entry.id)) {
-          await tx.userCarSaleTerm.update({ where: { id: BigInt(entry.id) }, data });
+          const previousPrice = existingPriceById.get(entry.id);
+          await tx.userCarSaleTerm.update({
+            where: { id: BigInt(entry.id) },
+            data: withPriceChangeHistory(data, entry, previousPrice),
+          });
         } else {
-          await tx.userCarSaleTerm.create({ data: { ...data, userCarId } });
+          await tx.userCarSaleTerm.create({ data: { ...withInitialPriceHistory(data, entry), userCarId } });
         }
       }
 

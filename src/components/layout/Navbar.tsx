@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/data/khodroyab-data";
 import { cn } from "@/lib/utils";
-import { PhoneCall, Search, Sparkles, ShieldCheck } from "lucide-react";
+import { PhoneCall, UserRound } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
@@ -20,8 +20,8 @@ export const Navbar: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Admin routes own their shell — never render the public navbar on them.
-  if (pathname.startsWith("/admin")) return null;
+  // Admin and user-panel routes own their shell — never render the public navbar on them.
+  if (pathname.startsWith("/admin") || pathname.startsWith("/panel")) return null;
 
   return (
     <header
@@ -106,19 +106,26 @@ export const Navbar: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5">
           <Link
-            href="/search"
+            href="/panel"
             className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-white/[0.1] bg-[#171B21]/80 px-3.5 py-2.5 text-xs font-semibold text-[#F5F5F5] transition-all duration-200 hover:border-[#FF6A00]/50 hover:bg-[#171B21]"
           >
-            <Search className="h-3.5 w-3.5 text-[#FF6A00]" />
-            <span>جستجوی خودرو</span>
-            <span className="rounded bg-[#FF6A00]/15 px-1.5 py-0.5 text-[10px] text-[#FF8A2A]">
-              به‌زودی
-            </span>
+            <UserRound className="h-3.5 w-3.5 text-[#FF6A00]" />
+            <span>ورود به پنل</span>
           </Link>
 
+          {/* Mobile: the primary action is signing in to the customer panel. */}
+          <Link
+            href="/panel"
+            className="inline-flex sm:hidden items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-4 py-2.5 text-xs font-bold text-[#07090C] shadow-[0_0_25px_rgba(255,106,0,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+          >
+            <UserRound className="h-3.5 w-3.5" />
+            <span>ورود به پنل کاربری</span>
+          </Link>
+
+          {/* Desktop/tablet: free consultation stays the primary call to action. */}
           <Link
             href="/contact#consultation"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#07090C] shadow-[0_0_25px_rgba(255,106,0,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+            className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-4 py-2.5 text-sm font-bold text-[#07090C] shadow-[0_0_25px_rgba(255,106,0,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
           >
             <PhoneCall className="h-3.5 w-3.5" />
             <span>مشاوره رایگان</span>

@@ -8,6 +8,9 @@
 /** Name of the HttpOnly cookie holding the signed admin session token. */
 export const ADMIN_SESSION_COOKIE = "khodroyab_admin_session";
 
+/** Name of the HttpOnly cookie holding the signed *user* (customer panel) session token. */
+export const USER_SESSION_COOKIE = "khodroyab_user_session";
+
 /** Default session lifetime: 8 hours. Overridable via AUTH_SESSION_TTL_SECONDS. */
 export const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 8;
 

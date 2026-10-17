@@ -25,7 +25,7 @@ const DOCK_ITEMS = [
 export const MobileBottomDock: React.FC = () => {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/panel")) return null;
 
   return (
     <nav

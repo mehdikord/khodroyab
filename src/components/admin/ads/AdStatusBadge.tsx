@@ -7,15 +7,15 @@ import { cn } from "@/lib/utils";
 
 const STYLES: Record<AdStatus, { className: string; icon: LucideIcon }> = {
   pending: {
-    className: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+    className: "border-amber-500/30 bg-amber-500/10 text-panel-warning",
     icon: Clock3,
   },
   approved: {
-    className: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+    className: "border-emerald-500/25 bg-emerald-500/10 text-panel-success",
     icon: CheckCircle2,
   },
   rejected: {
-    className: "border-red-500/25 bg-red-500/10 text-red-300",
+    className: "border-red-500/25 bg-red-500/10 text-panel-danger",
     icon: XCircle,
   },
 };

@@ -204,3 +204,415 @@
   animation: adminBarSlide 1.1s linear infinite;
 }
 
+
+/* =====================================================================
+   USER PANEL (/panel) DESIGN SYSTEM
+   Mobile-first customer panel. Shares the brand tokens with the admin
+   panel but is scoped separately so the two can evolve independently.
+   ===================================================================== */
+:root {
+  /* Customer-panel tokens, dark defaults (RGB triplets so Tailwind alpha works). */
+  --p-bg: 7 9 12;
+  --p-surface: 13 17 23;
+  --p-surface-2: 18 22 29;
+  --p-media: 10 13 18;
+  --p-elevated: 23 27 33;
+  --p-text: 245 245 245;
+  --p-text-2: 210 215 223;
+  --p-muted: 155 163 174;
+  --p-muted-2: 139 147 161;
+  --p-faint: 94 102 114;
+  --p-faint-2: 66 80 95;
+  --p-line: 255 255 255;
+  --p-accent: 255 138 42;
+  --p-accent-soft: 255 185 135;
+  --p-success: 110 231 183;
+  --p-success-2: 52 211 153;
+  --p-danger: 252 165 165;
+  --p-danger-2: 248 113 113;
+  --p-warning: 252 211 77;
+  --p-grid-line: rgba(255, 255, 255, 0.035);
+  --p-ambient-strength: 1;
+}
+
+.panel-root {
+  --panel-bg: rgb(var(--p-bg));
+  --panel-surface: rgb(var(--p-surface));
+  --panel-text: rgb(var(--p-text));
+  --panel-primary: #ff6a00;
+  --panel-primary-2: #ff8a2a;
+  /* Height reserved for the fixed bottom dock (+ iOS home indicator). */
+  --panel-dock-space: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+
+  color-scheme: dark;
+  background-color: var(--panel-bg);
+  color: var(--panel-text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────────────── */
+.panel-root[data-theme="light"] {
+  --p-bg: 243 244 247;
+  --p-surface: 255 255 255;
+  --p-surface-2: 246 247 250;
+  --p-media: 236 238 242;
+  --p-elevated: 240 242 246;
+  --p-text: 15 19 26;
+  --p-text-2: 45 52 64;
+  --p-muted: 90 99 114;
+  --p-muted-2: 107 116 131;
+  --p-faint: 140 148 162;
+  --p-faint-2: 170 178 190;
+  --p-line: 15 23 42;
+  --p-accent: 226 88 0;
+  --p-accent-soft: 194 65 12;
+  --p-success: 4 120 87;
+  --p-success-2: 5 150 105;
+  --p-danger: 185 28 28;
+  --p-danger-2: 220 38 38;
+  --p-warning: 180 83 9;
+  --p-grid-line: rgba(15, 23, 42, 0.06);
+  --p-ambient-strength: 0.55;
+  color-scheme: light;
+}
+
+/* Deep shadows tuned for the dark surface look muddy on light; soften them. */
+.panel-root[data-theme="light"] [class*="shadow-["],
+.panel-root[data-theme="light"] .shadow-card-depth,
+.panel-root[data-theme="light"] .shadow-2xl,
+.panel-root[data-theme="light"] .shadow-xl,
+.panel-root[data-theme="light"] .shadow-lg {
+  --tw-shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.06);
+  --tw-shadow-colored: var(--tw-shadow);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.panel-root ::selection {
+  background-color: rgba(255, 106, 0, 0.35);
+  color: var(--panel-text);
+}
+
+/* Grid texture adapts to the theme (white lines are invisible on light). */
+.panel-root .admin-grid-bg {
+  background-image:
+    linear-gradient(var(--p-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--p-grid-line) 1px, transparent 1px);
+}
+
+/* Ambient glow used on the login screen and page headers. */
+.panel-ambient {
+  background-image:
+    radial-gradient(circle at 85% 0%, rgba(255, 106, 0, 0.16), transparent 42%),
+    radial-gradient(circle at 10% 100%, rgba(255, 138, 42, 0.07), transparent 40%);
+  opacity: var(--p-ambient-strength);
+}
+
+/* Content area keeps clear of the dock. */
+.panel-content {
+  padding-bottom: var(--panel-dock-space);
+}
+
+/* Dock entrance. */
+@keyframes panelDockIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.panel-dock {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: panelDockIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Frosted-glass dock surface: translucent dark tint + heavy blur + a soft
+   top highlight so it reads as a sheet of glass over the scrolling content. */
+.panel-dock-glass {
+  position: relative;
+  isolation: isolate;
+  background-color: rgb(var(--p-surface) / 0.72);
+  background-image:
+    linear-gradient(180deg, rgb(var(--p-line) / 0.06) 0%, rgb(var(--p-line) / 0.015) 45%, rgb(var(--p-line) / 0) 100%),
+    radial-gradient(120% 90% at 50% 120%, rgba(255, 106, 0, 0.1), transparent 60%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgb(var(--p-line) / 0.12);
+  box-shadow:
+    0 -12px 40px rgba(0, 0, 0, 0.7),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.panel-root[data-theme="light"] .panel-dock-glass {
+  background-color: rgb(255 255 255 / 0.78);
+  box-shadow:
+    0 -10px 36px rgba(15, 23, 42, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+.panel-dock-glass::before {
+  content: "";
+  position: absolute;
+  inset-inline: 18%;
+  top: 0;
+  height: 1px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgb(var(--p-line) / 0.45), transparent);
+  pointer-events: none;
+}
+/* Browsers without backdrop-filter get a more opaque fallback. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel-dock-glass {
+    background-color: rgb(var(--p-surface) / 0.96);
+  }
+}
+
+/* Staggered card entrance for result grids. */
+@keyframes panelCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.panel-card-in {
+  animation: panelCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Thin themed scrollbars inside horizontal filter rows. */
+.panel-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.panel-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--p-line) / 0.12);
+  border-radius: 9999px;
+}
+
+/* Hide the scrollbar on touch-style chip rows. */
+.panel-no-scrollbar {
+  scrollbar-width: none;
+}
+.panel-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-dock,
+  .panel-card-in {
+    animation: none;
+  }
+}
+
+/* ─── Profile sheets (bottom sheet on mobile, centered dialog on desktop) ─── */
+@keyframes panelSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes panelSheetPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.panel-sheet {
+  animation: panelSheetUp 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (min-width: 640px) {
+  .panel-sheet {
+    animation-name: panelSheetPop;
+    animation-duration: 0.32s;
+  }
+}
+
+/* Soft conic sheen behind the profile avatar. */
+@keyframes panelRingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.panel-avatar-ring::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, #ff6a00, #ff8a2a, rgba(255, 106, 0, 0.15), #ff6a00);
+  animation: panelRingSpin 9s linear infinite;
+}
+
+/* Completion ring stroke draws in on mount. */
+@keyframes panelRingDraw {
+  from {
+    stroke-dashoffset: var(--ring-circumference);
+  }
+}
+.panel-ring-progress {
+  animation: panelRingDraw 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-sheet,
+  .panel-ring-progress {
+    animation: none;
+  }
+  .panel-avatar-ring::before {
+    animation: none;
+  }
+}
+
+/* ─── Price-history chart ─── */
+@keyframes panelChartDraw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.panel-chart-line {
+  stroke-dasharray: 1;
+  animation: panelChartDraw 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes panelChartFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.panel-chart-area {
+  animation: panelChartFade 1.4s ease 0.3s both;
+}
+@keyframes panelChartPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.panel-chart-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: panelChartPulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-chart-line,
+  .panel-chart-area,
+  .panel-chart-pulse {
+    animation: none;
+  }
+}
+
+/* ─── Theme switch (panel header) ─── */
+.panel-theme-switch {
+  --knob: 26px;
+  position: relative;
+  width: 60px;
+  height: 32px;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--p-line) / 0.14);
+  background: linear-gradient(135deg, #0b1020, #1b2340);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3) inset, 0 6px 16px -8px rgba(0, 0, 0, 0.8);
+  transition: background 0.45s ease, box-shadow 0.45s ease, border-color 0.45s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.panel-theme-switch[data-on="true"] {
+  background: linear-gradient(135deg, #ffd166, #ff8a2a 60%, #ff6a00);
+  border-color: rgba(255, 106, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35) inset, 0 8px 22px -8px rgba(255, 106, 0, 0.75);
+}
+.panel-theme-switch .stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 14px 9px, #fff 90%, transparent),
+    radial-gradient(1px 1px at 26px 20px, rgba(255, 255, 255, 0.8) 90%, transparent),
+    radial-gradient(1.4px 1.4px at 38px 7px, #fff 90%, transparent),
+    radial-gradient(1px 1px at 46px 22px, rgba(255, 255, 255, 0.7) 90%, transparent);
+  opacity: 1;
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+.panel-theme-switch[data-on="true"] .stars {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.panel-theme-switch .clouds {
+  position: absolute;
+  inset-inline-start: 6px;
+  bottom: -6px;
+  width: 40px;
+  height: 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 14px -4px 0 -2px rgba(255, 255, 255, 0.95), -8px 2px 0 -4px rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.panel-theme-switch[data-on="true"] .clouds {
+  opacity: 1;
+  transform: translateY(0);
+}
+.panel-theme-switch .knob {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: var(--knob);
+  height: var(--knob);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0b1020;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #cfd6e6);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 14px rgba(255, 255, 255, 0.25);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.4s ease, color 0.4s ease;
+}
+.panel-theme-switch[data-on="true"] .knob {
+  transform: translateX(calc(-1 * (60px - var(--knob) - 4px)));
+  background: radial-gradient(circle at 35% 35%, #fff7e6, #ffd166);
+  color: #b45309;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.45), 0 0 18px rgba(255, 209, 102, 0.8);
+}
+[dir="ltr"] .panel-theme-switch[data-on="true"] .knob {
+  transform: translateX(calc(60px - var(--knob) - 4px));
+}
+.panel-theme-switch .knob svg {
+  transition: transform 0.5s ease, opacity 0.3s ease;
+}
+.panel-theme-switch:active .knob {
+  width: calc(var(--knob) + 4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-theme-switch,
+  .panel-theme-switch .knob,
+  .panel-theme-switch .stars,
+  .panel-theme-switch .clouds {
+    transition: none;
+  }
+}

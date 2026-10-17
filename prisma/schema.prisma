@@ -234,7 +234,34 @@ model UserCarSaleTerm {
   userCar  UserCar  @relation(fields: [userCarId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   saleTerm SaleTerm @relation(fields: [saleTermId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
+  priceHistory UserCarSaleTermPriceHistory[]
+
   @@index([userCarId])
   @@index([saleTermId])
   @@map("user_car_sale_terms")
+}
+
+/// Who changed a sale-term price.
+enum PriceChangeSource {
+  user
+  admin
+  system
+}
+
+// ─── Table 12: user_car_sale_term_price_histories ────────────────────────────
+// Append-only log of every price a sale term has had. The first row is written
+// when the term is created; a new row is appended whenever the price changes.
+// The latest two rows give the "current vs previous" delta shown in search.
+model UserCarSaleTermPriceHistory {
+  id                BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  userCarSaleTermId BigInt            @map("user_car_sale_term_id") @db.UnsignedBigInt
+  /// Price at this point in time (digit-only string, same format as `user_car_sale_terms.price`).
+  price             String            @db.VarChar(255)
+  source            PriceChangeSource @default(user)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamp(0)
+
+  userCarSaleTerm UserCarSaleTerm @relation(fields: [userCarSaleTermId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userCarSaleTermId, createdAt])
+  @@map("user_car_sale_term_price_histories")
 }

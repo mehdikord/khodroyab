@@ -1,0 +1,144 @@
+import React from "react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowRight, BadgeCheck, CalendarDays, Megaphone, Quote, Sparkles } from "lucide-react";
+
+import { requireUser } from "@/lib/auth/user-auth";
+import { getSellerProfile, listSellerApprovedAds } from "@/lib/panel-search";
+import { toPersianDigits } from "@/lib/utils";
+import { SafeImage } from "@/components/panel/SafeImage";
+import { AdCard } from "@/components/panel/search/AdCard";
+
+export const dynamic = "force-dynamic";
+
+interface PageProps {
+  params: { id: string };
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const seller = await getSellerProfile(params.id);
+  return {
+    title: seller ? `${seller.name} | فروشندگان خودرو یاب` : "فروشنده | پنل کاربری خودرو یاب",
+    robots: "noindex, nofollow",
+  };
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "؟";
+  if (parts.length === 1) return parts[0].slice(0, 1);
+  return parts[0].slice(0, 1) + parts[1].slice(0, 1);
+}
+
+/**
+ * Public seller profile as seen by other customers: avatar, name, bio and the
+ * seller's approved ads (same cards as the search, including price history).
+ */
+export default async function SellerProfilePage({ params }: PageProps) {
+  await requireUser();
+
+  const [seller, ads] = await Promise.all([getSellerProfile(params.id), listSellerApprovedAds(params.id)]);
+  if (!seller) notFound();
+
+  return (
+    <div className="space-y-5">
+      <Link
+        href="/panel/search"
+        className="admin-animate-in inline-flex items-center gap-1.5 text-xs font-bold text-panel-muted transition-colors hover:text-panel-text"
+      >
+        <ArrowRight className="h-4 w-4" />
+        بازگشت به جستجو
+      </Link>
+
+      {/* Seller hero */}
+      <section className="panel-card-in relative overflow-hidden rounded-[32px] border border-panel-line/[0.1] bg-panel-surface">
+        <div className="panel-ambient pointer-events-none absolute inset-0" aria-hidden="true" />
+        <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-24 end-[-60px] h-64 w-64 rounded-full bg-[#FF6A00]/20 blur-3xl" aria-hidden="true" />
+
+        <div className="relative flex flex-col items-center gap-5 px-5 pb-6 pt-8 text-center sm:flex-row sm:items-center sm:gap-7 sm:px-8 sm:text-start">
+          <div className="panel-avatar-ring relative h-28 w-28 shrink-0 rounded-[30px] sm:h-32 sm:w-32">
+            <div className="relative h-full w-full overflow-hidden rounded-[30px] border-[3px] border-panel-surface bg-panel-surface-2">
+              {seller.image ? (
+                <SafeImage
+                  src={seller.image}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  fallback={
+                    <span className="flex h-full w-full items-center justify-center bg-[#FF6A00]/[0.12] text-3xl font-black text-panel-accent">
+                      {initials(seller.name)}
+                    </span>
+                  }
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center bg-[#FF6A00]/[0.12] text-3xl font-black text-panel-accent">
+                  {initials(seller.name)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <h1 className="text-2xl font-black text-panel-text sm:text-3xl">{seller.name}</h1>
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#FF6A00]/35 bg-[#FF6A00]/10 px-2 py-0.5 text-[10px] font-bold text-panel-accent-soft">
+                <BadgeCheck className="h-3 w-3" />
+                فروشنده
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-panel-muted-2 sm:justify-start">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-panel-accent" />
+                عضو از {seller.memberSinceLabel}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Megaphone className="h-3.5 w-3.5 text-panel-accent" />
+                {toPersianDigits(seller.approvedAdCount)} آگهی تایید‌شده
+              </span>
+            </div>
+
+            {seller.bio ? (
+              <div className="relative mt-4 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-4 py-3 text-start">
+                <Quote className="absolute -top-2.5 start-3 h-5 w-5 rounded-md bg-panel-surface p-0.5 text-panel-accent" />
+                <p className="whitespace-pre-line text-xs leading-6 text-panel-text-2">{seller.bio}</p>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-panel-faint">این فروشنده هنوز بیوگرافی ثبت نکرده است.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Ads */}
+      <div className="admin-animate-in flex items-center justify-between" style={{ animationDelay: "120ms" }}>
+        <h2 className="flex items-center gap-2 text-base font-black text-panel-text">
+          <Sparkles className="h-4 w-4 text-panel-accent" />
+          آگهی‌های {seller.name}
+        </h2>
+        <span className="rounded-lg bg-panel-line/[0.05] px-2 py-1 text-[11px] font-bold text-panel-muted">
+          {toPersianDigits(ads.length)} آگهی
+        </span>
+      </div>
+
+      {ads.length === 0 ? (
+        <div className="admin-animate-in relative overflow-hidden rounded-3xl border border-dashed border-panel-line/[0.12] bg-panel-surface/60 px-6 py-14 text-center">
+          <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
+          <div className="relative">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-panel-line/[0.08] bg-panel-surface text-panel-faint">
+              <Megaphone className="h-7 w-7" />
+            </span>
+            <p className="mt-5 text-base font-extrabold text-panel-text">این فروشنده در حال حاضر آگهی فعالی ندارد</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {ads.map((ad, index) => (
+            <AdCard key={ad.id} ad={ad} delay={Math.min(index, 8) * 45} hideSeller />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

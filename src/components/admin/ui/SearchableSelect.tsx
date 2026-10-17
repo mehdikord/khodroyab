@@ -158,18 +158,18 @@ export function SearchableSelect({
           onClick={() => setOpen((o) => !o)}
           onKeyDown={onTriggerKeyDown}
           className={cn(
-            "flex h-12 w-full items-center gap-2 rounded-xl border bg-[#07090C] px-4 text-start text-sm outline-none transition-all",
+            "flex h-12 w-full items-center gap-2 rounded-xl border bg-panel-bg px-4 text-start text-sm outline-none transition-all",
             "focus-visible:border-[#FF6A00] focus-visible:ring-4 focus-visible:ring-[#FF6A00]/15",
             disabled && "cursor-not-allowed opacity-60",
-            hasError ? "border-red-500/50" : open ? "border-[#FF6A00] ring-4 ring-[#FF6A00]/15" : "border-white/[0.12] hover:border-white/20",
+            hasError ? "border-red-500/50" : open ? "border-[#FF6A00] ring-4 ring-[#FF6A00]/15" : "border-panel-line/[0.12] hover:border-panel-line/20",
             clearable && selected && "pe-20"
           )}
         >
-          <span className={cn("min-w-0 flex-1 truncate", selected ? "text-[#F5F5F5]" : "text-[#5E6672]")}>
+          <span className={cn("min-w-0 flex-1 truncate", selected ? "text-panel-text" : "text-panel-faint")}>
             {selected?.label ?? placeholder}
           </span>
           <ChevronDown
-            className={cn("h-4 w-4 shrink-0 text-[#5E6672] transition-transform", open && "rotate-180 text-[#FF8A2A]")}
+            className={cn("h-4 w-4 shrink-0 text-panel-faint transition-transform", open && "rotate-180 text-panel-accent")}
           />
         </button>
         {clearable && selected && !disabled && (
@@ -180,7 +180,7 @@ export function SearchableSelect({
               event.stopPropagation();
               onChange("");
             }}
-            className="absolute end-10 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-[#5E6672] transition-colors hover:bg-white/[0.06] hover:text-[#F5F5F5]"
+            className="absolute end-10 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-panel-faint transition-colors hover:bg-panel-line/[0.06] hover:text-panel-text"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -188,9 +188,9 @@ export function SearchableSelect({
       </div>
 
       {open && (
-        <div className="admin-animate-fade absolute inset-x-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0D1117] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
-          <div className="relative border-b border-white/[0.07] p-2">
-            <Search className="pointer-events-none absolute end-5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5E6672]" />
+        <div className="admin-animate-fade absolute inset-x-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-panel-line/[0.12] bg-panel-surface shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+          <div className="relative border-b border-panel-line/[0.07] p-2">
+            <Search className="pointer-events-none absolute end-5 top-1/2 h-4 w-4 -translate-y-1/2 text-panel-faint" />
             <input
               ref={searchRef}
               type="text"
@@ -200,7 +200,7 @@ export function SearchableSelect({
               placeholder={searchPlaceholder}
               aria-autocomplete="list"
               aria-controls={listId}
-              className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#07090C] pe-10 ps-3 text-sm text-[#F5F5F5] outline-none placeholder:text-[#5E6672] focus:border-[#FF6A00]/60"
+              className="h-10 w-full rounded-xl border border-panel-line/[0.08] bg-panel-bg pe-10 ps-3 text-sm text-panel-text outline-none placeholder:text-panel-faint focus:border-[#FF6A00]/60"
             />
           </div>
 
@@ -211,7 +211,7 @@ export function SearchableSelect({
             className="admin-scrollbar max-h-64 overflow-y-auto p-1.5"
           >
             {filtered.length === 0 ? (
-              <li className="px-3 py-6 text-center text-xs font-semibold text-[#5E6672]">{emptyText}</li>
+              <li className="px-3 py-6 text-center text-xs font-semibold text-panel-faint">{emptyText}</li>
             ) : (
               filtered.map((option, index) => {
                 const isSelected = option.value === value;
@@ -226,18 +226,18 @@ export function SearchableSelect({
                     onClick={() => commit(option)}
                     className={cn(
                       "flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
-                      isHighlighted ? "bg-[#FF6A00]/[0.12]" : "hover:bg-white/[0.04]"
+                      isHighlighted ? "bg-[#FF6A00]/[0.12]" : "hover:bg-panel-line/[0.04]"
                     )}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className={cn("block truncate text-sm font-semibold", isSelected ? "text-[#FF8A2A]" : "text-[#F5F5F5]")}>
+                      <span className={cn("block truncate text-sm font-semibold", isSelected ? "text-panel-accent" : "text-panel-text")}>
                         {option.label}
                       </span>
                       {option.description && (
-                        <span className="mt-0.5 block truncate text-[11px] text-[#8B93A1]">{option.description}</span>
+                        <span className="mt-0.5 block truncate text-[11px] text-panel-muted-2">{option.description}</span>
                       )}
                     </span>
-                    {isSelected && <Check className="h-4 w-4 shrink-0 text-[#FF8A2A]" />}
+                    {isSelected && <Check className="h-4 w-4 shrink-0 text-panel-accent" />}
                   </li>
                 );
               })

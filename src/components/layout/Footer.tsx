@@ -20,7 +20,7 @@ import {
 
 export const Footer: React.FC = () => {
   const pathname = usePathname();
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/panel")) return null;
   return (
     <footer className="relative border-t border-white/[0.08] bg-[#07090C] text-[#F5F5F5] overflow-hidden pb-24 lg:pb-0">
       {/* React Bits Pro — Perspective Grid Background */}

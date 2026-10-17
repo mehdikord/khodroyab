@@ -7,6 +7,8 @@ import { userToRecord, type UserRecord } from "@/lib/users";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
+import { userPasswordSchema, userPhoneSchema } from "@/lib/validation/user";
+import { hashPassword } from "@/lib/auth/password";
 import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
@@ -33,13 +35,30 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
 
   // Basic validation
   const fieldErrors: Record<string, string> = {};
-  if (!name) fieldErrors.name = "نام الزامی است";
-  if (!phone) fieldErrors.phone = "تلفن الزامی است";
-  if (!password) fieldErrors.password = "رمز عبور الزامی است";
+  if (!name?.trim()) fieldErrors.name = "نام الزامی است";
+
+  const phoneResult = userPhoneSchema.safeParse(phone ?? "");
+  if (!phoneResult.success) fieldErrors.phone = phoneResult.error.issues[0]?.message ?? "شماره موبایل معتبر نیست";
+
+  const passwordResult = userPasswordSchema.safeParse(password ?? "");
+  if (!passwordResult.success) fieldErrors.password = passwordResult.error.issues[0]?.message ?? "رمز عبور الزامی است";
 
   if (Object.keys(fieldErrors).length > 0) {
     return { ok: false, message: "اطلاعات فرم ناقص است", fieldErrors };
   }
+
+  const normalizedPhone = phoneResult.data!;
+  const duplicate = await prisma.user.findFirst({ where: { phone: normalizedPhone }, select: { id: true } });
+  if (duplicate) {
+    return {
+      ok: false,
+      message: "این شماره موبایل قبلاً ثبت شده است",
+      fieldErrors: { phone: "کاربری با این شماره موبایل وجود دارد" },
+    };
+  }
+
+  // Never persist the plaintext: customers sign in to their own panel with it.
+  const passwordHash = await hashPassword(passwordResult.data!);
 
   let image: string | null = null;
   if (imageFile && imageFile.size > 0) {
@@ -55,10 +74,10 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
   try {
     const created = await prisma.user.create({
       data: {
-        name,
-        phone,
+        name: name.trim(),
+        phone: normalizedPhone,
         email: email || null,
-        password, // Real app: hash password
+        password: passwordHash,
         nationalCode: nationalCode || "1",
         postalCode: postalCode || null,
         address: address || null,
@@ -88,14 +107,50 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
   const name = formData.get("name") as string;
   const phone = formData.get("phone") as string;
   const email = formData.get("email") as string;
+  const password = (formData.get("password") as string | null) ?? "";
   const nationalCode = formData.get("nationalCode") as string;
   const postalCode = formData.get("postalCode") as string;
   const address = formData.get("address") as string;
   const isActive = formData.get("isActive") === "true";
   const imageFile = formData.get("imageFile") as File;
 
+  const fieldErrors: Record<string, string> = {};
+  if (!name?.trim()) fieldErrors.name = "نام الزامی است";
+
+  const phoneResult = userPhoneSchema.safeParse(phone ?? "");
+  if (!phoneResult.success) fieldErrors.phone = phoneResult.error.issues[0]?.message ?? "شماره موبایل معتبر نیست";
+
+  // An empty password field means "keep the current password".
+  let passwordHash: string | null = null;
+  if (password.length > 0) {
+    const passwordResult = userPasswordSchema.safeParse(password);
+    if (!passwordResult.success) {
+      fieldErrors.password = passwordResult.error.issues[0]?.message ?? "رمز عبور معتبر نیست";
+    } else {
+      passwordHash = await hashPassword(passwordResult.data);
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, message: "اطلاعات فرم ناقص است", fieldErrors };
+  }
+
+  const normalizedPhone = phoneResult.data!;
+
   const current = await prisma.user.findUnique({ where: { id: userId }, select: { image: true } });
   if (!current) return { ok: false, message: "کاربر یافت نشد" };
+
+  const duplicate = await prisma.user.findFirst({
+    where: { phone: normalizedPhone, NOT: { id: userId } },
+    select: { id: true },
+  });
+  if (duplicate) {
+    return {
+      ok: false,
+      message: "این شماره موبایل قبلاً ثبت شده است",
+      fieldErrors: { phone: "کاربری با این شماره موبایل وجود دارد" },
+    };
+  }
 
   let image = current.image;
   if (imageFile && imageFile.size > 0) {
@@ -107,9 +162,10 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
-        name,
-        phone,
+        name: name.trim(),
+        phone: normalizedPhone,
         email: email || null,
+        ...(passwordHash ? { password: passwordHash } : {}),
         nationalCode: nationalCode || "1",
         postalCode: postalCode || null,
         address: address || null,
@@ -146,6 +202,37 @@ export async function deleteUserAction(id: string): Promise<{ ok: true } | { ok:
     return { ok: true };
   } catch (error) {
     console.error("[users:delete] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
+}
+
+/**
+ * Toggle a user's active state without opening the edit form.
+ * @param id user id (BigInt serialized as string)
+ */
+export async function toggleUserActiveAction(id: string): Promise<{ ok: true; record: UserRecord } | { ok: false; message: string }> {
+  const guardResult = await guardRequest();
+  if (guardResult) return guardResult as any;
+
+  let userId: bigint;
+  try {
+    userId = BigInt(id);
+  } catch {
+    return { ok: false, message: "شناسه کاربر نامعتبر است" };
+  }
+
+  const current = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true } });
+  if (!current) return { ok: false, message: "کاربر یافت نشد" };
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: !current.isActive },
+    });
+    revalidatePath("/admin/users");
+    return { ok: true, record: userToRecord(updated) };
+  } catch (error) {
+    console.error("[users:toggle] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 }
