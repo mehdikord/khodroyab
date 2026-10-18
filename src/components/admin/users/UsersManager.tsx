@@ -170,16 +170,18 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
                     type="button"
                     onClick={() => handleToggleActive(user)}
                     disabled={pendingToggleId === user.id}
-                    title={user.isActive ? "برای غیرفعال کردن حساب کلیک کنید" : "برای فعال کردن حساب کلیک کنید"}
+                    title={user.isActive ? "برای غیرفعال کردن حساب کلیک کنید" : user.isPending ? "برای تایید و فعال کردن حساب کلیک کنید" : "برای فعال کردن حساب کلیک کنید"}
                     aria-pressed={user.isActive}
                     className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors disabled:cursor-wait disabled:opacity-60 ${
                       user.isActive
                         ? "border-green-500/30 bg-green-500/10 text-green-400 hover:border-green-500/60 hover:bg-green-500/20"
-                        : "border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500/60 hover:bg-red-500/20"
+                        : user.isPending
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:border-amber-500/60 hover:bg-amber-500/20"
+                          : "border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500/60 hover:bg-red-500/20"
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? "bg-green-400" : "bg-red-400"}`} />
-                    {user.isActive ? "فعال" : "غیرفعال"}
+                    <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? "bg-green-400" : user.isPending ? "bg-amber-400" : "bg-red-400"}`} />
+                    {user.isActive ? "فعال" : user.isPending ? "در انتظار تایید" : "غیرفعال"}
                   </button>
                 </td>
                 <td className="px-6 py-4 text-center">

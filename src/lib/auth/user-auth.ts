@@ -33,7 +33,7 @@ export interface CurrentUser extends SessionUser {
 
 export type AuthenticateUserResult =
   | { ok: true; user: SessionUser }
-  | { ok: false; reason: "invalid" | "inactive" };
+  | { ok: false; reason: "invalid" | "inactive" | "pending" };
 
 /**
  * Verify customer credentials against MySQL.
@@ -46,7 +46,7 @@ export async function authenticateUser(phone: string, password: string): Promise
   const user = await prisma.user.findFirst({
     where: { phone },
     orderBy: { id: "asc" },
-    select: { id: true, name: true, phone: true, password: true, isActive: true },
+    select: { id: true, name: true, phone: true, password: true, isActive: true, approvedAt: true },
   });
 
   if (!user) {
@@ -68,7 +68,10 @@ export async function authenticateUser(phone: string, password: string): Promise
   }
 
   if (!valid) return { ok: false, reason: "invalid" };
-  if (!user.isActive) return { ok: false, reason: "inactive" };
+  if (!user.isActive) {
+    // Self-registered accounts stay inactive until an administrator approves them.
+    return { ok: false, reason: user.approvedAt === null ? "pending" : "inactive" };
+  }
 
   return { ok: true, user: { id: user.id.toString(), name: user.name, phone: user.phone } };
 }

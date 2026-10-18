@@ -83,6 +83,8 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
         address: address || null,
         image,
         isActive: true,
+        // Admin-created accounts never wait in the approval queue.
+        approvedAt: new Date(),
       },
     });
     revalidatePath("/admin/users");
@@ -137,7 +139,7 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
 
   const normalizedPhone = phoneResult.data!;
 
-  const current = await prisma.user.findUnique({ where: { id: userId }, select: { image: true } });
+  const current = await prisma.user.findUnique({ where: { id: userId }, select: { image: true, approvedAt: true } });
   if (!current) return { ok: false, message: "کاربر یافت نشد" };
 
   const duplicate = await prisma.user.findFirst({
@@ -171,9 +173,12 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
         address: address || null,
         image,
         isActive,
+        // Activating a pending account from the edit form counts as approval.
+        ...(isActive ? { approvedAt: current.approvedAt ?? new Date() } : {}),
       },
     });
     revalidatePath("/admin/users");
+    revalidatePath("/admin/users/pending");
     return { ok: true, record: userToRecord(updated) };
   } catch (error) {
     console.error("[users:update] failed", error);
@@ -199,6 +204,7 @@ export async function deleteUserAction(id: string): Promise<{ ok: true } | { ok:
     await prisma.user.delete({ where: { id: userId } });
     if (isManagedUpload(current.image)) await removeUpload(current.image, "users");
     revalidatePath("/admin/users");
+    revalidatePath("/admin/users/pending");
     return { ok: true };
   } catch (error) {
     console.error("[users:delete] failed", error);
@@ -221,15 +227,18 @@ export async function toggleUserActiveAction(id: string): Promise<{ ok: true; re
     return { ok: false, message: "شناسه کاربر نامعتبر است" };
   }
 
-  const current = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true } });
+  const current = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true, approvedAt: true } });
   if (!current) return { ok: false, message: "کاربر یافت نشد" };
 
   try {
+    const nextActive = !current.isActive;
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { isActive: !current.isActive },
+      // Activating a pending (self-registered) account approves it as well.
+      data: { isActive: nextActive, ...(nextActive && !current.approvedAt ? { approvedAt: new Date() } : {}) },
     });
     revalidatePath("/admin/users");
+    revalidatePath("/admin/users/pending");
     return { ok: true, record: userToRecord(updated) };
   } catch (error) {
     console.error("[users:toggle] failed", error);

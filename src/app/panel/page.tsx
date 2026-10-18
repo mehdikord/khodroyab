@@ -2,15 +2,15 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, BadgeCheck, Search, Sparkles } from "lucide-react";
+import { BadgeCheck, Search, Sparkles } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { PanelLogo } from "@/components/panel/PanelLogo";
-import { UserLoginForm } from "@/components/panel/UserLoginForm";
+import { UserAuthCard } from "@/components/panel/UserAuthCard";
 
 export const metadata: Metadata = {
-  title: "ورود به پنل کاربری | خودرو یاب",
-  description: "ورود کاربران خودرو یاب برای جستجوی خودرو و مدیریت آگهی‌ها",
+  title: "ورود / ثبت‌نام | پنل کاربری خودرو یاب",
+  description: "ورود یا ثبت‌نام کاربران خودرو یاب برای جستجوی خودرو و مدیریت آگهی‌ها",
   robots: "noindex, nofollow",
 };
 
@@ -20,7 +20,7 @@ const HIGHLIGHTS = [
   { icon: Sparkles, text: "طراحی‌شده برای موبایل و لپ‌تاپ" },
 ];
 
-/** Customer login screen at exactly `/panel`. */
+/** Customer login / registration screen at exactly `/panel`. */
 export default async function PanelLoginPage() {
   // A *valid* session skips the login screen. A stale/invalid cookie simply
   // falls through to the form (never trusted without verification).
@@ -43,7 +43,7 @@ export default async function PanelLoginPage() {
             <span className="bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] bg-clip-text text-transparent"> خودرو یاب</span>
           </h1>
           <p className="mt-2 max-w-xs text-sm leading-7 text-panel-muted">
-            برای جستجوی خودرو و مدیریت آگهی‌های خود با شماره موبایل و رمز عبور وارد شوید.
+            با شماره موبایل و رمز عبور وارد شوید، یا اگر حساب ندارید ثبت‌نام کنید.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default async function PanelLoginPage() {
           className="admin-animate-in mt-8 rounded-3xl border border-panel-line/[0.1] bg-panel-surface/95 p-5 shadow-[0_40px_80px_rgba(0,0,0,0.9),0_0_60px_rgba(255,106,0,0.07)] backdrop-blur-2xl sm:p-7"
           style={{ animationDelay: "80ms" }}
         >
-          <UserLoginForm />
+          <UserAuthCard />
         </div>
 
         {/* Highlights */}
@@ -73,16 +73,7 @@ export default async function PanelLoginPage() {
           })}
         </ul>
 
-        <div className="mt-8 flex flex-col items-center gap-3 text-center text-xs text-panel-faint">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 rounded-full border border-panel-line/[0.08] bg-panel-surface/80 px-4 py-2 font-semibold text-panel-muted transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text"
-          >
-            <ArrowUpLeft className="h-3.5 w-3.5" />
-            بازگشت به سایت خودرو یاب
-          </Link>
-          <p>© {new Date().getFullYear()} خودرو یاب — KHODROYAB</p>
-        </div>
+        <p className="mt-8 text-center text-xs text-panel-faint">© {new Date().getFullYear()} خودرو یاب — KHODROYAB</p>
       </div>
     </div>
   );

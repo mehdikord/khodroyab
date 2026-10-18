@@ -33,8 +33,27 @@ const AREAS: ProtectedArea[] = [
   { prefix: "/panel", loginPath: "/panel", cookieName: USER_SESSION_COOKIE },
 ];
 
+/**
+ * Path prefixes that are *not* part of the public marketing site and must keep
+ * working as-is. Everything else (home, about, services, …) redirects to the
+ * customer panel: the project is currently used as a panel-only application.
+ */
+const PASSTHROUGH_PREFIXES = ["/admin", "/panel", "/uploads", "/api", "/_next"];
+
+function isPassthrough(pathname: string): boolean {
+  return PASSTHROUGH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Public website is disabled: send visitors straight to the customer panel.
+  if (!isPassthrough(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/panel";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   for (const area of AREAS) {
     const inArea = pathname === area.prefix || pathname.startsWith(`${area.prefix}/`);
@@ -62,5 +81,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/panel/:path*"],
+  // Everything except Next internals, uploads/API routes and static files (paths with an extension).
+  matcher: ["/((?!_next|uploads|api|.*\\..*).*)"],
 };

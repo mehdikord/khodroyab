@@ -41,20 +41,23 @@ model Admin {
 // ─── Table 2: users ──────────────────────────────────────────────────────────
 // NOTE: `name` is BigInt per the source design. See SCHEMA_REVIEW.md.
 model User {
-  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  name         String   @db.VarChar(255)
-  phone        String   @db.VarChar(255)
-  email        String?  @db.VarChar(255)
-  image        String?  @db.VarChar(255)
-  bio          String?  @db.Text
-  password     String   @db.VarChar(255)
-  nationalCode String?  @default("1") @map("national_code") @db.VarChar(255)
-  address      String?  @db.VarChar(255)
-  postalCode   String?  @map("postal_code") @db.VarChar(255)
-  tel          String?  @db.VarChar(255)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name         String    @db.VarChar(255)
+  phone        String    @db.VarChar(255)
+  email        String?   @db.VarChar(255)
+  image        String?   @db.VarChar(255)
+  bio          String?   @db.Text
+  password     String    @db.VarChar(255)
+  nationalCode String?   @default("1") @map("national_code") @db.VarChar(255)
+  address      String?   @db.VarChar(255)
+  postalCode   String?   @map("postal_code") @db.VarChar(255)
+  tel          String?   @db.VarChar(255)
+  isActive     Boolean   @default(true) @map("is_active")
+  /// When the admin approved the account. `null` = self-registered and still
+  /// waiting for approval; admin-created accounts are approved on creation.
+  approvedAt   DateTime? @map("approved_at") @db.Timestamp(0)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(0)
 
   userCars          UserCar[]
   priceTableEntries UserPriceTableEntry[]

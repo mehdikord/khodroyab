@@ -57,3 +57,45 @@ export function zodFieldErrors(error: z.ZodError): FieldErrors {
   }
   return fieldErrors;
 }
+
+/* ───────────────────────── Self-registration ───────────────────────── */
+
+export const USER_NAME_MAX_LENGTH = 100;
+
+export const userRegisterSchema = z
+  .object({
+    name: z
+      .string({ error: "نام الزامی است" })
+      .trim()
+      .min(2, { error: "نام باید حداقل ۲ کاراکتر باشد" })
+      .max(USER_NAME_MAX_LENGTH, { error: `نام حداکثر ${USER_NAME_MAX_LENGTH} کاراکتر است` }),
+    // Persian/Arabic digits are folded to ASCII by `normalizePhone`, so "۰۹۱۲…" is stored as "0912…".
+    phone: userPhoneSchema,
+    password: userPasswordSchema,
+    passwordConfirm: z.string({ error: "تکرار رمز عبور الزامی است" }),
+  })
+  .refine((value) => value.password === value.passwordConfirm, {
+    error: "تکرار رمز عبور با رمز عبور یکسان نیست",
+    path: ["passwordConfirm"],
+  });
+
+export type UserRegisterInput = z.infer<typeof userRegisterSchema>;
+
+export function parseUserRegisterForm(formData: FormData):
+  | { success: true; data: UserRegisterInput }
+  | { success: false; fieldErrors: FieldErrors } {
+  const read = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : "";
+  };
+
+  const result = userRegisterSchema.safeParse({
+    name: read("name"),
+    phone: read("phone"),
+    password: read("password"),
+    passwordConfirm: read("passwordConfirm"),
+  });
+
+  if (result.success) return { success: true, data: result.data };
+  return { success: false, fieldErrors: zodFieldErrors(result.error) };
+}
