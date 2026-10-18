@@ -1,0 +1,23 @@
+import React from "react";
+import type { Metadata } from "next";
+
+import { requireUser } from "@/lib/auth/user-auth";
+import { listPriceTableCars, listUserPriceTableEntries } from "@/lib/price-table";
+import { MyPriceTableManager } from "@/components/panel/price-table/MyPriceTableManager";
+
+export const metadata: Metadata = {
+  title: "جدول قیمت | پنل کاربری خودرو یاب",
+  robots: "noindex, nofollow",
+};
+
+export const dynamic = "force-dynamic";
+
+/** The customer's personal price table: colour + USD price per eligible car. */
+export default async function PanelPriceTablePage() {
+  const user = await requireUser();
+  const userId = BigInt(user.id);
+
+  const [cars, entries] = await Promise.all([listPriceTableCars(), listUserPriceTableEntries(userId)]);
+
+  return <MyPriceTableManager cars={cars} initialEntries={entries} />;
+}

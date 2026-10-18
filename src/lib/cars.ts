@@ -10,6 +10,8 @@ export interface CarRecord {
   slug: string;
   model: string;
   year: string;
+  /** Whether customers may list this car in their personal price table. */
+  priceTable: boolean;
   brandName: string;
   carTypeName: string;
   createdAt: string;
@@ -25,6 +27,7 @@ export function carToRecord(car: Car & { brand: Brand; carType: CarType }): CarR
     slug: car.slug,
     model: car.model,
     year: car.year,
+    priceTable: car.priceTable,
     brandName: car.brand.name,
     carTypeName: car.carType.name,
     createdAt: car.createdAt.toISOString(),

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone } from "lucide-react";
+import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface AdminSubNavItem {
@@ -124,6 +124,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
             href: "/admin/options",
           },
         ],
+      },
+      {
+        key: "price_table",
+        label: "مدیریت جدول قیمت",
+        enLabel: "PRICE TABLE",
+        href: "/admin/price-table",
+        icon: Table2,
       },
     ],
   },

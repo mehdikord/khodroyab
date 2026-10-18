@@ -56,7 +56,8 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  userCars UserCar[]
+  userCars          UserCar[]
+  priceTableEntries UserPriceTableEntry[]
 
   @@map("users")
 }
@@ -92,22 +93,25 @@ model CarType {
 
 // ─── Table 4: cars ───────────────────────────────────────────────────────────
 model Car {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  brandId   BigInt   @map("brand_id") @db.UnsignedBigInt
-  carTypeId BigInt   @map("car_type_id") @db.UnsignedBigInt
-  name      String   @db.VarChar(255)
-  slug      String   @db.VarChar(255)
-  model     String   @db.VarChar(255)
-  year      String   @db.VarChar(255)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandId    BigInt   @map("brand_id") @db.UnsignedBigInt
+  carTypeId  BigInt   @map("car_type_id") @db.UnsignedBigInt
+  name       String   @db.VarChar(255)
+  slug       String   @db.VarChar(255)
+  model      String   @db.VarChar(255)
+  year       String   @db.VarChar(255)
+  /// When true, customers may list this car in their personal price table.
+  priceTable Boolean  @default(false) @map("price_table")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   carType CarType @relation(fields: [carTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  carOptions CarOption[]
-  userCars   UserCar[]
-  carImages  CarImage[]
+  carOptions        CarOption[]
+  userCars          UserCar[]
+  carImages         CarImage[]
+  priceTableEntries UserPriceTableEntry[]
 
   @@index([brandId])
   @@index([carTypeId])
@@ -264,4 +268,26 @@ model UserCarSaleTermPriceHistory {
 
   @@index([userCarSaleTermId, createdAt])
   @@map("user_car_sale_term_price_histories")
+}
+
+// ─── Table 13: user_price_table_entries ──────────────────────────────────────
+// A customer's personal price table: one row per (user, car). Only cars with
+// `cars.price_table = true` may appear here; the admin controls that flag.
+model UserPriceTableEntry {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt   @map("user_id") @db.UnsignedBigInt
+  carId     BigInt   @map("car_id") @db.UnsignedBigInt
+  /// Free-text colour entered by the customer (e.g. "سفید").
+  color     String   @db.VarChar(255)
+  /// Price in US dollars (digit-only string, same convention as sale-term prices).
+  priceUsd  String   @map("price_usd") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  car  Car  @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userId, carId])
+  @@index([carId])
+  @@map("user_price_table_entries")
 }

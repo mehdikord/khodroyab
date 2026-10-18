@@ -2,13 +2,16 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BadgeCheck, CalendarDays, Megaphone, Quote, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarDays, Megaphone, Quote, Sparkles, Table2 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth/user-auth";
 import { getSellerProfile, listSellerApprovedAds } from "@/lib/panel-search";
+import { getUserPriceTableRows } from "@/lib/price-table";
 import { toPersianDigits } from "@/lib/utils";
 import { SafeImage } from "@/components/panel/SafeImage";
 import { AdCard } from "@/components/panel/search/AdCard";
+import { PriceTableView } from "@/components/panel/price-table/PriceTableView";
+import { SellerProfileTabs } from "@/components/panel/sellers/SellerProfileTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -32,14 +35,18 @@ function initials(name: string): string {
 }
 
 /**
- * Public seller profile as seen by other customers: avatar, name, bio and the
- * seller's approved ads (same cards as the search, including price history).
+ * Public seller profile as seen by other customers: avatar, name, bio, then two
+ * tabs: the seller's approved ads (same cards as the search, including price
+ * history) and the seller's price table (every eligible car, "---" for gaps).
  */
 export default async function SellerProfilePage({ params }: PageProps) {
   await requireUser();
 
-  const [seller, ads] = await Promise.all([getSellerProfile(params.id), listSellerApprovedAds(params.id)]);
+  const seller = await getSellerProfile(params.id);
   if (!seller) notFound();
+
+  const [ads, priceRows] = await Promise.all([listSellerApprovedAds(params.id), getUserPriceTableRows(BigInt(seller.id))]);
+  const pricedCount = priceRows.filter((row) => row.entry !== null).length;
 
   return (
     <div className="space-y-5">
@@ -111,34 +118,72 @@ export default async function SellerProfilePage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Ads */}
-      <div className="admin-animate-in flex items-center justify-between" style={{ animationDelay: "120ms" }}>
-        <h2 className="flex items-center gap-2 text-base font-black text-panel-text">
-          <Sparkles className="h-4 w-4 text-panel-accent" />
-          آگهی‌های {seller.name}
-        </h2>
-        <span className="rounded-lg bg-panel-line/[0.05] px-2 py-1 text-[11px] font-bold text-panel-muted">
-          {toPersianDigits(ads.length)} آگهی
-        </span>
-      </div>
+      {/* Tabs: ads (default) / price table */}
+      <SellerProfileTabs
+        adsCount={ads.length}
+        priceTableCount={pricedCount}
+        adsPanel={
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-black text-panel-text">
+                <Sparkles className="h-4 w-4 text-panel-accent" />
+                آگهی‌های {seller.name}
+              </h2>
+              <span className="rounded-lg bg-panel-line/[0.05] px-2 py-1 text-[11px] font-bold text-panel-muted">
+                {toPersianDigits(ads.length)} آگهی
+              </span>
+            </div>
 
-      {ads.length === 0 ? (
-        <div className="admin-animate-in relative overflow-hidden rounded-3xl border border-dashed border-panel-line/[0.12] bg-panel-surface/60 px-6 py-14 text-center">
-          <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
-          <div className="relative">
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-panel-line/[0.08] bg-panel-surface text-panel-faint">
-              <Megaphone className="h-7 w-7" />
-            </span>
-            <p className="mt-5 text-base font-extrabold text-panel-text">این فروشنده در حال حاضر آگهی فعالی ندارد</p>
+            {ads.length === 0 ? (
+              <div className="relative overflow-hidden rounded-3xl border border-dashed border-panel-line/[0.12] bg-panel-surface/60 px-6 py-14 text-center">
+                <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
+                <div className="relative">
+                  <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-panel-line/[0.08] bg-panel-surface text-panel-faint">
+                    <Megaphone className="h-7 w-7" />
+                  </span>
+                  <p className="mt-5 text-base font-extrabold text-panel-text">این فروشنده در حال حاضر آگهی فعالی ندارد</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {ads.map((ad, index) => (
+                  <AdCard key={ad.id} ad={ad} delay={Math.min(index, 8) * 45} hideSeller />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {ads.map((ad, index) => (
-            <AdCard key={ad.id} ad={ad} delay={Math.min(index, 8) * 45} hideSeller />
-          ))}
-        </div>
-      )}
+        }
+        priceTablePanel={
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-black text-panel-text">
+                <Table2 className="h-4 w-4 text-panel-accent" />
+                جدول قیمت {seller.name}
+              </h2>
+              <span className="rounded-lg bg-panel-line/[0.05] px-2 py-1 text-[11px] font-bold text-panel-muted">
+                {toPersianDigits(pricedCount)} از {toPersianDigits(priceRows.length)} خودرو
+              </span>
+            </div>
+
+            {priceRows.length === 0 ? (
+              <div className="relative overflow-hidden rounded-3xl border border-dashed border-panel-line/[0.12] bg-panel-surface/60 px-6 py-14 text-center">
+                <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
+                <div className="relative">
+                  <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-panel-line/[0.08] bg-panel-surface text-panel-faint">
+                    <Table2 className="h-7 w-7" />
+                  </span>
+                  <p className="mt-5 text-base font-extrabold text-panel-text">هنوز خودرویی برای جدول قیمت تعریف نشده است</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <PriceTableView rows={priceRows} />
+                <p className="text-[11px] text-panel-faint">قیمت‌ها به دلار و توسط فروشنده ثبت شده‌اند. «---» یعنی فروشنده برای آن خودرو قیمتی ثبت نکرده است.</p>
+              </>
+            )}
+          </div>
+        }
+      />
     </div>
   );
 }
