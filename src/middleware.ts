@@ -44,15 +44,33 @@ function isPassthrough(pathname: string): boolean {
   return PASSTHROUGH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+/**
+ * Build an absolute redirect URL on the host the *visitor* used.
+ *
+ * Behind a reverse proxy (nginx, Caddy, …) `request.nextUrl` carries the
+ * internal origin (e.g. `http://localhost:3052`), so redirecting to it would
+ * send browsers to a host they cannot reach. Prefer the forwarded headers set
+ * by the proxy and fall back to the plain `Host` header.
+ */
+function redirectTo(request: NextRequest, pathname: string): NextResponse {
+  const headers = request.headers;
+  const forwardedHost = headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || headers.get("host") || request.nextUrl.host;
+  const forwardedProto = headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = forwardedProto || request.nextUrl.protocol.replace(":", "") || "https";
+
+  const url = new URL(`${protocol}://${host}`);
+  url.pathname = pathname;
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public website is disabled: send visitors straight to the customer panel.
   if (!isPassthrough(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/panel";
-    url.search = "";
-    return NextResponse.redirect(url);
+    return redirectTo(request, "/panel");
   }
 
   for (const area of AREAS) {
@@ -68,10 +86,7 @@ export function middleware(request: NextRequest) {
     // Every other route in the area requires at least a session cookie before
     // it is handed to the server for verification.
     if (!request.cookies.has(area.cookieName)) {
-      const url = request.nextUrl.clone();
-      url.pathname = area.loginPath;
-      url.search = "";
-      return NextResponse.redirect(url);
+      return redirectTo(request, area.loginPath);
     }
 
     return NextResponse.next();
