@@ -61,6 +61,7 @@ model User {
 
   userCars          UserCar[]
   priceTableEntries UserPriceTableEntry[]
+  subscriptions     UserSubscription[]
 
   @@map("users")
 }
@@ -293,4 +294,65 @@ model UserPriceTableEntry {
   @@unique([userId, carId])
   @@index([carId])
   @@map("user_price_table_entries")
+}
+
+// ─── Table 14: subscription_plans ────────────────────────────────────────────
+// Plans the administrator can grant to customers. A plan's duration is in
+// months; every month counts as 30 days of panel access.
+model SubscriptionPlan {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name           String   @db.VarChar(255)
+  durationMonths Int      @map("duration_months") @db.UnsignedInt
+  /// Digit-only string (Toman), same convention as sale-term prices.
+  price          String   @db.VarChar(255)
+  description    String?  @db.Text
+  /// Inactive plans stay in history but can no longer be granted.
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  userSubscriptions UserSubscription[]
+
+  @@map("subscription_plans")
+}
+
+/// Lifecycle of one granted subscription.
+/// - `active`: the user's current subscription (access until `ends_at`).
+/// - `renewed`: superseded by a newer grant that absorbed its remaining days.
+/// - `cancelled`: revoked by an administrator before it ran out.
+enum UserSubscriptionStatus {
+  active
+  renewed
+  cancelled
+}
+
+// ─── Table 15: user_subscriptions ────────────────────────────────────────────
+// Append-only history of every subscription granted to a user. Plan fields are
+// snapshotted so later edits to a plan never rewrite the user's history.
+model UserSubscription {
+  id             BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  userId         BigInt                 @map("user_id") @db.UnsignedBigInt
+  planId         BigInt                 @map("plan_id") @db.UnsignedBigInt
+  planName       String                 @map("plan_name") @db.VarChar(255)
+  durationMonths Int                    @map("duration_months") @db.UnsignedInt
+  price          String                 @db.VarChar(255)
+  /// Days granted by this plan (duration_months × 30).
+  addedDays      Int                    @map("added_days") @db.UnsignedInt
+  /// Remaining days carried over from the previous active subscription.
+  carriedDays    Int                    @default(0) @map("carried_days") @db.UnsignedInt
+  /// Free-text note entered by the administrator.
+  description    String?                @db.Text
+  status         UserSubscriptionStatus @default(active)
+  startsAt       DateTime               @map("starts_at") @db.Timestamp(0)
+  endsAt         DateTime               @map("ends_at") @db.Timestamp(0)
+  cancelledAt    DateTime?              @map("cancelled_at") @db.Timestamp(0)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userId, status, endsAt])
+  @@index([planId])
+  @@map("user_subscriptions")
 }

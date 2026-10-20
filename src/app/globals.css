@@ -183,6 +183,20 @@
   animation: adminSlideInRight 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Blinking warning marker (e.g. subscriptions about to expire). */
+@keyframes adminBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+.admin-blink {
+  animation: adminBlink 1s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-animate-in,
   .admin-animate-fade,

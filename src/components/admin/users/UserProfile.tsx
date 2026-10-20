@@ -25,6 +25,9 @@ import type { LucideIcon } from "lucide-react";
 
 import type { UserRecord } from "@/lib/users";
 import type { UserCarRecord } from "@/lib/user-cars";
+import type { SubscriptionPlanRecord, UserSubscriptionRecord } from "@/lib/subscriptions";
+import type { ActiveSubscriptionSummary } from "@/lib/subscriptions-shared";
+import { UserSubscriptionsSection } from "@/components/admin/subscriptions/UserSubscriptionsSection";
 import { Badge } from "@/components/admin/ui/Badge";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
@@ -34,6 +37,10 @@ interface UserProfileProps {
   saleAdsCount: number;
   /** Latest ads (max 5) for the minimal preview list. */
   recentAds: UserCarRecord[];
+  subscriptionHistory: UserSubscriptionRecord[];
+  activeSubscription: ActiveSubscriptionSummary | null;
+  /** Active plans offered in the "add subscription" modal. */
+  plans: SubscriptionPlanRecord[];
 }
 
 /** Lowest active price across an ad's sale terms, or null when none exist. */
@@ -220,7 +227,14 @@ function DetailRow({
 
 /* ───────────────────────── main ───────────────────────── */
 
-export function UserProfile({ user, saleAdsCount, recentAds }: UserProfileProps) {
+export function UserProfile({
+  user,
+  saleAdsCount,
+  recentAds,
+  subscriptionHistory,
+  activeSubscription,
+  plans,
+}: UserProfileProps) {
   const membershipDays = daysSince(user.createdAt);
   const saleAdsHref = `/admin/users/${user.id}/sale-ads`;
 
@@ -394,6 +408,14 @@ export function UserProfile({ user, saleAdsCount, recentAds }: UserProfileProps)
           </div>
         </div>
       </section>
+
+      {/* ───────── Subscriptions ───────── */}
+      <UserSubscriptionsSection
+        user={{ id: user.id, name: user.name }}
+        plans={plans}
+        initialHistory={subscriptionHistory}
+        initialActive={activeSubscription}
+      />
 
       {/* ───────── Sale ads (latest 5) ───────── */}
       <section className="admin-animate-in rounded-3xl border border-white/[0.07] bg-[#0D1117] p-5 sm:p-6">

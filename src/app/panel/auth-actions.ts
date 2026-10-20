@@ -63,6 +63,10 @@ export async function loginUserAction(formData: FormData): Promise<UserLoginActi
         message: "حساب شما ثبت شده اما هنوز توسط مدیر تایید نشده است. پس از تایید می‌توانید وارد شوید.",
       };
     }
+    if (result.reason === "expired") {
+      // Correct credentials, no active subscription: not a failed attempt either.
+      return { ok: false, message: "اشتراک شما به پایان رسیده است، لطفاً با مدیریت تماس بگیرید." };
+    }
     if (result.reason === "inactive") {
       // Correct credentials, disabled account: say so without counting a failure.
       return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };

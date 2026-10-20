@@ -15,7 +15,11 @@ export default async function PanelAppLayout({ children }: { children: React.Rea
   const theme = readPanelTheme();
 
   return (
-    <PanelShell user={{ name: user.name, phone: user.phone, image: user.image }} theme={theme}>
+    <PanelShell
+      user={{ name: user.name, phone: user.phone, image: user.image }}
+      subscriptionDaysLeft={user.subscriptionDaysLeft}
+      theme={theme}
+    >
       {children}
     </PanelShell>
   );

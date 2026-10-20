@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ExternalLink, LogOut } from "lucide-react";
+import { CalendarClock, ChevronDown, ExternalLink, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
@@ -11,6 +11,8 @@ import { PANEL_NAV_ITEMS, findActivePanelItem } from "@/components/panel/panel-n
 import { logoutUserAction } from "@/app/panel/auth-actions";
 import { ThemeSwitch } from "@/components/panel/ThemeSwitch";
 import type { PanelTheme } from "@/lib/panel-theme";
+import { SUBSCRIPTION_WARNING_DAYS } from "@/lib/subscriptions-shared";
+import { toPersianDigits } from "@/lib/utils";
 
 export interface PanelShellUser {
   name: string;
@@ -20,6 +22,8 @@ export interface PanelShellUser {
 
 interface PanelShellProps {
   user: PanelShellUser;
+  /** Days left on the active subscription, shown as a header badge. */
+  subscriptionDaysLeft: number;
   /** Server-resolved theme (from cookie). */
   theme: PanelTheme;
   children: React.ReactNode;
@@ -46,6 +50,27 @@ function Avatar({ user, className }: { user: PanelShellUser; className?: string 
       ) : (
         getInitials(user.name)
       )}
+    </span>
+  );
+}
+
+/** Remaining subscription days: green normally, red under the warning threshold. */
+function SubscriptionDaysBadge({ days }: { days: number }) {
+  const warning = days < SUBSCRIPTION_WARNING_DAYS;
+  return (
+    <span
+      title={`${toPersianDigits(days)} روز از اشتراک شما باقی مانده است`}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-extrabold",
+        warning
+          ? "border-red-500/40 bg-red-500/[0.12] text-red-500"
+          : "border-emerald-500/40 bg-emerald-500/[0.12] text-emerald-500"
+      )}
+    >
+      <CalendarClock className="h-3.5 w-3.5" />
+      <span>
+        {toPersianDigits(days)} روز<span className="hidden sm:inline"> اشتراک</span>
+      </span>
     </span>
   );
 }
@@ -98,7 +123,7 @@ function Dock({ pathname }: { pathname: string }) {
 }
 
 /** Customer-panel chrome: sticky top bar, content area, fixed bottom dock. */
-export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, children }) => {
+export const PanelShell: React.FC<PanelShellProps> = ({ user, subscriptionDaysLeft, theme, children }) => {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -142,6 +167,8 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, children })
           <div className="min-w-0 flex-1 border-s border-panel-line/[0.08] ps-3 sm:ps-4">
             <p className="truncate text-[15px] font-extrabold text-panel-text sm:text-base">{pageTitle}</p>
           </div>
+
+          <SubscriptionDaysBadge days={subscriptionDaysLeft} />
 
           {/* Theme switch */}
           <ThemeSwitch initialTheme={theme} />

@@ -2,21 +2,31 @@
 
 import React, { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Users, Edit2, Trash2, UserCircle2 } from "lucide-react";
+import { Plus, Users, Edit2, Trash2, UserCircle2, AlertTriangle } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { UserFormModal } from "@/components/admin/users/UserFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
+import { SubscriptionBadge } from "@/components/admin/subscriptions/SubscriptionBadge";
+import { GrantSubscriptionModal } from "@/components/admin/subscriptions/GrantSubscriptionModal";
 import { deleteUserAction, toggleUserActiveAction } from "@/app/admin/(panel)/users/actions";
 import type { UserRecord } from "@/lib/users";
+import type { SubscriptionPlanRecord } from "@/lib/subscriptions";
+import { isExpiringSoon, type ActiveSubscriptionSummary } from "@/lib/subscriptions-shared";
 import { toPersianDigits } from "@/lib/utils";
 
 interface UsersManagerProps {
   initialUsers: UserRecord[];
+  /** Current subscription per user id; users without one are absent. */
+  initialSubscriptions: Record<string, ActiveSubscriptionSummary>;
+  /** Active plans offered in the "add subscription" modal. */
+  plans: SubscriptionPlanRecord[];
 }
 
-export function UsersManager({ initialUsers }: UsersManagerProps) {
+export function UsersManager({ initialUsers, initialSubscriptions, plans }: UsersManagerProps) {
   const [users, setUsers] = useState<UserRecord[]>(initialUsers);
+  const [subscriptions, setSubscriptions] = useState<Record<string, ActiveSubscriptionSummary>>(initialSubscriptions);
+  const [grantTarget, setGrantTarget] = useState<UserRecord | null>(null);
   const [query, setQuery] = useState("");
   const [modalUser, setModalUser] = useState<UserRecord | null | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
@@ -26,14 +36,23 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return users;
-    return users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(normalized) ||
-        user.phone.includes(normalized) ||
-        (user.email && user.email.toLowerCase().includes(normalized))
-    );
-  }, [users, query]);
+    const matched = normalized
+      ? users.filter(
+          (user) =>
+            user.name.toLowerCase().includes(normalized) ||
+            user.phone.includes(normalized) ||
+            (user.email && user.email.toLowerCase().includes(normalized))
+        )
+      : users;
+
+    // Subscriptions about to expire float to the top (fewest days first); the
+    // rest keep their original order.
+    const expiring = matched
+      .filter((user) => isExpiringSoon(subscriptions[user.id] ?? null))
+      .sort((a, b) => subscriptions[a.id].remainingDays - subscriptions[b.id].remainingDays);
+    const rest = matched.filter((user) => !isExpiringSoon(subscriptions[user.id] ?? null));
+    return [...expiring, ...rest];
+  }, [users, query, subscriptions]);
 
   function showToast(kind: ToastState["kind"], message: string) {
     setToast({ kind, message });
@@ -100,6 +119,27 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
         />
       )}
 
+      {grantTarget && (
+        <GrantSubscriptionModal
+          user={grantTarget}
+          plans={plans}
+          current={subscriptions[grantTarget.id] ?? null}
+          onClose={() => setGrantTarget(null)}
+          onSuccess={(result) => {
+            const userId = grantTarget.id;
+            setSubscriptions((prev) => {
+              const next = { ...prev };
+              if (result.active) next[userId] = result.active;
+              else delete next[userId];
+              return next;
+            });
+            showToast("success", `اشتراک «${result.record.planName}» برای «${grantTarget.name}» ثبت شد`);
+            setGrantTarget(null);
+          }}
+          onError={(msg) => showToast("error", msg)}
+        />
+      )}
+
       {deleteTarget && (
         <ConfirmDialog
           open={true}
@@ -138,13 +178,17 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
               <th className="px-6 py-4">کد ملی</th>
               <th className="px-6 py-4">کد پستی</th>
               <th className="px-6 py-4">آدرس</th>
+              <th className="px-6 py-4 text-center">اشتراک</th>
               <th className="px-6 py-4 text-center">وضعیت</th>
               <th className="px-6 py-4 text-center">عملیات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
-            {filteredUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-white/[0.02]">
+            {filteredUsers.map((user) => {
+              const subscription = subscriptions[user.id] ?? null;
+              const expiring = isExpiringSoon(subscription);
+              return (
+              <tr key={user.id} className={expiring ? "bg-red-500/[0.04] hover:bg-red-500/[0.07]" : "hover:bg-white/[0.02]"}>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/[0.1] bg-[#07090C]">
@@ -158,6 +202,15 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
                       )}
                     </div>
                     <span className="font-semibold text-[#F5F5F5]">{user.name}</span>
+                    {expiring && (
+                      <span
+                        className="admin-blink inline-flex text-red-500"
+                        title={`اشتراک این کاربر رو به اتمام است (${toPersianDigits(subscription!.remainingDays)} روز باقی‌مانده)`}
+                        aria-label="اشتراک رو به اتمام"
+                      >
+                        <AlertTriangle className="h-[18px] w-[18px]" />
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 font-mono text-[#D2D7DF]">{user.phone}</td>
@@ -165,6 +218,9 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
                 <td className="px-6 py-4 text-[#D2D7DF]">{user.nationalCode || "-"}</td>
                 <td className="px-6 py-4 text-[#D2D7DF]">{user.postalCode || "-"}</td>
                 <td className="px-6 py-4 max-w-[220px] truncate text-[#D2D7DF]" title={user.address ?? ""}>{user.address || "-"}</td>
+                <td className="px-6 py-4 text-center">
+                  <SubscriptionBadge subscription={subscription} onClick={() => setGrantTarget(user)} />
+                </td>
                 <td className="px-6 py-4 text-center">
                   <button
                     type="button"
@@ -213,7 +269,8 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
