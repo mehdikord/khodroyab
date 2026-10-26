@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
-import { carToRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { brandToRecord } from "@/lib/brands";
 import { carTypeToRecord } from "@/lib/car-types";
+import { colorToRecord } from "@/lib/colors";
 import { CarsManager } from "@/components/admin/cars/CarsManager";
 
 export const metadata: Metadata = {
@@ -18,12 +19,9 @@ export const dynamic = "force-dynamic";
 export default async function AdminCarsPage() {
   await requireAdmin();
 
-  const [cars, brands, carTypes] = await Promise.all([
+  const [cars, brands, carTypes, colors] = await Promise.all([
     prisma.car.findMany({
-      include: {
-        brand: true,
-        carType: true,
-      },
+      include: carRecordInclude,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     }),
     prisma.brand.findMany({
@@ -33,6 +31,9 @@ export default async function AdminCarsPage() {
     prisma.carType.findMany({
       orderBy: { name: "asc" },
     }),
+    prisma.color.findMany({
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (
@@ -40,6 +41,7 @@ export default async function AdminCarsPage() {
       initialCars={cars.map(carToRecord)}
       brands={brands.map(brandToRecord)}
       carTypes={carTypes.map(carTypeToRecord)}
+      colors={colors.map(colorToRecord)}
     />
   );
 }

@@ -67,19 +67,37 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
       };
     }
 
+    const colorIds = Array.from(new Set(parsed.entries.map((entry) => entry.colorId)), (id) => BigInt(id));
+    const existingColors = await prisma.color.findMany({ where: { id: { in: colorIds } }, select: { id: true } });
+    const colorSet = new Set(existingColors.map((color) => color.id.toString()));
+    for (const entry of parsed.entries) {
+      if (!colorSet.has(entry.colorId)) {
+        fieldErrors[`${entry.carId}.colorId`] = "این رنگ دیگر وجود ندارد؛ رنگ دیگری انتخاب کنید";
+      }
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      return { ok: false, message: "برخی از رنگ‌های انتخاب‌شده حذف شده‌اند؛ صفحه را به‌روزرسانی کنید", fieldErrors };
+    }
+
     const submittedIds = parsed.entries.map((entry) => BigInt(entry.carId));
 
     await prisma.$transaction([
       prisma.userPriceTableEntry.deleteMany({
         where: { userId, carId: { in: eligibleIds, notIn: submittedIds } },
       }),
-      ...parsed.entries.map((entry) =>
-        prisma.userPriceTableEntry.upsert({
+      ...parsed.entries.map((entry) => {
+        const values = {
+          colorId: BigInt(entry.colorId),
+          priceUsd: entry.priceUsd,
+          clearancePrice: entry.clearancePrice,
+          instantPrice: entry.instantPrice,
+        };
+        return prisma.userPriceTableEntry.upsert({
           where: { userId_carId: { userId, carId: BigInt(entry.carId) } },
-          create: { userId, carId: BigInt(entry.carId), color: entry.color, priceUsd: entry.priceUsd },
-          update: { color: entry.color, priceUsd: entry.priceUsd },
-        })
-      ),
+          create: { userId, carId: BigInt(entry.carId), ...values },
+          update: values,
+        });
+      }),
     ]);
 
     revalidatePath("/panel/price-table");

@@ -8,6 +8,8 @@ import { createCarAction, updateCarAction } from "@/app/admin/(panel)/cars/actio
 import type { CarRecord } from "@/lib/cars";
 import type { BrandRecord } from "@/lib/brands";
 import type { CarTypeRecord } from "@/lib/car-types";
+import type { ColorRecord } from "@/lib/colors";
+import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { cn } from "@/lib/utils";
 
 interface CarFormModalProps {
@@ -15,6 +17,7 @@ interface CarFormModalProps {
   car: CarRecord | null;
   brands: BrandRecord[];
   carTypes: CarTypeRecord[];
+  colors: ColorRecord[];
   onClose: () => void;
   onSuccess: (record: CarRecord) => void;
   onError: (message: string) => void;
@@ -32,6 +35,7 @@ export function CarFormModal({
   car,
   brands,
   carTypes,
+  colors,
   onClose,
   onSuccess,
   onError,
@@ -41,6 +45,7 @@ export function CarFormModal({
   const slugId = useId();
   const brandIdId = useId();
   const carTypeIdId = useId();
+  const colorIdId = useId();
   const modelId = useId();
   const yearId = useId();
 
@@ -48,10 +53,12 @@ export function CarFormModal({
   const [slug, setSlug] = useState(car?.slug ?? "");
   const [brandId, setBrandId] = useState(car?.brandId ?? (brands[0]?.id || ""));
   const [carTypeId, setCarTypeId] = useState(car?.carTypeId ?? (carTypes[0]?.id || ""));
+  const [colorId, setColorId] = useState(car?.colorId ?? "");
   const [model, setModel] = useState(car?.model ?? "");
   const [year, setYear] = useState(car?.year ?? "");
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const selectedColor = colors.find((c) => c.id === colorId) ?? null;
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -65,6 +72,7 @@ export function CarFormModal({
     formData.set("slug", slug);
     formData.set("brandId", brandId);
     formData.set("carTypeId", carTypeId);
+    formData.set("colorId", colorId);
     formData.set("model", model);
     formData.set("year", year);
 
@@ -228,6 +236,41 @@ export function CarFormModal({
               className={inputClassName(Boolean(fieldErrors.year))}
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor={colorIdId} className="block text-xs font-bold text-[#D2D7DF]">
+            رنگ (اختیاری)
+          </label>
+          <div className="relative">
+            <select
+              id={colorIdId}
+              disabled={isPending}
+              value={colorId}
+              onChange={(e) => setColorId(e.target.value)}
+              className={cn(inputClassName(Boolean(fieldErrors.colorId)), selectedColor && "pr-11")}
+            >
+              <option value="">بدون رنگ</option>
+              {colors.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {selectedColor && (
+              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+                <ColorSwatch code={selectedColor.code} />
+              </span>
+            )}
+          </div>
+          {colors.length === 0 && (
+            <p className="text-[11px] text-[#5E6672]">
+              هنوز رنگی تعریف نشده است؛ از منوی «رنگ‌ها» رنگ اضافه کنید.
+            </p>
+          )}
+          {fieldErrors.colorId && (
+            <p className="text-xs font-semibold text-red-400">{fieldErrors.colorId}</p>
+          )}
         </div>
 
         <div className="space-y-2">

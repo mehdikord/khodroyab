@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
-import { carToRecord, type CarRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord, type CarRecord } from "@/lib/cars";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { parseCarForm } from "@/lib/validation/cars";
@@ -27,6 +27,12 @@ function isPrismaCode(error: unknown, code: string): boolean {
   }
   return false;
 }
+
+/** A brand, car type or colour picked in the form no longer exists. */
+const STALE_RELATION_RESULT = {
+  ok: false as const,
+  message: "برند، نوع یا رنگ انتخاب‌شده دیگر وجود ندارد؛ صفحه را به‌روزرسانی کنید.",
+};
 
 async function guardRequest(): Promise<
   { ok: false; message: string } | null
@@ -60,20 +66,19 @@ export async function createCarAction(
       data: {
         brandId: BigInt(parsed.data.brandId),
         carTypeId: BigInt(parsed.data.carTypeId),
+        colorId: parsed.data.colorId ? BigInt(parsed.data.colorId) : null,
         name: parsed.data.name,
         slug: parsed.data.slug,
         model: parsed.data.model,
         year: parsed.data.year,
       },
-      include: {
-        brand: true,
-        carType: true,
-      },
+      include: carRecordInclude,
     });
 
     revalidatePath("/admin/cars");
     return { ok: true, record: carToRecord(created) };
   } catch (error) {
+    if (isPrismaCode(error, "P2003")) return STALE_RELATION_RESULT;
     console.error("[cars:create] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
@@ -108,20 +113,19 @@ export async function updateCarAction(
       data: {
         brandId: BigInt(parsed.data.brandId),
         carTypeId: BigInt(parsed.data.carTypeId),
+        colorId: parsed.data.colorId ? BigInt(parsed.data.colorId) : null,
         name: parsed.data.name,
         slug: parsed.data.slug,
         model: parsed.data.model,
         year: parsed.data.year,
       },
-      include: {
-        brand: true,
-        carType: true,
-      },
+      include: carRecordInclude,
     });
 
     revalidatePath("/admin/cars");
     return { ok: true, record: carToRecord(updated) };
   } catch (error) {
+    if (isPrismaCode(error, "P2003")) return STALE_RELATION_RESULT;
     console.error("[cars:update] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }

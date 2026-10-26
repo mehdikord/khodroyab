@@ -133,6 +133,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
             href: "/admin/car-types",
           },
           {
+            key: "colors",
+            label: "رنگ‌ها",
+            enLabel: "COLORS",
+            href: "/admin/colors",
+          },
+          {
             key: "options",
             label: "ویژگی‌ها",
             enLabel: "FEATURES",

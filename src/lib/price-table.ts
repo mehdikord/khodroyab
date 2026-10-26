@@ -17,9 +17,16 @@ export interface PriceTableCarRecord {
 /** What a customer has entered for one car. */
 export interface PriceTableEntryRecord {
   carId: string;
-  color: string;
-  /** Digit-only USD price string, e.g. "12500". */
-  priceUsd: string;
+  colorId: string | null;
+  colorName: string | null;
+  /** Hex code of the chosen colour, e.g. "#ffffff". */
+  colorCode: string | null;
+  /** Raw price: digit-only USD string, e.g. "12500"; `null` when left blank. */
+  priceUsd: string | null;
+  /** Clearance price, same format as `priceUsd`. */
+  clearancePrice: string | null;
+  /** Instant price, same format as `priceUsd`. */
+  instantPrice: string | null;
 }
 
 /**
@@ -67,10 +74,25 @@ export async function listPriceTableCars(): Promise<PriceTableCarRecord[]> {
 export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTableEntryRecord[]> {
   const entries = await prisma.userPriceTableEntry.findMany({
     where: { userId, car: { priceTable: true } },
-    select: { carId: true, color: true, priceUsd: true },
+    select: {
+      carId: true,
+      colorId: true,
+      priceUsd: true,
+      clearancePrice: true,
+      instantPrice: true,
+      color: { select: { name: true, code: true } },
+    },
     orderBy: { id: "asc" },
   });
-  return entries.map((entry) => ({ carId: entry.carId.toString(), color: entry.color, priceUsd: entry.priceUsd }));
+  return entries.map((entry) => ({
+    carId: entry.carId.toString(),
+    colorId: entry.colorId?.toString() ?? null,
+    colorName: entry.color?.name ?? null,
+    colorCode: entry.color?.code ?? null,
+    priceUsd: entry.priceUsd,
+    clearancePrice: entry.clearancePrice,
+    instantPrice: entry.instantPrice,
+  }));
 }
 
 /** Merge eligible cars with a customer's entries into display rows (one per car). */

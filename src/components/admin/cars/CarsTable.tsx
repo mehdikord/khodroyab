@@ -5,6 +5,7 @@ import { Edit2, Trash2, ListChecks, Eye, Image as ImageIcon } from "lucide-react
 import Link from "next/link";
 
 import type { CarRecord } from "@/lib/cars";
+import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { toPersianDigits } from "@/lib/utils";
 
 interface CarsTableProps {
@@ -38,6 +39,9 @@ export function CarsTable({
             <th scope="col" className="px-4 py-4 text-right font-bold text-[#8B93A1] uppercase tracking-wider">
               مدل / سال
             </th>
+            <th scope="col" className="px-4 py-4 text-right font-bold text-[#8B93A1] uppercase tracking-wider">
+              رنگ
+            </th>
             <th scope="col" className="px-4 py-4 text-center font-bold text-[#8B93A1] uppercase tracking-wider">
               مشخصات
             </th>
@@ -60,6 +64,16 @@ export function CarsTable({
               <td className="px-4 py-4 text-[#8B93A1]">
                 <p>{toPersianDigits(car.model)}</p>
                 <p className="text-xs">{toPersianDigits(car.year)}</p>
+              </td>
+              <td className="px-4 py-4">
+                {car.colorName && car.colorCode ? (
+                  <span className="inline-flex items-center gap-2 whitespace-nowrap text-sm text-[#D2D7DF]">
+                    <ColorSwatch code={car.colorCode} />
+                    {car.colorName}
+                  </span>
+                ) : (
+                  <span className="text-[#5E6672]">---</span>
+                )}
               </td>
               <td className="px-4 py-4 text-center">
                 <button

@@ -1,15 +1,18 @@
 import { z } from "zod";
 
-import { PRICE_TABLE_COLOR_MAX, PRICE_TABLE_PRICE_MAX_DIGITS, digitsOnly } from "@/lib/price-table-shared";
+import {
+  PRICE_TABLE_PRICE_FIELDS,
+  PRICE_TABLE_PRICE_MAX_DIGITS,
+  digitsOnly,
+  type PriceTablePriceField,
+} from "@/lib/price-table-shared";
 
-export { PRICE_TABLE_COLOR_MAX, PRICE_TABLE_PRICE_MAX_DIGITS };
+export { PRICE_TABLE_PRICE_MAX_DIGITS };
 
 /** One submitted row of the customer's price table. */
-export interface PriceTableEntryInput {
+export interface PriceTableEntryInput extends Record<PriceTablePriceField, string | null> {
   carId: string;
-  color: string;
-  /** Normalised digit-only USD price. */
-  priceUsd: string;
+  colorId: string;
 }
 
 export type ParsedPriceTableForm =
@@ -18,18 +21,29 @@ export type ParsedPriceTableForm =
 
 const rawEntrySchema = z.object({
   carId: z.string().regex(/^\d+$/, { error: "شناسه خودرو نامعتبر است" }),
-  color: z.string().trim().max(PRICE_TABLE_COLOR_MAX, { error: `رنگ حداکثر ${PRICE_TABLE_COLOR_MAX} کاراکتر است` }),
+  colorId: z.string().regex(/^\d*$/, { error: "رنگ انتخاب‌شده نامعتبر است" }),
   priceUsd: z.string().trim(),
+  clearancePrice: z.string().trim(),
+  instantPrice: z.string().trim(),
 });
 
 const rawEntriesSchema = z.array(rawEntrySchema).max(2000);
 
+/** Validate one typed price; returns the normalised digits or an error message. */
+function parsePrice(raw: string): { value: string } | { error: string } {
+  const digits = digitsOnly(raw).replace(/^0+(?=\d)/, "");
+  if (!digits) return { error: "قیمت باید فقط شامل رقم باشد" };
+  if (digits.length > PRICE_TABLE_PRICE_MAX_DIGITS) return { error: "قیمت واردشده بیش از حد بزرگ است" };
+  if (digits === "0") return { error: "قیمت باید بزرگ‌تر از صفر باشد" };
+  return { value: digits };
+}
+
 /**
  * Parse the JSON `entries` field of the "save my price table" form.
  *
- * Rows where both colour and price are blank are treated as "not filled in"
- * and dropped; a row with only one of the two filled is a per-row error so
- * the table never shows a price without a colour or vice versa.
+ * Rows where colour and all three prices are blank are treated as "not filled
+ * in" and dropped. A filled row needs a colour and at least one of the raw,
+ * clearance or instant prices; the other prices may stay blank.
  */
 export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
   const raw = formData.get("entries");
@@ -65,31 +79,49 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
     if (seen.has(row.carId)) continue;
     seen.add(row.carId);
 
-    const color = row.color.replace(/\s+/g, " ").trim();
-    const priceDigits = digitsOnly(row.priceUsd).replace(/^0+(?=\d)/, "");
-    const hasColor = color.length > 0;
-    const hasPrice = row.priceUsd.trim().length > 0;
+    const entry: PriceTableEntryInput = {
+      carId: row.carId,
+      colorId: row.colorId,
+      priceUsd: null,
+      clearancePrice: null,
+      instantPrice: null,
+    };
+    let hasPrice = false;
+    let rowValid = true;
 
+    for (const { key } of PRICE_TABLE_PRICE_FIELDS) {
+      if (!row[key]) continue;
+      hasPrice = true;
+      const price = parsePrice(row[key]);
+      if ("error" in price) {
+        fieldErrors[`${row.carId}.${key}`] = price.error;
+        rowValid = false;
+      } else {
+        entry[key] = price.value;
+      }
+    }
+
+    const hasColor = row.colorId.length > 0;
     if (!hasColor && !hasPrice) continue; // blank row → nothing saved for this car
 
-    if (!hasColor) fieldErrors[`${row.carId}.color`] = "رنگ خودرو را وارد کنید";
+    if (!hasColor) {
+      fieldErrors[`${row.carId}.colorId`] = "رنگ خودرو را انتخاب کنید";
+      rowValid = false;
+    }
     if (!hasPrice) {
-      fieldErrors[`${row.carId}.priceUsd`] = "قیمت را وارد کنید";
-    } else if (!priceDigits) {
-      fieldErrors[`${row.carId}.priceUsd`] = "قیمت باید فقط شامل رقم باشد";
-    } else if (priceDigits.length > PRICE_TABLE_PRICE_MAX_DIGITS) {
-      fieldErrors[`${row.carId}.priceUsd`] = "قیمت واردشده بیش از حد بزرگ است";
-    } else if (priceDigits === "0") {
-      fieldErrors[`${row.carId}.priceUsd`] = "قیمت باید بزرگ‌تر از صفر باشد";
+      fieldErrors[`${row.carId}.priceUsd`] = "حداقل یکی از قیمت‌ها را وارد کنید";
+      rowValid = false;
     }
 
-    if (hasColor && hasPrice && priceDigits && priceDigits !== "0" && priceDigits.length <= PRICE_TABLE_PRICE_MAX_DIGITS) {
-      entries.push({ carId: row.carId, color, priceUsd: priceDigits });
-    }
+    if (rowValid) entries.push(entry);
   }
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { success: false, message: "برخی از ردیف‌های جدول ناقص هستند؛ رنگ و قیمت هر ردیف را کامل کنید", fieldErrors };
+    return {
+      success: false,
+      message: "برخی از ردیف‌های جدول ناقص هستند؛ برای هر ردیف رنگ و حداقل یکی از قیمت‌ها را وارد کنید",
+      fieldErrors,
+    };
   }
 
   return { success: true, entries };

@@ -2,12 +2,13 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BadgeCheck, CalendarDays, Megaphone, Quote, Sparkles, Table2 } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarDays, MapPin, Megaphone, Phone, Quote, Smartphone, Sparkles, Table2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { requireUser } from "@/lib/auth/user-auth";
 import { getSellerProfile, listSellerApprovedAds } from "@/lib/panel-search";
 import { getUserPriceTableRows } from "@/lib/price-table";
-import { toPersianDigits } from "@/lib/utils";
+import { cn, toPersianDigits } from "@/lib/utils";
 import { SafeImage } from "@/components/panel/SafeImage";
 import { AdCard } from "@/components/panel/search/AdCard";
 import { PriceTableView } from "@/components/panel/price-table/PriceTableView";
@@ -34,8 +35,64 @@ function initials(name: string): string {
   return parts[0].slice(0, 1) + parts[1].slice(0, 1);
 }
 
+interface ContactItemProps {
+  icon: LucideIcon;
+  label: string;
+  value: string | null;
+  /** Phone numbers become tap-to-call links and read left-to-right. */
+  phone?: boolean;
+  className?: string;
+}
+
+function ContactItem({ icon: Icon, label, value, phone, className }: ContactItemProps) {
+  const content = value ? (
+    <span
+      dir={phone ? "ltr" : undefined}
+      className={cn(
+        "block text-[13px] font-extrabold text-panel-text sm:text-sm",
+        phone ? "text-right font-mono tracking-wider" : "whitespace-pre-line break-words leading-6"
+      )}
+    >
+      {toPersianDigits(value)}
+    </span>
+  ) : (
+    <span className="block text-xs font-semibold text-panel-faint">ثبت نشده</span>
+  );
+
+  const body = (
+    <>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#FF6A00]/25 bg-[#FF6A00]/10 text-panel-accent transition-colors group-hover/contact:bg-[#FF6A00]/20">
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1 text-start">
+        <span className="block text-[10px] font-bold text-panel-muted">{label}</span>
+        <span className="mt-0.5 block">{content}</span>
+      </span>
+    </>
+  );
+
+  const boxClass = cn(
+    "flex items-center gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-3.5 py-3",
+    className
+  );
+
+  if (phone && value) {
+    return (
+      <a
+        href={`tel:${value.replace(/[^\d+]/g, "")}`}
+        title={`تماس با ${label}`}
+        className={cn(boxClass, "group/contact transition-colors hover:border-[#FF6A00]/35 hover:bg-[#FF6A00]/[0.06]")}
+      >
+        {body}
+      </a>
+    );
+  }
+  return <div className={cn(boxClass, value ? "items-start" : undefined)}>{body}</div>;
+}
+
 /**
- * Public seller profile as seen by other customers: avatar, name, bio, then two
+ * Public seller profile as seen by other customers: avatar, name, contact
+ * details (mobile, landline, address), bio, then two
  * tabs: the seller's approved ads (same cards as the search, including price
  * history) and the seller's price table (every eligible car, "---" for gaps).
  */
@@ -114,6 +171,13 @@ export default async function SellerProfilePage({ params }: PageProps) {
             ) : (
               <p className="mt-4 text-xs text-panel-faint">این فروشنده هنوز بیوگرافی ثبت نکرده است.</p>
             )}
+
+            {/* Contact details */}
+            <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <ContactItem icon={Smartphone} label="شماره موبایل" value={seller.phone} phone />
+              <ContactItem icon={Phone} label="شماره تلفن" value={seller.tel} phone />
+              <ContactItem icon={MapPin} label="آدرس" value={seller.address} className="sm:col-span-2" />
+            </div>
           </div>
         </div>
       </section>

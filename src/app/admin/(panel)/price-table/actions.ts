@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
-import { carToRecord, type CarRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord, type CarRecord } from "@/lib/cars";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 
@@ -52,7 +52,7 @@ export async function toggleCarPriceTableAction(id: string): Promise<PriceTableT
     const updated = await prisma.car.update({
       where: { id: carId },
       data: { priceTable: !current.priceTable },
-      include: { brand: true, carType: true },
+      include: carRecordInclude,
     });
 
     revalidatePriceTablePages();
@@ -82,7 +82,7 @@ export async function setCarsPriceTableAction(ids: string[], enabled: boolean): 
     await prisma.car.updateMany({ where: { id: { in: carIds } }, data: { priceTable: Boolean(enabled) } });
     const records = await prisma.car.findMany({
       where: { id: { in: carIds } },
-      include: { brand: true, carType: true },
+      include: carRecordInclude,
     });
 
     revalidatePriceTablePages();

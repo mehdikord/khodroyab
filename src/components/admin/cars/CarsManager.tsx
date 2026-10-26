@@ -14,6 +14,7 @@ import { getCarOptionsAction } from "@/app/admin/(panel)/cars/[id]/options/actio
 import type { CarRecord } from "@/lib/cars";
 import type { BrandRecord } from "@/lib/brands";
 import type { CarTypeRecord } from "@/lib/car-types";
+import type { ColorRecord } from "@/lib/colors";
 import type { CarOptionRecord } from "@/lib/car-options";
 import { toPersianDigits } from "@/lib/utils";
 
@@ -26,9 +27,10 @@ interface CarsManagerProps {
   initialCars: CarRecord[];
   brands: BrandRecord[];
   carTypes: CarTypeRecord[];
+  colors: ColorRecord[];
 }
 
-export function CarsManager({ initialCars, brands, carTypes }: CarsManagerProps) {
+export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManagerProps) {
   const [cars, setCars] = useState<CarRecord[]>(initialCars);
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
@@ -60,7 +62,8 @@ export function CarsManager({ initialCars, brands, carTypes }: CarsManagerProps)
       (car) =>
         car.name.toLowerCase().includes(normalized) ||
         car.brandName.toLowerCase().includes(normalized) ||
-        car.model.toLowerCase().includes(normalized)
+        car.model.toLowerCase().includes(normalized) ||
+        (car.colorName?.toLowerCase().includes(normalized) ?? false)
     );
   }, [cars, query]);
 
@@ -114,6 +117,7 @@ export function CarsManager({ initialCars, brands, carTypes }: CarsManagerProps)
           car={modal.mode === "edit" ? modal.car : null}
           brands={brands}
           carTypes={carTypes}
+          colors={colors}
           onClose={() => setModal(null)}
           onSuccess={modal.mode === "create" ? handleCreateSuccess : handleUpdateSuccess}
           onError={handleError}
@@ -184,7 +188,7 @@ export function CarsManager({ initialCars, brands, carTypes }: CarsManagerProps)
           </span>
           <input
             type="search"
-            placeholder="جستجو در نام، برند یا مدل..."
+            placeholder="جستجو در نام، برند، مدل یا رنگ..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-11 w-full rounded-xl border border-white/[0.12] bg-[#07090C] px-12 text-sm text-[#F5F5F5] outline-none transition-all placeholder:text-[#5E6672] focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"

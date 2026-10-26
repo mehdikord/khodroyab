@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
 import { userToRecord } from "@/lib/users";
-import { carToRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { SaleAdsManager } from "@/components/admin/users/sale-ads/SaleAdsManager";
@@ -43,7 +43,7 @@ export default async function AdminUserSaleAdsPage({ params }: PageProps) {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     }),
     prisma.car.findMany({
-      include: { brand: true, carType: true },
+      include: carRecordInclude,
       orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
     }),
     prisma.saleTerm.findMany({

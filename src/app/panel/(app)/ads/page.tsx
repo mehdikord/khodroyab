@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/user-auth";
-import { carToRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { MyAdsManager } from "@/components/panel/ads/MyAdsManager";
@@ -27,7 +27,7 @@ export default async function PanelAdsPage() {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     }),
     prisma.car.findMany({
-      include: { brand: true, carType: true },
+      include: carRecordInclude,
       orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
     }),
     prisma.saleTerm.findMany({ where: { isActive: true }, orderBy: { title: "asc" } }),

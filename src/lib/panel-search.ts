@@ -239,15 +239,24 @@ export async function getSearchOptions(): Promise<SearchOptions> {
 /* ───────────────────────── Sellers ───────────────────────── */
 
 /**
- * Public seller profile (name, avatar, bio) plus the count of their approved
- * ads. Returns null for unknown or deactivated accounts so the page can 404.
+ * Public seller profile (name, avatar, bio, contact details) plus the count of
+ * their approved ads. Returns null for unknown or deactivated accounts so the page can 404.
  */
 export async function getSellerProfile(idRaw: string): Promise<SellerProfile | null> {
   const id = toBigIntOrNull(idRaw);
   if (id === null) return null;
   const user = await prisma.user.findFirst({
     where: { id, isActive: true },
-    select: { id: true, name: true, image: true, bio: true, createdAt: true, _count: { select: { userCars: { where: PUBLIC_AD_WHERE } } } },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      bio: true,
+      phone: true,
+      tel: true,
+      address: true,
+      createdAt: true,
+      _count: { select: { userCars: { where: PUBLIC_AD_WHERE } } } },
   });
   if (!user) return null;
   return {
@@ -255,6 +264,9 @@ export async function getSellerProfile(idRaw: string): Promise<SellerProfile | n
     name: user.name,
     image: user.image,
     bio: user.bio,
+    phone: user.phone,
+    tel: user.tel?.trim() || null,
+    address: user.address?.trim() || null,
     memberSinceLabel: faDate.format(user.createdAt),
     approvedAdCount: user._count.userCars,
   };

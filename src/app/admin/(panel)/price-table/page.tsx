@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
-import { carToRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { PriceTableManager } from "@/components/admin/price-table/PriceTableManager";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export default async function AdminPriceTablePage() {
   await requireAdmin();
 
   const cars = await prisma.car.findMany({
-    include: { brand: true, carType: true },
+    include: carRecordInclude,
     orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }, { id: "asc" }],
   });
 

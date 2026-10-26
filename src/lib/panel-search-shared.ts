@@ -105,6 +105,11 @@ export interface SellerProfile {
   name: string;
   image: string | null;
   bio: string | null;
+  /** Mobile number (login phone). */
+  phone: string;
+  /** Landline number, if the seller entered one. */
+  tel: string | null;
+  address: string | null;
   /** Pre-formatted Persian "member since" date. */
   memberSinceLabel: string;
   approvedAdCount: number;

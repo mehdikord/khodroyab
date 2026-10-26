@@ -4,42 +4,58 @@ import React, { useMemo, useRef, useState, useTransition } from "react";
 import { AlertCircle, Eraser, Loader2, RotateCcw, Save, Search, Table2, X } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
+import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { saveMyPriceTableAction } from "@/app/panel/(app)/price-table/actions";
+import type { ColorRecord } from "@/lib/colors";
 import type { PriceTableCarRecord, PriceTableEntryRecord } from "@/lib/price-table";
-import { PRICE_TABLE_COLOR_MAX, digitsOnly, normalizeUsdPrice } from "@/lib/price-table-shared";
+import {
+  PRICE_TABLE_PRICE_FIELDS,
+  digitsOnly,
+  normalizeUsdPrice,
+  type PriceTablePriceField,
+} from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 interface MyPriceTableManagerProps {
   cars: PriceTableCarRecord[];
+  colors: ColorRecord[];
   initialEntries: PriceTableEntryRecord[];
 }
 
-interface Draft {
-  color: string;
-  /** Digit-only USD price as typed (normalised on every keystroke). */
-  priceUsd: string;
+/** One row as edited: colour id ("" = none) and digit-only USD prices ("" = blank). */
+interface Draft extends Record<PriceTablePriceField, string> {
+  colorId: string;
 }
 
 type Drafts = Record<string, Draft>;
 
-const EMPTY_DRAFT: Draft = { color: "", priceUsd: "" };
+const EMPTY_DRAFT: Draft = { colorId: "", priceUsd: "", clearancePrice: "", instantPrice: "" };
+
+const DRAFT_KEYS = ["colorId", ...PRICE_TABLE_PRICE_FIELDS.map((field) => field.key)] as const;
 
 function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[]): Drafts {
   const byCar = new Map(entries.map((entry) => [entry.carId, entry]));
   const drafts: Drafts = {};
   for (const car of cars) {
     const entry = byCar.get(car.id);
-    drafts[car.id] = entry ? { color: entry.color, priceUsd: entry.priceUsd } : { ...EMPTY_DRAFT };
+    drafts[car.id] = entry
+      ? {
+          colorId: entry.colorId ?? "",
+          priceUsd: entry.priceUsd ?? "",
+          clearancePrice: entry.clearancePrice ?? "",
+          instantPrice: entry.instantPrice ?? "",
+        }
+      : { ...EMPTY_DRAFT };
   }
   return drafts;
 }
 
 function isFilled(draft: Draft): boolean {
-  return draft.color.trim().length > 0 || draft.priceUsd.length > 0;
+  return DRAFT_KEYS.some((key) => draft[key].length > 0);
 }
 
 function sameDraft(a: Draft, b: Draft): boolean {
-  return a.color.trim() === b.color.trim() && a.priceUsd === b.priceUsd;
+  return DRAFT_KEYS.every((key) => a[key] === b[key]);
 }
 
 const cellInputClass = (hasError: boolean) =>
@@ -51,14 +67,17 @@ const cellInputClass = (hasError: boolean) =>
 
 const headClass = "whitespace-nowrap px-2 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-panel-muted sm:px-3";
 
+const fieldLabelClass = "mb-1 block text-[10px] font-bold text-panel-muted";
+
 /**
  * The customer's own price table, edited inline: every car the admin allowed
- * is a row with a colour and a USD price input. Changes are saved together.
+ * is a row with a colour select and three USD price inputs (raw, clearance,
+ * instant). Changes are saved together.
  *
- * Desktop/tablet: full table. Phone: model/year fold under the car name and the
- * two inputs stack inside one cell, so it still reads as a table.
+ * Wide screens: one column per field. Narrower screens: model/year fold under
+ * the car name and the four inputs share one cell as a labelled grid.
  */
-export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManagerProps) {
+export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTableManagerProps) {
   const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries));
   const [drafts, setDrafts] = useState<Drafts>(() => toDrafts(cars, initialEntries));
   const [query, setQuery] = useState("");
@@ -67,6 +86,7 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isPending, startTransition] = useTransition();
   const topRef = useRef<HTMLDivElement>(null);
+  const colorById = useMemo(() => new Map(colors.map((color) => [color.id, color])), [colors]);
 
   const dirtyIds = useMemo(
     () => new Set(cars.filter((car) => !sameDraft(drafts[car.id] ?? EMPTY_DRAFT, saved[car.id] ?? EMPTY_DRAFT)).map((car) => car.id)),
@@ -96,16 +116,15 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
   function updateDraft(carId: string, patch: Partial<Draft>) {
     setDrafts((prev) => ({ ...prev, [carId]: { ...(prev[carId] ?? EMPTY_DRAFT), ...patch } }));
     setFieldErrors((prev) => {
-      if (!prev[`${carId}.color`] && !prev[`${carId}.priceUsd`]) return prev;
+      if (!DRAFT_KEYS.some((key) => prev[`${carId}.${key}`])) return prev;
       const next = { ...prev };
-      delete next[`${carId}.color`];
-      delete next[`${carId}.priceUsd`];
+      for (const key of DRAFT_KEYS) delete next[`${carId}.${key}`];
       return next;
     });
   }
 
-  function handlePriceChange(carId: string, raw: string) {
-    updateDraft(carId, { priceUsd: normalizeUsdPrice(raw) });
+  function handlePriceChange(carId: string, field: PriceTablePriceField, raw: string) {
+    updateDraft(carId, { [field]: normalizeUsdPrice(raw) });
   }
 
   function clearRow(carId: string) {
@@ -193,9 +212,15 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
       </div>
 
       <p className="admin-animate-in rounded-2xl border border-panel-line/[0.08] bg-panel-surface px-4 py-3 text-[11px] leading-6 text-panel-muted sm:text-xs">
-        برای هر خودرو، رنگ (مثلاً «سفید») و قیمت به دلار را وارد کنید. ردیف‌هایی که خالی بگذارید در پروفایل شما با «---» نمایش داده
-        می‌شوند. لیست خودروها توسط مدیر تعیین می‌شود.
+        برای هر خودرو رنگ را انتخاب کنید و قیمت خام، قیمت ترخیصی و قیمت فوری را به دلار وارد کنید. وارد کردن حداقل یکی از قیمت‌ها
+        کافی است و قیمت‌هایی که خالی بگذارید در پروفایل شما با «---» نمایش داده می‌شوند. لیست خودروها و رنگ‌ها توسط مدیر تعیین می‌شود.
       </p>
+
+      {cars.length > 0 && colors.length === 0 && (
+        <p className="admin-animate-in rounded-2xl border border-panel-warning/30 bg-panel-warning/10 px-4 py-3 text-[11px] font-semibold leading-6 text-panel-warning sm:text-xs">
+          هنوز رنگی توسط مدیر تعریف نشده است؛ تا زمان تعریف رنگ‌ها امکان ثبت ردیف جدید وجود ندارد.
+        </p>
+      )}
 
       {formError && (
         <div
@@ -249,30 +274,32 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
 
           {/* Table */}
           <div className="admin-animate-in overflow-hidden rounded-2xl border border-panel-line/[0.1] bg-panel-surface" style={{ animationDelay: "100ms" }}>
-            <table className="w-full table-fixed border-collapse text-sm md:table-auto">
+            <table className="w-full table-fixed border-collapse text-sm lg:table-auto">
               <thead>
                 <tr className="border-b border-panel-line/[0.1] bg-panel-surface-2/60">
-                  <th scope="col" className={cn(headClass, "hidden w-12 text-center md:table-cell")}>
+                  <th scope="col" className={cn(headClass, "hidden w-12 text-center xl:table-cell")}>
                     #
                   </th>
-                  <th scope="col" className={cn(headClass, "w-[40%] md:w-auto")}>
+                  <th scope="col" className={cn(headClass, "w-[34%] lg:w-auto")}>
                     نام خودرو
                   </th>
-                  <th scope="col" className={cn(headClass, "hidden md:table-cell")}>
+                  <th scope="col" className={cn(headClass, "hidden xl:table-cell")}>
                     مدل
                   </th>
-                  <th scope="col" className={cn(headClass, "hidden md:table-cell")}>
+                  <th scope="col" className={cn(headClass, "hidden xl:table-cell")}>
                     سال ساخت
                   </th>
-                  <th scope="col" className={cn(headClass, "md:hidden")}>
-                    رنگ / قیمت (دلار)
+                  <th scope="col" className={cn(headClass, "lg:hidden")}>
+                    رنگ / قیمت‌ها (دلار)
                   </th>
-                  <th scope="col" className={cn(headClass, "hidden w-40 md:table-cell lg:w-48")}>
+                  <th scope="col" className={cn(headClass, "hidden w-40 lg:table-cell")}>
                     رنگ
                   </th>
-                  <th scope="col" className={cn(headClass, "hidden w-44 md:table-cell lg:w-56")}>
-                    قیمت (دلار)
-                  </th>
+                  {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                    <th key={field.key} scope="col" className={cn(headClass, "hidden w-36 lg:table-cell")}>
+                      {field.label} (دلار)
+                    </th>
+                  ))}
                   <th scope="col" className={cn(headClass, "w-10 px-1 text-center md:w-14")}>
                     <span className="sr-only">پاک کردن ردیف</span>
                   </th>
@@ -281,55 +308,71 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
               <tbody className="divide-y divide-panel-line/[0.06]">
                 {visibleCars.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-xs text-panel-muted">
+                    <td colSpan={10} className="px-4 py-10 text-center text-xs text-panel-muted">
                       خودرویی با این مشخصات در لیست نیست.
                     </td>
                   </tr>
                 )}
                 {visibleCars.map((car) => {
                   const draft = drafts[car.id] ?? EMPTY_DRAFT;
-                  const colorError = fieldErrors[`${car.id}.color`];
-                  const priceError = fieldErrors[`${car.id}.priceUsd`];
+                  const colorError = fieldErrors[`${car.id}.colorId`];
+                  const selectedColor = colorById.get(draft.colorId) ?? null;
                   const dirty = dirtyIds.has(car.id);
                   const filled = isFilled(draft);
                   const rowIndex = cars.indexOf(car);
 
-                  const colorInput = (
+                  const renderColorSelect = (showLabel: boolean) => (
                     <div>
-                      <input
-                        type="text"
-                        value={draft.color}
-                        onChange={(e) => updateDraft(car.id, { color: e.target.value })}
-                        maxLength={PRICE_TABLE_COLOR_MAX}
-                        placeholder="رنگ (مثلاً سفید)"
-                        aria-label={`رنگ ${car.name}`}
-                        aria-invalid={Boolean(colorError)}
-                        disabled={isPending}
-                        className={cellInputClass(Boolean(colorError))}
-                      />
+                      {showLabel && <span className={fieldLabelClass}>رنگ</span>}
+                      <div className="relative">
+                        <select
+                          value={draft.colorId}
+                          onChange={(e) => updateDraft(car.id, { colorId: e.target.value })}
+                          aria-label={`رنگ ${car.name}`}
+                          aria-invalid={Boolean(colorError)}
+                          disabled={isPending}
+                          className={cn(cellInputClass(Boolean(colorError)), selectedColor && "ps-8")}
+                        >
+                          <option value="">انتخاب رنگ</option>
+                          {colors.map((color) => (
+                            <option key={color.id} value={color.id}>
+                              {color.name}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedColor && (
+                          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center">
+                            <ColorSwatch code={selectedColor.code} />
+                          </span>
+                        )}
+                      </div>
                       {colorError && <p className="mt-1 text-[10px] font-semibold text-panel-danger-2">{colorError}</p>}
                     </div>
                   );
 
-                  const priceInput = (
-                    <div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={formatPersianNumber(draft.priceUsd)}
-                          onChange={(e) => handlePriceChange(car.id, e.target.value)}
-                          placeholder="قیمت به دلار"
-                          aria-label={`قیمت دلاری ${car.name}`}
-                          aria-invalid={Boolean(priceError)}
-                          disabled={isPending}
-                          className={cn(cellInputClass(Boolean(priceError)), "pe-9 font-semibold")}
-                        />
-                        <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs font-black text-panel-faint">$</span>
+                  const renderPriceInput = (field: PriceTablePriceField, label: string, showLabel: boolean) => {
+                    const error = fieldErrors[`${car.id}.${field}`];
+                    return (
+                      <div key={field}>
+                        {showLabel && <span className={fieldLabelClass}>{label} (دلار)</span>}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formatPersianNumber(draft[field])}
+                            onChange={(e) => handlePriceChange(car.id, field, e.target.value)}
+                            placeholder={label}
+                            aria-label={`${label} ${car.name}`}
+                            aria-invalid={Boolean(error)}
+                            disabled={isPending}
+                            className={cn(cellInputClass(Boolean(error)), "pe-9 font-semibold")}
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs font-black text-panel-faint">$</span>
+                        </div>
+                        {error && <p className="mt-1 text-[10px] font-semibold text-panel-danger-2">{error}</p>}
                       </div>
-                      {priceError && <p className="mt-1 text-[10px] font-semibold text-panel-danger-2">{priceError}</p>}
-                    </div>
-                  );
+                    );
+                  };
 
                   return (
                     <tr
@@ -339,10 +382,10 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
                         dirty ? "bg-[#FF6A00]/[0.05]" : filled ? "hover:bg-panel-line/[0.03]" : "hover:bg-panel-line/[0.02]"
                       )}
                     >
-                      <td className="hidden px-3 py-3 text-center font-mono text-[11px] text-panel-faint md:table-cell md:align-middle">
+                      <td className="hidden px-3 py-3 text-center font-mono text-[11px] text-panel-faint xl:table-cell xl:align-middle">
                         {toPersianDigits(rowIndex + 1)}
                       </td>
-                      <td className="px-2 py-3 sm:px-3 md:align-middle">
+                      <td className="px-2 py-3 sm:px-3 lg:align-middle">
                         <div className="flex items-start gap-2">
                           <span
                             aria-hidden="true"
@@ -354,28 +397,32 @@ export function MyPriceTableManager({ cars, initialEntries }: MyPriceTableManage
                           <div className="min-w-0">
                             <p className="break-words text-[13px] font-bold leading-5 text-panel-text sm:text-sm">{car.name}</p>
                             <p className="mt-0.5 text-[10px] leading-4 text-panel-faint sm:text-[11px]">{car.brandName}</p>
-                            <p className="mt-1 text-[10px] leading-4 text-panel-muted-2 md:hidden">
+                            <p className="mt-1 text-[10px] leading-4 text-panel-muted-2 xl:hidden">
                               مدل {toPersianDigits(car.model)} · سال {toPersianDigits(car.year)}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="hidden whitespace-nowrap px-3 py-3 text-panel-text-2 md:table-cell md:align-middle">{toPersianDigits(car.model)}</td>
-                      <td className="hidden whitespace-nowrap px-3 py-3 text-panel-text-2 md:table-cell md:align-middle">{toPersianDigits(car.year)}</td>
+                      <td className="hidden whitespace-nowrap px-3 py-3 text-panel-text-2 xl:table-cell xl:align-middle">{toPersianDigits(car.model)}</td>
+                      <td className="hidden whitespace-nowrap px-3 py-3 text-panel-text-2 xl:table-cell xl:align-middle">{toPersianDigits(car.year)}</td>
 
-                      {/* Phone: both inputs stacked in one cell */}
-                      <td className="px-2 py-3 md:hidden">
-                        <div className="space-y-2">
-                          {colorInput}
-                          {priceInput}
+                      {/* Phone/tablet: all inputs share one cell as a labelled grid */}
+                      <td className="px-2 py-3 lg:hidden">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {renderColorSelect(true)}
+                          {PRICE_TABLE_PRICE_FIELDS.map((field) => renderPriceInput(field.key, field.label, true))}
                         </div>
                       </td>
 
-                      {/* Tablet/desktop: separate cells */}
-                      <td className="hidden px-3 py-3 md:table-cell md:align-middle">{colorInput}</td>
-                      <td className="hidden px-3 py-3 md:table-cell md:align-middle">{priceInput}</td>
+                      {/* Desktop: one cell per field */}
+                      <td className="hidden px-2 py-3 lg:table-cell lg:align-middle">{renderColorSelect(false)}</td>
+                      {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                        <td key={field.key} className="hidden px-2 py-3 lg:table-cell lg:align-middle">
+                          {renderPriceInput(field.key, field.label, false)}
+                        </td>
+                      ))}
 
-                      <td className="px-1 py-3 text-center md:align-middle">
+                      <td className="px-1 py-3 text-center lg:align-middle">
                         <button
                           type="button"
                           onClick={() => clearRow(car.id)}

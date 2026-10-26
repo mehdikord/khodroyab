@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
-import { carToRecord } from "@/lib/cars";
+import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { isAdStatus, type AdStatus } from "@/lib/ad-status";
@@ -88,7 +88,7 @@ export default async function AdminAllAdsPage({ searchParams }: PageProps) {
     prisma.userCar.count({ where }),
     prisma.userCar.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.car.findMany({
-      include: { brand: true, carType: true },
+      include: carRecordInclude,
       orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
     }),
     prisma.saleTerm.findMany({ where: { isActive: true }, orderBy: { title: "asc" } }),
