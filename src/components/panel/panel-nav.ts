@@ -1,4 +1,4 @@
-import { LayoutDashboard, Megaphone, Search, Table2, UserRound } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Megaphone, Search, Table2, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface PanelNavItem {
@@ -17,7 +17,8 @@ export const PANEL_NAV_ITEMS: PanelNavItem[] = [
   { key: "dashboard", label: "داشبورد", shortLabel: "داشبورد", href: "/panel/dashboard", icon: LayoutDashboard },
   { key: "search", label: "جستجوی خودرو", shortLabel: "جستجو", href: "/panel/search", icon: Search, primary: true },
   { key: "ads", label: "آگهی‌های من", shortLabel: "آگهی‌ها", href: "/panel/ads", icon: Megaphone },
-  { key: "price-table", label: "جدول قیمت", shortLabel: "جدول قیمت", href: "/panel/price-table", icon: Table2 },
+  { key: "price-list", label: "لیست قیمت", shortLabel: "لیست قیمت", href: "/panel/price-list", icon: ListOrdered },
+  { key: "price-table", label: "جدول من", shortLabel: "جدول من", href: "/panel/price-table", icon: Table2 },
   { key: "profile", label: "پروفایل", shortLabel: "پروفایل", href: "/panel/profile", icon: UserRound },
 ];
 

@@ -7,7 +7,7 @@ import { listPriceTableCars, listUserPriceTableEntries } from "@/lib/price-table
 import { MyPriceTableManager } from "@/components/panel/price-table/MyPriceTableManager";
 
 export const metadata: Metadata = {
-  title: "جدول قیمت | پنل کاربری خودرو یاب",
+  title: "جدول من | پنل کاربری خودرو یاب",
   robots: "noindex, nofollow",
 };
 

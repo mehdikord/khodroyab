@@ -174,7 +174,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
         <div>
           <h1 className="flex items-center gap-2 text-xl font-black text-panel-text sm:text-2xl">
             <Table2 className="h-5 w-5 text-panel-accent" />
-            جدول قیمت
+            جدول من
           </h1>
           <p className="mt-1 text-xs text-panel-muted sm:text-sm">
             {cars.length === 0
