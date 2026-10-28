@@ -14,19 +14,27 @@ export interface PriceTableCarRecord {
   year: string;
 }
 
-/** What a customer has entered for one car. */
-export interface PriceTableEntryRecord {
-  carId: string;
-  colorId: string | null;
-  colorName: string | null;
-  /** Hex code of the chosen colour, e.g. "#ffffff". */
-  colorCode: string | null;
+/** One year tier of a row: the three USD prices for a production year. */
+export interface PriceTableTierRecord {
+  /** Production year typed by the customer (independent of the car's catalogue year). */
+  year: string;
   /** Raw price: digit-only USD string, e.g. "12500"; `null` when left blank. */
   priceUsd: string | null;
   /** Clearance price, same format as `priceUsd`. */
   clearancePrice: string | null;
   /** Instant price, same format as `priceUsd`. */
   instantPrice: string | null;
+}
+
+/** What a customer has entered for one car: a colour and one or more year tiers. */
+export interface PriceTableEntryRecord {
+  carId: string;
+  colorId: string | null;
+  colorName: string | null;
+  /** Hex code of the chosen colour, e.g. "#ffffff". */
+  colorCode: string | null;
+  /** Year tiers in the customer's order (never empty for a saved entry). */
+  tiers: PriceTableTierRecord[];
 }
 
 /**
@@ -77,10 +85,11 @@ export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTa
     select: {
       carId: true,
       colorId: true,
-      priceUsd: true,
-      clearancePrice: true,
-      instantPrice: true,
       color: { select: { name: true, code: true } },
+      prices: {
+        select: { year: true, priceUsd: true, clearancePrice: true, instantPrice: true },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
     },
     orderBy: { id: "asc" },
   });
@@ -89,9 +98,7 @@ export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTa
     colorId: entry.colorId?.toString() ?? null,
     colorName: entry.color?.name ?? null,
     colorCode: entry.color?.code ?? null,
-    priceUsd: entry.priceUsd,
-    clearancePrice: entry.clearancePrice,
-    instantPrice: entry.instantPrice,
+    tiers: entry.prices,
   }));
 }
 

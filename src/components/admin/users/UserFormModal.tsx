@@ -73,6 +73,24 @@ export function UserFormModal({ user, onClose, onSuccess, onError }: UserFormMod
             <label className="block text-sm font-semibold text-[#F5F5F5]">تلفن <span className="text-[#FF6A00]">*</span></label>
             <input name="phone" type="text" defaultValue={user?.phone} required className={inputClassName(!!fieldErrors.phone)} />
           </div>
+          <div className="col-span-2 space-y-2">
+            <label className="block text-sm font-semibold text-[#F5F5F5]">
+              نام مجموعه <span className="text-[11px] font-normal text-[#5E6672]">(اختیاری)</span>
+            </label>
+            <input
+              name="companyName"
+              type="text"
+              maxLength={120}
+              defaultValue={user?.companyName || ""}
+              placeholder="مثلاً نمایشگاه خودرو آریا"
+              className={inputClassName(!!fieldErrors.companyName)}
+            />
+            {fieldErrors.companyName ? (
+              <p className="text-xs text-red-400">{fieldErrors.companyName}</p>
+            ) : (
+              <p className="text-[11px] text-[#5E6672]">در صورت ثبت، در آگهی‌ها و پروفایل عمومی به جای نام کاربر نمایش داده می‌شود.</p>
+            )}
+          </div>
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-[#F5F5F5]">ایمیل</label>
             <input name="email" type="email" defaultValue={user?.email || ""} className={inputClassName(false)} />

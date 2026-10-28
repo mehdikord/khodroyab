@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Search, SearchX, Tags, UsersRound, X } from "lucide-react";
 
 import type { PriceListRow } from "@/lib/price-list";
-import { PRICE_TABLE_PRICE_FIELDS, digitsOnly } from "@/lib/price-table-shared";
+import { digitsOnly } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColorLabel, PriceTag } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColorLabel, YearHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 
 interface PriceListBrowserProps {
   rows: PriceListRow[];
@@ -25,11 +26,13 @@ function hasAnyPrice(row: PriceListRow): boolean {
 }
 
 /**
- * Market-wide price list: every price-table car with the lowest raw,
- * clearance and instant price across all sellers. Rows open the car's page
- * with every seller's prices.
+ * Market-wide price list: every price-table car with, for each production
+ * year, the lowest raw / clearance / instant price across all sellers. There
+ * is one column per year that appears among the visible cars (oldest first);
+ * a car without prices for a year shows "—". Rows open the car's page.
  *
- * Desktop: a full table (the whole row is clickable). Below `lg`: cards.
+ * Desktop: a table whose car column stays pinned while the year columns
+ * scroll horizontally. Below `lg`: cards with a scrollable strip of years.
  */
 export function PriceListBrowser({ rows }: PriceListBrowserProps) {
   const router = useRouter();
@@ -59,12 +62,19 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
         row.brandName.toLowerCase().includes(normalized) ||
         row.model.toLowerCase().includes(normalized) ||
         (row.colorName?.toLowerCase().includes(normalized) ?? false) ||
-        (digits.length > 0 && (row.year.includes(digits) || row.model.includes(digits)))
+        (digits.length > 0 &&
+          (row.year.includes(digits) || row.model.includes(digits) || row.years.some((year) => year.includes(digits))))
       );
     });
   }, [rows, query, brand, pricedOnly]);
 
   const isFiltered = Boolean(query.trim() || brand || pricedOnly);
+
+  /** Year columns: every year priced for any visible car, oldest first. */
+  const yearColumns = useMemo(
+    () => Array.from(new Set(visibleRows.flatMap((row) => row.years))).sort((a, b) => Number(a) - Number(b)),
+    [visibleRows]
+  );
 
   function openRow(event: React.MouseEvent<HTMLTableRowElement>, row: PriceListRow) {
     // Let real links inside the row (and text selection) behave natively.
@@ -206,20 +216,29 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="admin-animate-in hidden overflow-hidden rounded-3xl border border-panel-line/[0.1] bg-panel-surface shadow-[0_24px_60px_-30px_rgba(0,0,0,0.6)] lg:block" style={{ animationDelay: "100ms" }}>
+          <HorizontalScroller className="admin-animate-in hidden lg:block" viewportClassName="rounded-3xl border border-panel-line/[0.1] bg-panel-surface shadow-[0_24px_60px_-30px_rgba(0,0,0,0.6)]">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-panel-line/[0.1] bg-panel-surface-2/70">
-                  <th scope="col" className={cn(headClass, "ps-5")}>برند</th>
-                  <th scope="col" className={headClass}>نام خودرو</th>
+                <tr className="border-b border-panel-line/[0.1] bg-panel-surface-2">
+                  <th scope="col" className={cn(headClass, "sticky right-0 z-20 min-w-[230px] bg-panel-surface-2 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)]")}>
+                    خودرو
+                  </th>
                   <th scope="col" className={headClass}>مدل</th>
                   <th scope="col" className={headClass}>رنگ</th>
                   <th scope="col" className={headClass}>سال ساخت</th>
-                  {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                    <th key={field.key} scope="col" className={headClass}>
-                      {field.label}
-                    </th>
-                  ))}
+                  {yearColumns.length === 0 ? (
+                    <th scope="col" className={headClass}>قیمت‌ها</th>
+                  ) : (
+                    yearColumns.map((year, index) => (
+                      <th
+                        key={year}
+                        scope="col"
+                        className={cn(headClass, "min-w-[168px] border-s border-panel-line/[0.08]", index % 2 === 1 && "bg-panel-line/[0.025]")}
+                      >
+                        <YearHeading year={year} active />
+                      </th>
+                    ))
+                  )}
                   <th scope="col" className="w-12 pe-4">
                     <span className="sr-only">مشاهده</span>
                   </th>
@@ -235,38 +254,47 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                       onMouseEnter={() => router.prefetch(carHref(row))}
                       className="group cursor-pointer transition-colors hover:bg-[#FF6A00]/[0.045]"
                     >
-                      <td className="relative py-3.5 pe-3 ps-5">
+                      <td className="sticky right-0 z-10 bg-panel-surface py-3.5 pe-3 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)] transition-colors group-hover:bg-panel-surface-2">
                         <span
                           aria-hidden="true"
                           className="absolute inset-y-2 start-0 w-[3px] rounded-full bg-[#FF6A00] opacity-0 shadow-[0_0_10px_#FF6A00] transition-opacity group-hover:opacity-100"
                         />
-                        <div className="flex items-center gap-2.5">
-                          <BrandLogo name={row.brandName} image={row.brandImage} />
-                          <span className="whitespace-nowrap text-[13px] font-bold text-panel-text-2">{row.brandName}</span>
+                        <div className="flex items-center gap-3">
+                          <BrandLogo name={row.brandName} image={row.brandImage} className="h-10 w-10 rounded-xl p-1" />
+                          <div className="min-w-0">
+                            <Link
+                              href={carHref(row)}
+                              className="block text-sm font-extrabold text-panel-text outline-none transition-colors group-hover:text-panel-accent focus-visible:underline"
+                            >
+                              {row.name}
+                            </Link>
+                            <span className="block text-[11px] font-semibold text-panel-muted-2">{row.brandName}</span>
+                            <span className={cn("mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold", priced ? "text-panel-muted" : "text-panel-faint")}>
+                              <UsersRound className="h-3 w-3" />
+                              {priced ? `${toPersianDigits(row.sellerCount)} فروشنده` : "بدون قیمت"}
+                            </span>
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-3 py-3.5">
-                        <Link
-                          href={carHref(row)}
-                          className="block text-sm font-extrabold text-panel-text outline-none transition-colors group-hover:text-panel-accent focus-visible:underline"
-                        >
-                          {row.name}
-                        </Link>
-                        <span className={cn("mt-1 inline-flex items-center gap-1 text-[10px] font-semibold", priced ? "text-panel-muted" : "text-panel-faint")}>
-                          <UsersRound className="h-3 w-3" />
-                          {priced ? `${toPersianDigits(row.sellerCount)} فروشنده` : "بدون قیمت"}
-                        </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.model)}</td>
                       <td className="px-3 py-3.5 text-[13px]">
                         <ColorLabel name={row.colorName} code={row.colorCode} />
                       </td>
                       <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.year)}</td>
-                      {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                        <td key={field.key} className="px-3 py-3.5">
-                          <PriceTag price={row.lowest[field.key]} />
+                      {yearColumns.length === 0 ? (
+                        <td className="px-3 py-3.5">
+                          <YearPrices prices={undefined} className="min-h-0 justify-start" />
                         </td>
-                      ))}
+                      ) : (
+                        yearColumns.map((year, index) => (
+                          <td
+                            key={year}
+                            className={cn("border-s border-panel-line/[0.06] px-3 py-3", index % 2 === 1 && "bg-panel-line/[0.02]")}
+                          >
+                            <YearPrices prices={row.byYear[year]} />
+                          </td>
+                        ))
+                      )}
                       <td className="pe-4 text-panel-faint">
                         <ChevronLeft className="h-5 w-5 transition-all group-hover:-translate-x-1 group-hover:text-panel-accent" />
                       </td>
@@ -275,54 +303,67 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                 })}
               </tbody>
             </table>
-          </div>
+          </HorizontalScroller>
 
           {/* Mobile / tablet cards */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
             {visibleRows.map((row, index) => {
               const priced = hasAnyPrice(row);
               return (
-                <Link
+                <article
                   key={row.id}
-                  href={carHref(row)}
-                  className="panel-card-in group relative overflow-hidden rounded-3xl border border-panel-line/[0.1] bg-panel-surface p-4 transition-all hover:border-[#FF6A00]/40 active:scale-[0.99]"
+                  className="panel-card-in group relative overflow-hidden rounded-3xl border border-panel-line/[0.1] bg-panel-surface transition-all hover:border-[#FF6A00]/40"
                   style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
                 >
-                  <div className="pointer-events-none absolute -top-16 end-[-40px] h-32 w-32 rounded-full bg-[#FF6A00]/10 blur-2xl transition-opacity group-hover:opacity-100" aria-hidden="true" />
+                  <div className="pointer-events-none absolute -top-16 end-[-40px] h-32 w-32 rounded-full bg-[#FF6A00]/10 blur-2xl" aria-hidden="true" />
 
-                  <div className="relative flex items-start gap-3">
-                    <BrandLogo name={row.brandName} image={row.brandImage} className="h-11 w-11 rounded-2xl p-1.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold text-panel-muted">{row.brandName}</p>
-                      <p className="mt-0.5 break-words text-[15px] font-black leading-6 text-panel-text">{row.name}</p>
-                    </div>
-                    <ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-panel-faint transition-all group-hover:-translate-x-1 group-hover:text-panel-accent" />
-                  </div>
-
-                  <div className="relative mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(row.model)}</span>
-                    <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">سال {toPersianDigits(row.year)}</span>
-                    <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
-                      <ColorLabel name={row.colorName} code={row.colorCode} />
-                    </span>
-                  </div>
-
-                  <div className="relative mt-3 grid grid-cols-3 gap-2">
-                    {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                      <div key={field.key} className="rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-2 py-2.5 text-center">
-                        <p className="text-[10px] font-bold text-panel-muted">{field.label}</p>
-                        <div className="mt-1.5 flex justify-center">
-                          <PriceTag price={row.lowest[field.key]} size="sm" />
-                        </div>
+                  <Link href={carHref(row)} className="relative block p-4 pb-3 active:scale-[0.99]">
+                    <div className="flex items-start gap-3">
+                      <BrandLogo name={row.brandName} image={row.brandImage} className="h-11 w-11 rounded-2xl p-1.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-panel-muted">{row.brandName}</p>
+                        <p className="mt-0.5 break-words text-[15px] font-black leading-6 text-panel-text">{row.name}</p>
                       </div>
-                    ))}
-                  </div>
+                      <ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-panel-faint transition-all group-hover:-translate-x-1 group-hover:text-panel-accent" />
+                    </div>
 
-                  <p className={cn("relative mt-3 flex items-center gap-1.5 text-[11px] font-semibold", priced ? "text-panel-muted" : "text-panel-faint")}>
-                    <UsersRound className="h-3.5 w-3.5" />
-                    {priced ? `کمترین قیمت از بین ${toPersianDigits(row.sellerCount)} فروشنده` : "هنوز فروشنده‌ای قیمت ثبت نکرده است"}
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(row.model)}</span>
+                      <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">سال {toPersianDigits(row.year)}</span>
+                      <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
+                        <ColorLabel name={row.colorName} code={row.colorCode} />
+                      </span>
+                    </div>
+                  </Link>
+
+                  {yearColumns.length > 0 && (
+                    <HorizontalScroller variant="overlay" className="relative" viewportClassName="px-4 pb-1">
+                      <div className="flex w-max gap-2 pb-2">
+                        {yearColumns.map((year) => (
+                          <div
+                            key={year}
+                            className={cn(
+                              "w-[150px] shrink-0 rounded-2xl border px-2.5 py-2",
+                              row.byYear[year] ? "border-panel-line/[0.08] bg-panel-bg/60" : "border-dashed border-panel-line/[0.1] bg-transparent"
+                            )}
+                          >
+                            <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
+                              <YearHeading year={year} active={Boolean(row.byYear[year])} />
+                            </p>
+                            <YearPrices prices={row.byYear[year]} className="min-h-[70px]" />
+                          </div>
+                        ))}
+                      </div>
+                    </HorizontalScroller>
+                  )}
+
+                  <p className={cn("relative px-4 pb-4 pt-2 text-[11px] font-semibold", priced ? "text-panel-muted" : "text-panel-faint")}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <UsersRound className="h-3.5 w-3.5" />
+                      {priced ? `کمترین قیمت هر سال از بین ${toPersianDigits(row.sellerCount)} فروشنده` : "هنوز فروشنده‌ای قیمت ثبت نکرده است"}
+                    </span>
                   </p>
-                </Link>
+                </article>
               );
             })}
           </div>

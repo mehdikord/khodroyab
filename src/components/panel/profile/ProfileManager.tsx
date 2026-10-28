@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AtSign,
   BadgeCheck,
+  Building2,
   CalendarDays,
   ChevronLeft,
   Copy,
@@ -331,6 +332,13 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   حساب فعال
                 </span>
               </div>
+              {profile.companyName && (
+                <p className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-bold text-panel-text-2">
+                  <Building2 className="h-4 w-4 text-panel-accent" />
+                  {profile.companyName}
+                  <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 text-[10px] font-semibold text-panel-muted">نام نمایشی شما</span>
+                </p>
+              )}
               <p dir="ltr" className="mt-1.5 font-mono text-sm tracking-[0.12em] text-panel-muted sm:text-start">
                 {formatMobile(profile.phone)}
               </p>
@@ -405,6 +413,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
         <div className="space-y-5">
           <InfoGroup title="اطلاعات هویتی" delay={160}>
             <InfoRow icon={UserRoundPen} label="نام و نام خانوادگی" value={profile.name} />
+            <InfoRow icon={Building2} label="نام مجموعه" value={profile.companyName} />
             <InfoRow icon={Fingerprint} label="کد ملی" value={nationalCode} mono />
             <InfoRow icon={Smartphone} label="شماره موبایل" value={profile.phone} mono copyable />
           </InfoGroup>

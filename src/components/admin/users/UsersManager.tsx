@@ -40,6 +40,7 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
       ? users.filter(
           (user) =>
             user.name.toLowerCase().includes(normalized) ||
+            (user.companyName?.toLowerCase().includes(normalized) ?? false) ||
             user.phone.includes(normalized) ||
             (user.email && user.email.toLowerCase().includes(normalized))
         )
@@ -201,7 +202,10 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
                         </div>
                       )}
                     </div>
-                    <span className="font-semibold text-[#F5F5F5]">{user.name}</span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-[#F5F5F5]">{user.name}</span>
+                      {user.companyName && <span className="block truncate text-[11px] text-[#8B93A1]">{user.companyName}</span>}
+                    </span>
                     {expiring && (
                       <span
                         className="admin-blink inline-flex text-red-500"

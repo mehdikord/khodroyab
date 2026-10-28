@@ -85,7 +85,10 @@ export interface SearchAdRecord {
   /** First image registered for the car, or null when none exists. */
   imageUrl: string | null;
   userId: string;
+  /** Public seller name: business name when set, else the person's name. */
   userName: string;
+  /** True when `userName` is the seller's business name. */
+  userIsCompany: boolean;
   userImage: string | null;
   saleTerms: SearchAdSaleTerm[];
   createdAtLabel: string;
@@ -102,7 +105,10 @@ export interface SearchResult {
 /** Public view of a seller, as other customers see it. */
 export interface SellerProfile {
   id: string;
+  /** Public name: business name (نام مجموعه) when set, else the person's name. */
   name: string;
+  /** True when `name` is the seller's business name. */
+  isCompany: boolean;
   image: string | null;
   bio: string | null;
   /** Mobile number (login phone). */

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId, useState, useTransition } from "react";
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, Eye, EyeOff, Loader2, Lock, Smartphone, UserRound } from "lucide-react";
+import { AlertCircle, ArrowLeft, Building2, CheckCircle2, Clock3, Eye, EyeOff, Loader2, Lock, Smartphone, UserRound } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { registerUserAction } from "@/app/panel/auth-actions";
@@ -19,11 +19,13 @@ interface UserRegisterFormProps {
 }
 
 /**
- * Self-registration form: name, mobile (09…), password + confirmation.
+ * Self-registration form: name, optional business name, mobile (09…),
+ * password + confirmation.
  * The created account waits for admin approval before it can sign in.
  */
 export const UserRegisterForm: React.FC<UserRegisterFormProps> = ({ onSwitchToLogin }) => {
   const nameId = useId();
+  const companyId = useId();
   const phoneId = useId();
   const passwordId = useId();
   const confirmId = useId();
@@ -131,6 +133,40 @@ export const UserRegisterForm: React.FC<UserRegisterFormProps> = ({ onSwitchToLo
         {fieldErrors.name && (
           <p id={`${nameId}-error`} className="text-xs text-panel-danger-2">
             {fieldErrors.name}
+          </p>
+        )}
+      </div>
+
+      {/* Company (optional) */}
+      <div className="space-y-2">
+        <label htmlFor={companyId} className="flex items-center justify-between text-sm font-semibold text-panel-text">
+          نام مجموعه
+          <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-panel-muted">اختیاری</span>
+        </label>
+        <div className="group relative">
+          <span className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-center text-panel-faint transition-colors group-focus-within:text-panel-accent">
+            <Building2 className="h-[18px] w-[18px]" />
+          </span>
+          <input
+            id={companyId}
+            name="companyName"
+            type="text"
+            autoComplete="organization"
+            placeholder="مثلاً نمایشگاه خودرو آریا"
+            maxLength={120}
+            aria-invalid={Boolean(fieldErrors.companyName)}
+            aria-describedby={fieldErrors.companyName ? `${companyId}-error` : `${companyId}-hint`}
+            disabled={isPending}
+            className={cn(fieldClass(Boolean(fieldErrors.companyName)), "pl-4")}
+          />
+        </div>
+        {fieldErrors.companyName ? (
+          <p id={`${companyId}-error`} className="text-xs text-panel-danger-2">
+            {fieldErrors.companyName}
+          </p>
+        ) : (
+          <p id={`${companyId}-hint`} className="text-[11px] text-panel-faint">
+            اگر وارد کنید، در آگهی‌ها و پروفایل شما به جای نامتان نمایش داده می‌شود.
           </p>
         )}
       </div>

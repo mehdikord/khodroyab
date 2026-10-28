@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   Car,
   BadgeX,
+  Building2,
   CalendarDays,
   Clock3,
   Fingerprint,
@@ -319,6 +320,12 @@ export function UserProfile({
               <h2 className="mt-4 text-2xl font-black tracking-tight text-[#F5F5F5] sm:text-3xl">
                 {user.name}
               </h2>
+              {user.companyName && (
+                <p className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-bold text-[#D2D7DF]">
+                  <Building2 className="h-4 w-4 text-[#FF8A2A]" />
+                  {user.companyName}
+                </p>
+              )}
               <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-[#8B93A1] md:justify-start">
                 <span className="inline-flex items-center gap-1.5">
                   <CalendarDays className="h-3.5 w-3.5 text-[#5E6672]" />

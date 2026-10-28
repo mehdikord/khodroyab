@@ -93,6 +93,7 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileAc
       where: { id: userId },
       data: {
         name: parsed.data.name,
+        companyName: parsed.data.companyName || null,
         email: parsed.data.email || null,
         nationalCode: parsed.data.nationalCode || null,
         tel: parsed.data.tel || null,

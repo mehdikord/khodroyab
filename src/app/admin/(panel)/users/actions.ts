@@ -7,7 +7,7 @@ import { userToRecord, type UserRecord } from "@/lib/users";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
-import { userPasswordSchema, userPhoneSchema } from "@/lib/validation/user";
+import { companyNameSchema, userPasswordSchema, userPhoneSchema } from "@/lib/validation/user";
 import { hashPassword } from "@/lib/auth/password";
 import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 
@@ -25,6 +25,7 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
   if (guardResult) return guardResult as any;
 
   const name = formData.get("name") as string;
+  const companyNameResult = companyNameSchema.safeParse((formData.get("companyName") as string | null) ?? "");
   const phone = formData.get("phone") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -36,6 +37,7 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
   // Basic validation
   const fieldErrors: Record<string, string> = {};
   if (!name?.trim()) fieldErrors.name = "نام الزامی است";
+  if (!companyNameResult.success) fieldErrors.companyName = companyNameResult.error.issues[0]?.message ?? "نام مجموعه معتبر نیست";
 
   const phoneResult = userPhoneSchema.safeParse(phone ?? "");
   if (!phoneResult.success) fieldErrors.phone = phoneResult.error.issues[0]?.message ?? "شماره موبایل معتبر نیست";
@@ -75,6 +77,7 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
     const created = await prisma.user.create({
       data: {
         name: name.trim(),
+        companyName: companyNameResult.data || null,
         phone: normalizedPhone,
         email: email || null,
         password: passwordHash,
@@ -107,6 +110,7 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
   }
 
   const name = formData.get("name") as string;
+  const companyNameResult = companyNameSchema.safeParse((formData.get("companyName") as string | null) ?? "");
   const phone = formData.get("phone") as string;
   const email = formData.get("email") as string;
   const password = (formData.get("password") as string | null) ?? "";
@@ -118,6 +122,7 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
 
   const fieldErrors: Record<string, string> = {};
   if (!name?.trim()) fieldErrors.name = "نام الزامی است";
+  if (!companyNameResult.success) fieldErrors.companyName = companyNameResult.error.issues[0]?.message ?? "نام مجموعه معتبر نیست";
 
   const phoneResult = userPhoneSchema.safeParse(phone ?? "");
   if (!phoneResult.success) fieldErrors.phone = phoneResult.error.issues[0]?.message ?? "شماره موبایل معتبر نیست";
@@ -165,6 +170,7 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
       where: { id: userId },
       data: {
         name: name.trim(),
+        companyName: companyNameResult.data || null,
         phone: normalizedPhone,
         email: email || null,
         ...(passwordHash ? { password: passwordHash } : {}),

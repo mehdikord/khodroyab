@@ -26,7 +26,7 @@ export const UPLOAD_ROOT = path.resolve(
 export const UPLOAD_URL_PREFIX = "/uploads";
 
 /** Sub-directories a caller may write to. Keeps paths predictable and listable. */
-export type UploadSubdir = "brands" | "cars" | "users" | "sale-terms";
+export type UploadSubdir = "brands" | "cars" | "users" | "sale-terms" | "sponsors";
 
 export const MIME_TO_EXTENSION: Record<string, string> = {
   "image/png": "png",

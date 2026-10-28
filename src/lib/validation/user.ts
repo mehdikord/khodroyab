@@ -61,6 +61,14 @@ export function zodFieldErrors(error: z.ZodError): FieldErrors {
 /* ───────────────────────── Self-registration ───────────────────────── */
 
 export const USER_NAME_MAX_LENGTH = 100;
+export const COMPANY_NAME_MAX_LENGTH = 120;
+
+/** Optional business name (نام مجموعه); blank → "". */
+export const companyNameSchema = z
+  .string()
+  .trim()
+  .max(COMPANY_NAME_MAX_LENGTH, { error: `نام مجموعه حداکثر ${COMPANY_NAME_MAX_LENGTH} کاراکتر است` })
+  .refine((value) => value.length === 0 || value.length >= 2, { error: "نام مجموعه باید حداقل ۲ کاراکتر باشد" });
 
 export const userRegisterSchema = z
   .object({
@@ -69,6 +77,7 @@ export const userRegisterSchema = z
       .trim()
       .min(2, { error: "نام باید حداقل ۲ کاراکتر باشد" })
       .max(USER_NAME_MAX_LENGTH, { error: `نام حداکثر ${USER_NAME_MAX_LENGTH} کاراکتر است` }),
+    companyName: companyNameSchema,
     // Persian/Arabic digits are folded to ASCII by `normalizePhone`, so "۰۹۱۲…" is stored as "0912…".
     phone: userPhoneSchema,
     password: userPasswordSchema,
@@ -91,6 +100,7 @@ export function parseUserRegisterForm(formData: FormData):
 
   const result = userRegisterSchema.safeParse({
     name: read("name"),
+    companyName: read("companyName"),
     phone: read("phone"),
     password: read("password"),
     passwordConfirm: read("passwordConfirm"),

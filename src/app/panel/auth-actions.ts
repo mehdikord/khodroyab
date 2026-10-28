@@ -110,7 +110,7 @@ export async function registerUserAction(formData: FormData): Promise<UserRegist
     return { ok: false, message: "اطلاعات وارد شده معتبر نیست.", fieldErrors: parsed.fieldErrors };
   }
 
-  const { name, phone, password } = parsed.data;
+  const { name, companyName, phone, password } = parsed.data;
 
   try {
     const duplicate = await prisma.user.findFirst({ where: { phone }, select: { id: true } });
@@ -126,6 +126,7 @@ export async function registerUserAction(formData: FormData): Promise<UserRegist
     await prisma.user.create({
       data: {
         name,
+        companyName: companyName || null,
         phone,
         password: await hashPassword(password),
         isActive: false,

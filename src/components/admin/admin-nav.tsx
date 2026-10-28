@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, UserRoundPlus, Crown } from "lucide-react";
+import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, UserRoundPlus, Crown, HeartHandshake } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface AdminSubNavItem {
@@ -73,6 +73,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "SALE TERMS",
         href: "/admin/sale-terms",
         icon: HandCoins,
+      },
+      {
+        key: "sponsors",
+        label: "حامیان",
+        enLabel: "SPONSORS",
+        href: "/admin/sponsors",
+        icon: HeartHandshake,
       },
     ],
   },

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { CalendarDays, Car, ChevronLeft, HandCoins, UserRound } from "lucide-react";
+import { Building2, CalendarDays, Car, ChevronLeft, HandCoins, UserRound } from "lucide-react";
 
 import type { SearchAdRecord } from "@/lib/panel-search-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
@@ -139,8 +139,8 @@ export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 text-[10px] text-panel-faint">
-                <UserRound className="h-3 w-3" />
-                فروشنده
+                {ad.userIsCompany ? <Building2 className="h-3 w-3" /> : <UserRound className="h-3 w-3" />}
+                {ad.userIsCompany ? "مجموعه فروشنده" : "فروشنده"}
               </p>
               <p className="truncate text-sm font-extrabold text-panel-text transition-colors group-hover/seller:text-panel-accent-soft">
                 {ad.userName}

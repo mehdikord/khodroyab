@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { hasCompanyName, publicDisplayName } from "@/lib/display-name";
 import { normalizeDigits } from "@/lib/validation/admin";
 
 import {
@@ -55,6 +56,7 @@ function buildWhere(filters: SearchFilterValues): Prisma.UserCarWhereInput {
       { car: { brand: { name: { contains: filters.q } } } },
       { car: { carType: { name: { contains: filters.q } } } },
       { user: { name: { contains: filters.q } } },
+      { user: { companyName: { contains: filters.q } } },
     ];
     if (digits) {
       or.push({ code: { contains: digits } });
@@ -100,7 +102,7 @@ function buildOrderBy(sort: SearchSort): Prisma.UserCarOrderByWithRelationInput[
 }
 
 const searchInclude = {
-  user: { select: { id: true, name: true, image: true } },
+  user: { select: { id: true, name: true, companyName: true, image: true } },
   car: {
     include: {
       brand: { select: { name: true, image: true } },
@@ -166,7 +168,8 @@ function toSearchAdRecord(row: SearchAdRow): SearchAdRecord {
     brandImage: row.car.brand.image,
     imageUrl: row.car.carImages[0]?.imageUrl ?? null,
     userId: row.user.id.toString(),
-    userName: row.user.name,
+    userName: publicDisplayName(row.user),
+    userIsCompany: hasCompanyName(row.user),
     userImage: row.user.image,
     saleTerms: row.saleTerms.filter((item) => item.saleTerm.isActive).map(toSearchSaleTerm),
     createdAtLabel: faDate.format(row.createdAt),
@@ -250,6 +253,7 @@ export async function getSellerProfile(idRaw: string): Promise<SellerProfile | n
     select: {
       id: true,
       name: true,
+      companyName: true,
       image: true,
       bio: true,
       phone: true,
@@ -261,7 +265,8 @@ export async function getSellerProfile(idRaw: string): Promise<SellerProfile | n
   if (!user) return null;
   return {
     id: user.id.toString(),
-    name: user.name,
+    name: publicDisplayName(user),
+    isCompany: hasCompanyName(user),
     image: user.image,
     bio: user.bio,
     phone: user.phone,

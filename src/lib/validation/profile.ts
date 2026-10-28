@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { normalizeDigits, type FieldErrors } from "@/lib/validation/admin";
-import { PASSWORD_MAX_LENGTH, userPasswordSchema, zodFieldErrors } from "@/lib/validation/user";
+import { PASSWORD_MAX_LENGTH, companyNameSchema, userPasswordSchema, zodFieldErrors } from "@/lib/validation/user";
 
 /* ───────────────────────── helpers ───────────────────────── */
 
@@ -41,6 +41,7 @@ export const profileUpdateSchema = z.object({
     .trim()
     .min(2, { error: "نام باید حداقل ۲ کاراکتر باشد" })
     .max(80, { error: "نام نباید بیشتر از ۸۰ کاراکتر باشد" }),
+  companyName: companyNameSchema,
   email: z
     .string()
     .trim()
@@ -75,6 +76,7 @@ export function parseProfileUpdateForm(
 ): { success: true; data: ProfileUpdateInput } | { success: false; fieldErrors: FieldErrors } {
   const result = profileUpdateSchema.safeParse({
     name: str(formData, "name"),
+    companyName: str(formData, "companyName"),
     email: str(formData, "email"),
     nationalCode: str(formData, "nationalCode"),
     tel: str(formData, "tel"),

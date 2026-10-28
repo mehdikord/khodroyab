@@ -6,6 +6,7 @@ import type { ProfileAdStats, ProfileRecord } from "@/lib/profile";
 export const profileSelect = {
   id: true,
   name: true,
+  companyName: true,
   phone: true,
   email: true,
   image: true,
@@ -21,6 +22,7 @@ export const profileSelect = {
 export interface ProfileRow {
   id: bigint;
   name: string;
+  companyName: string | null;
   phone: string;
   email: string | null;
   image: string | null;
@@ -37,6 +39,7 @@ export function toProfileRecord(row: ProfileRow): ProfileRecord {
   return {
     id: row.id.toString(),
     name: row.name,
+    companyName: row.companyName,
     phone: row.phone,
     email: row.email,
     image: row.image,

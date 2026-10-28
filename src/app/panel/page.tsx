@@ -2,10 +2,11 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BadgeCheck, Search, Sparkles } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
+import { listActiveSponsors } from "@/lib/sponsors";
 import { PanelLogo } from "@/components/panel/PanelLogo";
+import { SponsorsMarquee } from "@/components/panel/SponsorsMarquee";
 import { UserAuthCard } from "@/components/panel/UserAuthCard";
 
 export const metadata: Metadata = {
@@ -14,13 +15,7 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-const HIGHLIGHTS = [
-  { icon: Search, text: "جستجوی پیشرفته میان آگهی‌های تایید‌شده" },
-  { icon: BadgeCheck, text: "دسترسی به کد اختصاصی هر آگهی" },
-  { icon: Sparkles, text: "طراحی‌شده برای موبایل و لپ‌تاپ" },
-];
-
-/** Customer login / registration screen at exactly `/panel`. */
+/** Customer login / registration screen at exactly `/panel`, with the active sponsors' logo strip at the bottom. */
 export default async function PanelLoginPage() {
   // A *valid* session skips the login screen. A stale/invalid cookie simply
   // falls through to the form (never trusted without verification).
@@ -28,6 +23,8 @@ export default async function PanelLoginPage() {
   if (user) {
     redirect("/panel/dashboard");
   }
+
+  const sponsors = await listActiveSponsors();
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden">
@@ -54,27 +51,15 @@ export default async function PanelLoginPage() {
         >
           <UserAuthCard />
         </div>
-
-        {/* Highlights */}
-        <ul className="admin-animate-in mt-6 grid grid-cols-1 gap-2" style={{ animationDelay: "160ms" }}>
-          {HIGHLIGHTS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li
-                key={item.text}
-                className="flex items-center gap-3 rounded-2xl border border-panel-line/[0.06] bg-panel-surface/60 px-4 py-2.5 text-xs text-panel-muted"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#FF6A00]/30 bg-[#FF6A00]/10 text-panel-accent">
-                  <Icon className="h-4 w-4" />
-                </span>
-                {item.text}
-              </li>
-            );
-          })}
-        </ul>
-
-        <p className="mt-8 text-center text-xs text-panel-faint">© {new Date().getFullYear()} خودرو یاب — KHODROYAB</p>
       </div>
+
+      {sponsors.length > 0 && (
+        <SponsorsMarquee sponsors={sponsors} className="admin-animate-in relative z-10 pb-2" />
+      )}
+
+      <p className="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 text-center text-xs text-panel-faint">
+        © {new Date().getFullYear()} خودرو یاب — KHODROYAB
+      </p>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Crown, UsersRound } from "lucide-react";
+import { ArrowRight, CalendarDays, Crown, UsersRound } from "lucide-react";
 
 import { requireUser } from "@/lib/auth/user-auth";
 import { getPriceListCarDetail } from "@/lib/price-list";
@@ -33,7 +33,8 @@ export default async function PriceListCarPage({ params }: PageProps) {
 
   const detail = await getPriceListCarDetail(params.carId);
   if (!detail) notFound();
-  const { car, offers, lowest } = detail;
+  const { car, offers, lowest, lowestByYear, years } = detail;
+  const sellerCount = offers.length;
 
   return (
     <div className="space-y-5">
@@ -69,8 +70,14 @@ export default async function PriceListCarPage({ params }: PageProps) {
                 )}
                 <span className="inline-flex items-center gap-1 rounded-lg bg-[#FF6A00]/10 px-2 py-1 font-bold text-panel-accent">
                   <UsersRound className="h-3.5 w-3.5" />
-                  {toPersianDigits(offers.length)} فروشنده
+                  {toPersianDigits(sellerCount)} فروشنده
                 </span>
+                {years.length > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">
+                    <CalendarDays className="h-3.5 w-3.5 text-panel-accent" />
+                    قیمت برای {years.map((year) => toPersianDigits(year)).join("، ")}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -110,10 +117,11 @@ export default async function PriceListCarPage({ params }: PageProps) {
         </div>
       ) : (
         <>
-          <CarOffersView car={car} offers={offers} lowest={lowest} currentUserId={user.id} />
+          <CarOffersView car={car} offers={offers} lowestByYear={lowestByYear} years={years} currentUserId={user.id} />
           <p className="text-[11px] leading-6 text-panel-faint">
-            قیمت‌ها به دلار و توسط فروشندگان در جدول قیمتشان ثبت شده‌اند. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده است؛ برای دیدن
-            پروفایل و اطلاعات تماس فروشنده روی نام او بزنید.
+            قیمت‌ها به دلار و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت جداگانه ثبت شده‌اند؛ هر ستون یک سال است و «—» یعنی
+            فروشنده برای آن سال قیمتی ثبت نکرده است. کمترین قیمت هر سال با نشان تاج سبز مشخص شده و با زدن عنوان هر سال، فروشندگان بر
+            اساس قیمت همان سال مرتب می‌شوند.
           </p>
         </>
       )}

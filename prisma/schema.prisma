@@ -43,6 +43,9 @@ model Admin {
 model User {
   id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   name         String    @db.VarChar(255)
+  /// Optional business / dealership name (نام مجموعه). When set, other
+  /// customers see it instead of `name` on ads, profiles and price lists.
+  companyName  String?   @map("company_name") @db.VarChar(255)
   phone        String    @db.VarChar(255)
   email        String?   @db.VarChar(255)
   image        String?   @db.VarChar(255)
@@ -297,29 +300,54 @@ model UserCarSaleTermPriceHistory {
 // ─── Table 13: user_price_table_entries ──────────────────────────────────────
 // A customer's personal price table: one row per (user, car). Only cars with
 // `cars.price_table = true` may appear here; the admin controls that flag.
+// The prices themselves live in `user_price_table_prices`, one row per
+// production year the customer chose to price.
 model UserPriceTableEntry {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   userId    BigInt   @map("user_id") @db.UnsignedBigInt
   carId     BigInt   @map("car_id") @db.UnsignedBigInt
   /// Colour picked by the customer from the `colors` catalogue.
-  colorId        BigInt?  @map("color_id") @db.UnsignedBigInt
+  colorId   BigInt?  @map("color_id") @db.UnsignedBigInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  color Color? @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  prices UserPriceTablePrice[]
+
+  @@unique([userId, carId])
+  @@index([carId])
+  @@index([colorId])
+  @@map("user_price_table_entries")
+}
+
+// ─── Table 17: user_price_table_prices ───────────────────────────────────────
+// One price tier of a price-table row: the raw / clearance / instant USD
+// prices for a production year typed by the customer. The year is the
+// customer's own and is independent of `cars.year`. Only tiers with at least
+// one price are stored.
+model UserPriceTablePrice {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  entryId        BigInt   @map("entry_id") @db.UnsignedBigInt
+  /// Production year, 4 ASCII digits (Gregorian or Jalali), e.g. "2025".
+  year           String   @db.VarChar(10)
   /// Raw price (قیمت خام) in US dollars (digit-only string, same convention as sale-term prices).
   priceUsd       String?  @map("price_usd") @db.VarChar(255)
   /// Clearance price (قیمت ترخیصی) in US dollars, digit-only string.
   clearancePrice String?  @map("clearance_price") @db.VarChar(255)
   /// Instant price (قیمت فوری) in US dollars, digit-only string.
   instantPrice   String?  @map("instant_price") @db.VarChar(255)
+  /// Display order inside the row (the customer's order, 0-based).
+  sortOrder      Int      @default(0) @map("sort_order") @db.UnsignedInt
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  color Color? @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  entry UserPriceTableEntry @relation(fields: [entryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  @@unique([userId, carId])
-  @@index([carId])
-  @@index([colorId])
-  @@map("user_price_table_entries")
+  @@unique([entryId, year])
+  @@map("user_price_table_prices")
 }
 
 // ─── Table 14: subscription_plans ────────────────────────────────────────────
@@ -381,4 +409,22 @@ model UserSubscription {
   @@index([userId, status, endsAt])
   @@index([planId])
   @@map("user_subscriptions")
+}
+
+// ─── Table 18: sponsors ──────────────────────────────────────────────────────
+// Sponsors managed by the administrator. Active ones are shown, ordered by
+// `sort_order` (ascending), in the logo strip of the customer login page.
+model Sponsor {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(255)
+  /// Logo path (`/uploads/sponsors/...`) or absolute URL.
+  logo      String   @db.VarChar(1024)
+  isActive  Boolean  @default(true) @map("is_active")
+  /// Display priority: lower numbers are shown first.
+  sortOrder Int      @default(0) @map("sort_order") @db.UnsignedInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([isActive, sortOrder])
+  @@map("sponsors")
 }

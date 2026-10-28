@@ -428,6 +428,33 @@
   }
 }
 
+/* Sponsor logo strip (login page): an endless horizontal loop of two
+   identical copies; moving by -50% lands exactly on the second copy. */
+@keyframes sponsorMarquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+.sponsor-marquee-track {
+  animation: sponsorMarquee var(--sponsor-marquee-duration, 30s) linear infinite;
+}
+.sponsor-marquee:hover .sponsor-marquee-track,
+.sponsor-marquee:focus-within .sponsor-marquee-track {
+  animation-play-state: paused;
+}
+.sponsor-marquee-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-marquee-track {
+    animation: none;
+  }
+}
+
 /* ─── Profile sheets (bottom sheet on mobile, centered dialog on desktop) ─── */
 @keyframes panelSheetUp {
   from {

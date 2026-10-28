@@ -1,10 +1,10 @@
 import React from "react";
-import { Crown } from "lucide-react";
+import { CalendarDays, Crown } from "lucide-react";
 
 import { SafeImage } from "@/components/panel/SafeImage";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import { PRICE_TABLE_EMPTY } from "@/lib/price-table-shared";
-import { cn, formatPersianNumber } from "@/lib/utils";
+import { PRICE_TABLE_EMPTY, PRICE_TABLE_PRICE_FIELDS, type PriceTablePriceField } from "@/lib/price-table-shared";
+import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 function initials(name: string, count: number): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -97,5 +97,62 @@ export function PriceTag({
       {formatPersianNumber(price)}
       <span className="text-[0.8em] font-black opacity-70">$</span>
     </span>
+  );
+}
+
+/** Short labels of the three prices inside a year cell. */
+export const SHORT_PRICE_LABELS: Record<PriceTablePriceField, string> = {
+  priceUsd: "خام",
+  clearancePrice: "ترخیصی",
+  instantPrice: "فوری",
+};
+
+/** Header of a year column: "سال ۲۰۲۵". */
+export function YearHeading({ year, active = false, className }: { year: string; active?: boolean; className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap", className)}>
+      <CalendarDays className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
+      سال <span className="font-mono text-[12px] font-black text-panel-text">{toPersianDigits(year)}</span>
+    </span>
+  );
+}
+
+/**
+ * Content of one year cell: the raw, clearance and instant prices stacked
+ * with short labels, or a single dash when nothing was priced for the year.
+ * `best` marks fields that equal the year's lowest price.
+ */
+export function YearPrices({
+  prices,
+  best,
+  highlight,
+  className,
+}: {
+  prices: Record<PriceTablePriceField, string | null> | undefined;
+  best?: Partial<Record<PriceTablePriceField, boolean>>;
+  /** Field to emphasise (the active sort field). */
+  highlight?: PriceTablePriceField;
+  className?: string;
+}) {
+  if (!prices) {
+    return (
+      <span className={cn("flex min-h-[78px] items-center justify-center text-lg font-black text-panel-faint", className)} aria-label="بدون قیمت">
+        —
+      </span>
+    );
+  }
+  return (
+    <dl className={cn("space-y-1", className)}>
+      {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+        <div key={field.key} className="flex items-center justify-between gap-2">
+          <dt className={cn("text-[10px] font-bold", highlight === field.key ? "text-panel-accent" : "text-panel-muted")}>
+            {SHORT_PRICE_LABELS[field.key]}
+          </dt>
+          <dd>
+            <PriceTag price={prices[field.key]} best={Boolean(best?.[field.key])} size="sm" />
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }

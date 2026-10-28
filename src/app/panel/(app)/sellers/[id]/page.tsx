@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BadgeCheck, CalendarDays, MapPin, Megaphone, Phone, Quote, Smartphone, Sparkles, Table2 } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, CalendarDays, MapPin, Megaphone, Phone, Quote, Smartphone, Sparkles, Table2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { requireUser } from "@/lib/auth/user-auth";
@@ -147,8 +147,8 @@ export default async function SellerProfilePage({ params }: PageProps) {
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <h1 className="text-2xl font-black text-panel-text sm:text-3xl">{seller.name}</h1>
               <span className="inline-flex items-center gap-1 rounded-full border border-[#FF6A00]/35 bg-[#FF6A00]/10 px-2 py-0.5 text-[10px] font-bold text-panel-accent-soft">
-                <BadgeCheck className="h-3 w-3" />
-                فروشنده
+                {seller.isCompany ? <Building2 className="h-3 w-3" /> : <BadgeCheck className="h-3 w-3" />}
+                {seller.isCompany ? "مجموعه" : "فروشنده"}
               </span>
             </div>
 
@@ -242,7 +242,10 @@ export default async function SellerProfilePage({ params }: PageProps) {
             ) : (
               <>
                 <PriceTableView rows={priceRows} />
-                <p className="text-[11px] text-panel-faint">قیمت‌ها به دلار و توسط فروشنده ثبت شده‌اند. «---» یعنی فروشنده برای آن خودرو قیمتی ثبت نکرده است.</p>
+                <p className="text-[11px] leading-6 text-panel-faint">
+                  قیمت‌ها به دلار و توسط فروشنده برای هر سال ساخت جداگانه ثبت شده‌اند. «---» یعنی فروشنده برای آن خودرو یا قیمت، مقداری ثبت
+                  نکرده است.
+                </p>
               </>
             )}
           </div>

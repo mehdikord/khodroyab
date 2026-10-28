@@ -2,17 +2,22 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDownWideNarrow, ChevronLeft } from "lucide-react";
+import { ArrowDownWideNarrow, Building2, ChevronLeft, X } from "lucide-react";
 
-import type { PriceListCarInfo, PriceListOffer, PriceListPrices } from "@/lib/price-list";
+import type { PriceListCarInfo, PriceListOffer, PriceListPricesByYear } from "@/lib/price-list";
 import { PRICE_TABLE_PRICE_FIELDS, type PriceTablePriceField } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColorLabel, PriceTag, UserAvatar } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColorLabel, UserAvatar, YearHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 
 interface CarOffersViewProps {
   car: PriceListCarInfo;
+  /** One entry per seller, with all of their years. */
   offers: PriceListOffer[];
-  lowest: PriceListPrices;
+  /** Lowest price per field for each year, across sellers (for the crowns). */
+  lowestByYear: PriceListPricesByYear;
+  /** Year columns, oldest first. */
+  years: string[];
   /** Signed-in user, so their own row can be marked. */
   currentUserId: string;
 }
@@ -25,19 +30,30 @@ function compareDigits(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/** The value an offer is sorted by: the field in `year`, or the seller's lowest across all years. */
+function sortValue(offer: PriceListOffer, key: PriceTablePriceField, year: string | null): string | null {
+  if (year) return offer.byYear[year]?.[key] ?? null;
+  let lowest: string | null = null;
+  for (const prices of Object.values(offer.byYear)) {
+    const value = prices[key];
+    if (value && (lowest === null || compareDigits(value, lowest) < 0)) lowest = value;
+  }
+  return lowest;
+}
+
 /** Sort by the chosen price first (blanks last), then by the remaining prices. */
-function sortOffers(offers: PriceListOffer[], primary: PriceTablePriceField): PriceListOffer[] {
+function sortOffers(offers: PriceListOffer[], primary: PriceTablePriceField, year: string | null): PriceListOffer[] {
   const order = [primary, ...PRICE_TABLE_PRICE_FIELDS.map((f) => f.key).filter((key) => key !== primary)];
   return [...offers].sort((a, b) => {
     for (const key of order) {
-      const x = a[key];
-      const y = b[key];
+      const x = sortValue(a, key, year);
+      const y = sortValue(b, key, year);
       if (x === y) continue;
       if (x === null) return 1;
       if (y === null) return -1;
       return compareDigits(x, y);
     }
-    return 0;
+    return a.userName.localeCompare(b.userName, "fa");
   });
 }
 
@@ -53,16 +69,35 @@ function YouBadge() {
   );
 }
 
-/**
- * Every seller's prices for one car. Sortable by any of the three prices; the
- * lowest price of each column is highlighted. Desktop: table; below `lg`: cards.
- */
-export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersViewProps) {
-  const [sortBy, setSortBy] = useState<PriceTablePriceField>("priceUsd");
-  const sorted = useMemo(() => sortOffers(offers, sortBy), [offers, sortBy]);
+function CompanyIcon() {
+  return <Building2 className="h-3.5 w-3.5 shrink-0 text-panel-accent" aria-label="مجموعه" />;
+}
 
-  const isBest = (offer: PriceListOffer, key: PriceTablePriceField) =>
-    offer[key] !== null && offer[key] === lowest[key];
+/**
+ * Every seller's prices for one car: one row per seller and one column per
+ * production year (oldest first). Each year cell holds the raw, clearance and
+ * instant price; a seller without prices for that year shows "—". The lowest
+ * price of each field within a year gets a crown. Sortable by any field,
+ * across all years or (by clicking a year header) within one year.
+ *
+ * Desktop: table with the seller column pinned and the year columns scrolling
+ * horizontally. Below `lg`: cards with a scrollable strip of years.
+ */
+export function CarOffersView({ car, offers, lowestByYear, years, currentUserId }: CarOffersViewProps) {
+  const [sortBy, setSortBy] = useState<PriceTablePriceField>("priceUsd");
+  const [sortYear, setSortYear] = useState<string | null>(null);
+  const sorted = useMemo(() => sortOffers(offers, sortBy, sortYear), [offers, sortBy, sortYear]);
+
+  const bestFor = (offer: PriceListOffer, year: string) => {
+    const prices = offer.byYear[year];
+    const lowest = lowestByYear[year];
+    if (!prices || !lowest) return undefined;
+    return Object.fromEntries(
+      PRICE_TABLE_PRICE_FIELDS.map(({ key }) => [key, prices[key] !== null && prices[key] === lowest[key]])
+    ) as Record<PriceTablePriceField, boolean>;
+  };
+
+  const toggleSortYear = (year: string) => setSortYear((current) => (current === year ? null : year));
 
   return (
     <div className="space-y-4">
@@ -71,10 +106,10 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
         <h2 className="text-base font-black text-panel-text">
           قیمت فروشندگان
           <span className="ms-2 rounded-lg bg-panel-line/[0.06] px-2 py-0.5 text-[11px] font-bold text-panel-muted">
-            {toPersianDigits(offers.length)} فروشنده
+            {toPersianDigits(offers.length)} فروشنده · {toPersianDigits(years.length)} سال
           </span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="hidden items-center gap-1 text-[11px] font-bold text-panel-muted sm:inline-flex">
             <ArrowDownWideNarrow className="h-4 w-4" />
             مرتب‌سازی
@@ -98,38 +133,81 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
               </button>
             ))}
           </div>
+          {sortYear && (
+            <button
+              type="button"
+              onClick={() => setSortYear(null)}
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-3 text-[11px] font-bold text-panel-accent"
+            >
+              فقط سال {toPersianDigits(sortYear)}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Desktop table */}
-      <div className="admin-animate-in hidden overflow-hidden rounded-3xl border border-panel-line/[0.1] bg-panel-surface shadow-[0_24px_60px_-30px_rgba(0,0,0,0.6)] lg:block" style={{ animationDelay: "160ms" }}>
+      <HorizontalScroller
+        className="admin-animate-in hidden lg:block"
+        viewportClassName="rounded-3xl border border-panel-line/[0.1] bg-panel-surface shadow-[0_24px_60px_-30px_rgba(0,0,0,0.6)]"
+      >
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-panel-line/[0.1] bg-panel-surface-2/70">
-              <th scope="col" className={cn(headClass, "ps-5")}>نام کاربر</th>
+            <tr className="border-b border-panel-line/[0.1] bg-panel-surface-2">
+              <th scope="col" className={cn(headClass, "sticky right-0 z-20 min-w-[220px] bg-panel-surface-2 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)]")}>
+                نام کاربر
+              </th>
               <th scope="col" className={headClass}>نام خودرو</th>
               <th scope="col" className={headClass}>برند</th>
               <th scope="col" className={headClass}>مدل</th>
               <th scope="col" className={headClass}>رنگ</th>
-              <th scope="col" className={headClass}>سال ساخت</th>
-              {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                <th key={field.key} scope="col" className={cn(headClass, sortBy === field.key && "text-panel-accent")}>
-                  {field.label}
-                </th>
-              ))}
+              {years.map((year, index) => {
+                const active = sortYear === year;
+                return (
+                  <th
+                    key={year}
+                    scope="col"
+                    aria-sort={active ? "ascending" : undefined}
+                    className={cn(
+                      headClass,
+                      "min-w-[168px] border-s border-panel-line/[0.08] p-0",
+                      active ? "bg-[#FF6A00]/[0.08]" : index % 2 === 1 && "bg-panel-line/[0.025]"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSortYear(year)}
+                      title="مرتب‌سازی بر اساس قیمت‌های این سال"
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 px-3 py-3.5 transition-colors hover:text-panel-text",
+                        active && "text-panel-accent"
+                      )}
+                    >
+                      <YearHeading year={year} active />
+                      <ArrowDownWideNarrow className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody className="divide-y divide-panel-line/[0.06]">
             {sorted.map((offer, index) => {
               const mine = offer.userId === currentUserId;
               return (
-                <tr key={offer.userId} className={cn("transition-colors", mine ? "bg-[#FF6A00]/[0.05]" : "hover:bg-panel-line/[0.03]")}>
-                  <td className="py-3 pe-3 ps-5">
+                <tr key={offer.userId} className={cn("group transition-colors", mine ? "bg-[#FF6A00]/[0.05]" : "hover:bg-panel-line/[0.03]")}>
+                  <td
+                    className={cn(
+                      "sticky right-0 z-10 py-3 pe-3 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)] transition-colors",
+                      mine ? "bg-panel-surface-2" : "bg-panel-surface group-hover:bg-panel-surface-2"
+                    )}
+                  >
                     <Link href={sellerHref(offer)} className="group/seller flex items-center gap-2.5">
                       <span className="w-5 shrink-0 text-center font-mono text-[11px] text-panel-faint">{toPersianDigits(index + 1)}</span>
                       <UserAvatar name={offer.userName} image={offer.userImage} className="transition-transform group-hover/seller:scale-105" />
                       <span className="min-w-0">
                         <span className="flex items-center gap-1.5">
+                          {offer.isCompany && <CompanyIcon />}
                           <span className="truncate text-[13px] font-extrabold text-panel-text transition-colors group-hover/seller:text-panel-accent">
                             {offer.userName}
                           </span>
@@ -139,7 +217,7 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
                       </span>
                     </Link>
                   </td>
-                  <td className="px-3 py-3 text-[13px] font-bold text-panel-text-2">{car.name}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-[13px] font-bold text-panel-text-2">{car.name}</td>
                   <td className="px-3 py-3">
                     <span className="inline-flex items-center gap-2 whitespace-nowrap text-[13px] text-panel-text-2">
                       <BrandLogo name={car.brandName} image={car.brandImage} className="h-6 w-6 rounded-lg p-0.5" />
@@ -150,10 +228,15 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
                   <td className="px-3 py-3 text-[13px]">
                     <ColorLabel name={offer.colorName} code={offer.colorCode} />
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-panel-text-2">{toPersianDigits(car.year)}</td>
-                  {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                    <td key={field.key} className="px-3 py-3">
-                      <PriceTag price={offer[field.key]} best={isBest(offer, field.key)} />
+                  {years.map((year, yearIndex) => (
+                    <td
+                      key={year}
+                      className={cn(
+                        "border-s border-panel-line/[0.06] px-3 py-3",
+                        sortYear === year ? "bg-[#FF6A00]/[0.035]" : yearIndex % 2 === 1 && "bg-panel-line/[0.02]"
+                      )}
+                    >
+                      <YearPrices prices={offer.byYear[year]} best={bestFor(offer, year)} highlight={sortBy} />
                     </td>
                   ))}
                 </tr>
@@ -161,7 +244,7 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
             })}
           </tbody>
         </table>
-      </div>
+      </HorizontalScroller>
 
       {/* Mobile / tablet cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
@@ -183,6 +266,7 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
                 <UserAvatar name={offer.userName} image={offer.userImage} className="h-11 w-11" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
+                    {offer.isCompany && <CompanyIcon />}
                     <span className="truncate text-sm font-black text-panel-text">{offer.userName}</span>
                     {mine && <YouBadge />}
                   </span>
@@ -191,36 +275,38 @@ export function CarOffersView({ car, offers, lowest, currentUserId }: CarOffersV
                 <ChevronLeft className="h-5 w-5 text-panel-faint transition-all group-hover:-translate-x-1 group-hover:text-panel-accent" />
               </Link>
 
-              <div className="space-y-3 p-4">
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-panel-line/[0.06] py-1 pe-2 ps-1 font-semibold text-panel-text-2">
-                    <BrandLogo name={car.brandName} image={car.brandImage} className="h-5 w-5 rounded-md p-0.5" />
-                    {car.brandName} · {car.name}
-                  </span>
-                  <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(car.model)}</span>
-                  <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">سال {toPersianDigits(car.year)}</span>
-                  <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
-                    <ColorLabel name={offer.colorName} code={offer.colorCode} />
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                    <div
-                      key={field.key}
-                      className={cn(
-                        "rounded-2xl border px-2 py-2.5 text-center",
-                        sortBy === field.key ? "border-[#FF6A00]/30 bg-[#FF6A00]/[0.04]" : "border-panel-line/[0.08] bg-panel-bg/60"
-                      )}
-                    >
-                      <p className="text-[10px] font-bold text-panel-muted">{field.label}</p>
-                      <div className="mt-1.5 flex justify-center">
-                        <PriceTag price={offer[field.key]} best={isBest(offer, field.key)} size="sm" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-panel-line/[0.06] py-1 pe-2 ps-1 font-semibold text-panel-text-2">
+                  <BrandLogo name={car.brandName} image={car.brandImage} className="h-5 w-5 rounded-md p-0.5" />
+                  {car.brandName} · {car.name}
+                </span>
+                <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(car.model)}</span>
+                <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
+                  <ColorLabel name={offer.colorName} code={offer.colorCode} />
+                </span>
               </div>
+
+              <HorizontalScroller variant="overlay" className="mt-3" viewportClassName="px-4 pb-1">
+                <div className="flex w-max gap-2 pb-3">
+                  {years.map((year) => {
+                    const priced = Boolean(offer.byYear[year]);
+                    return (
+                      <div
+                        key={year}
+                        className={cn(
+                          "w-[150px] shrink-0 rounded-2xl border px-2.5 py-2",
+                          priced ? "border-panel-line/[0.08] bg-panel-bg/60" : "border-dashed border-panel-line/[0.1]"
+                        )}
+                      >
+                        <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
+                          <YearHeading year={year} active={priced} />
+                        </p>
+                        <YearPrices prices={offer.byYear[year]} best={bestFor(offer, year)} highlight={sortBy} className="min-h-[70px]" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </HorizontalScroller>
             </article>
           );
         })}

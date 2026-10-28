@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Camera, Save, Trash2 } from "lucide-react";
+import { Building2, Camera, Save, Trash2 } from "lucide-react";
 
 import { updateProfileAction } from "@/app/panel/(app)/profile/actions";
 import { displayNationalCode, type ProfileRecord } from "@/lib/profile";
@@ -30,6 +30,7 @@ function getInitials(name: string): string {
 export function ProfileEditForm({ profile, onCancel, onSuccess, onPendingChange }: ProfileEditFormProps) {
   const ids = {
     name: useId(),
+    companyName: useId(),
     email: useId(),
     nationalCode: useId(),
     tel: useId(),
@@ -40,6 +41,7 @@ export function ProfileEditForm({ profile, onCancel, onSuccess, onPendingChange 
   };
 
   const [name, setName] = useState(profile.name);
+  const [companyName, setCompanyName] = useState(profile.companyName ?? "");
   const [email, setEmail] = useState(profile.email ?? "");
   const [nationalCode, setNationalCode] = useState(displayNationalCode(profile.nationalCode) ?? "");
   const [tel, setTel] = useState(profile.tel ?? "");
@@ -96,6 +98,7 @@ export function ProfileEditForm({ profile, onCancel, onSuccess, onPendingChange 
 
     const formData = new FormData();
     formData.set("name", name);
+    formData.set("companyName", companyName);
     formData.set("email", email);
     formData.set("nationalCode", nationalCode);
     formData.set("tel", tel);
@@ -200,6 +203,33 @@ export function ProfileEditForm({ profile, onCancel, onSuccess, onPendingChange 
             className={inputClassName(Boolean(fieldErrors.name))}
           />
           <FieldError message={fieldErrors.name} />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor={ids.companyName} className={labelClassName}>
+            نام مجموعه <span className="text-[11px] font-normal text-panel-faint">(اختیاری)</span>
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 start-0 flex w-11 items-center justify-center text-panel-faint">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <input
+              id={ids.companyName}
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={isPending}
+              maxLength={120}
+              autoComplete="organization"
+              placeholder="مثلاً نمایشگاه خودرو آریا"
+              className={cn(inputClassName(Boolean(fieldErrors.companyName)), "ps-11")}
+            />
+          </div>
+          {fieldErrors.companyName ? (
+            <FieldError message={fieldErrors.companyName} />
+          ) : (
+            <p className="text-[11px] text-panel-faint">
+              در صورت ثبت، سایر کاربران در آگهی‌ها، پروفایل و لیست قیمت به جای نام شما نام مجموعه را می‌بینند.
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">

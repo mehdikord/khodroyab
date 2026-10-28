@@ -6,6 +6,8 @@
 export interface ProfileRecord {
   id: string;
   name: string;
+  /** Business name (نام مجموعه); shown to other customers instead of `name` when set. */
+  companyName: string | null;
   phone: string;
   email: string | null;
   image: string | null;
@@ -40,6 +42,7 @@ export function displayNationalCode(value: string | null | undefined): string | 
 /** Fields that count towards the "profile completion" ring. */
 export const PROFILE_COMPLETION_FIELDS: { key: keyof ProfileRecord; label: string }[] = [
   { key: "image", label: "تصویر پروفایل" },
+  { key: "companyName", label: "نام مجموعه" },
   { key: "email", label: "ایمیل" },
   { key: "nationalCode", label: "کد ملی" },
   { key: "tel", label: "تلفن ثابت" },

@@ -5,6 +5,7 @@ import type { User } from "@prisma/client";
 export interface UserRecord {
   id: string;
   name: string;
+  companyName: string | null;
   phone: string;
   email: string | null;
   image: string | null;
@@ -26,6 +27,7 @@ export function userToRecord(user: User): UserRecord {
   return {
     id: user.id.toString(),
     name: user.name,
+    companyName: user.companyName,
     phone: user.phone,
     email: user.email,
     image: user.image,
