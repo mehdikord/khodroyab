@@ -4,20 +4,20 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDownWideNarrow, Building2, ChevronLeft, X } from "lucide-react";
 
-import type { PriceListCarInfo, PriceListOffer, PriceListPricesByYear } from "@/lib/price-list";
-import { PRICE_TABLE_PRICE_FIELDS, type PriceTablePriceField } from "@/lib/price-table-shared";
+import type { PriceListCarInfo, PriceListOffer, PriceListPricesByColumn } from "@/lib/price-list";
+import { PRICE_TABLE_PRICE_FIELDS, type PriceColumn, type PriceTablePriceField } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColorLabel, UserAvatar, YearHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColumnHeading, UserAvatar, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 
 interface CarOffersViewProps {
   car: PriceListCarInfo;
-  /** One entry per seller, with all of their years. */
+  /** One entry per seller, with all of their (year, colour) tiers. */
   offers: PriceListOffer[];
-  /** Lowest price per field for each year, across sellers (for the crowns). */
-  lowestByYear: PriceListPricesByYear;
-  /** Year columns, oldest first. */
-  years: string[];
+  /** Lowest price per field for each column, across sellers (for the crowns). */
+  lowestByColumn: PriceListPricesByColumn;
+  /** (year, colour) columns, oldest year first. */
+  columns: PriceColumn[];
   /** Signed-in user, so their own row can be marked. */
   currentUserId: string;
 }
@@ -30,11 +30,11 @@ function compareDigits(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-/** The value an offer is sorted by: the field in `year`, or the seller's lowest across all years. */
-function sortValue(offer: PriceListOffer, key: PriceTablePriceField, year: string | null): string | null {
-  if (year) return offer.byYear[year]?.[key] ?? null;
+/** The value an offer is sorted by: the field in one column, or the seller's lowest across all columns. */
+function sortValue(offer: PriceListOffer, key: PriceTablePriceField, column: string | null): string | null {
+  if (column) return offer.byColumn[column]?.[key] ?? null;
   let lowest: string | null = null;
-  for (const prices of Object.values(offer.byYear)) {
+  for (const prices of Object.values(offer.byColumn)) {
     const value = prices[key];
     if (value && (lowest === null || compareDigits(value, lowest) < 0)) lowest = value;
   }
@@ -42,12 +42,12 @@ function sortValue(offer: PriceListOffer, key: PriceTablePriceField, year: strin
 }
 
 /** Sort by the chosen price first (blanks last), then by the remaining prices. */
-function sortOffers(offers: PriceListOffer[], primary: PriceTablePriceField, year: string | null): PriceListOffer[] {
+function sortOffers(offers: PriceListOffer[], primary: PriceTablePriceField, column: string | null): PriceListOffer[] {
   const order = [primary, ...PRICE_TABLE_PRICE_FIELDS.map((f) => f.key).filter((key) => key !== primary)];
   return [...offers].sort((a, b) => {
     for (const key of order) {
-      const x = sortValue(a, key, year);
-      const y = sortValue(b, key, year);
+      const x = sortValue(a, key, column);
+      const y = sortValue(b, key, column);
       if (x === y) continue;
       if (x === null) return 1;
       if (y === null) return -1;
@@ -75,29 +75,30 @@ function CompanyIcon() {
 
 /**
  * Every seller's prices for one car: one row per seller and one column per
- * production year (oldest first). Each year cell holds the raw, clearance and
- * instant price; a seller without prices for that year shows "—". The lowest
- * price of each field within a year gets a crown. Sortable by any field,
- * across all years or (by clicking a year header) within one year.
+ * (production year, colour), oldest year first. Each cell holds the raw,
+ * clearance and instant price; a seller without prices for that column shows
+ * "—". The lowest price of each field within a column gets a crown. Sortable
+ * by any field, across all columns or (by clicking a column header) within one.
  *
- * Desktop: table with the seller column pinned and the year columns scrolling
- * horizontally. Below `lg`: cards with a scrollable strip of years.
+ * Desktop: table with the seller column pinned and the price columns
+ * scrolling horizontally. Below `lg`: cards with a scrollable strip.
  */
-export function CarOffersView({ car, offers, lowestByYear, years, currentUserId }: CarOffersViewProps) {
+export function CarOffersView({ car, offers, lowestByColumn, columns, currentUserId }: CarOffersViewProps) {
   const [sortBy, setSortBy] = useState<PriceTablePriceField>("priceUsd");
-  const [sortYear, setSortYear] = useState<string | null>(null);
-  const sorted = useMemo(() => sortOffers(offers, sortBy, sortYear), [offers, sortBy, sortYear]);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const sorted = useMemo(() => sortOffers(offers, sortBy, sortColumn), [offers, sortBy, sortColumn]);
+  const sortedColumn = columns.find((column) => column.key === sortColumn) ?? null;
 
-  const bestFor = (offer: PriceListOffer, year: string) => {
-    const prices = offer.byYear[year];
-    const lowest = lowestByYear[year];
+  const bestFor = (offer: PriceListOffer, key: string) => {
+    const prices = offer.byColumn[key];
+    const lowest = lowestByColumn[key];
     if (!prices || !lowest) return undefined;
     return Object.fromEntries(
       PRICE_TABLE_PRICE_FIELDS.map(({ key }) => [key, prices[key] !== null && prices[key] === lowest[key]])
     ) as Record<PriceTablePriceField, boolean>;
   };
 
-  const toggleSortYear = (year: string) => setSortYear((current) => (current === year ? null : year));
+  const toggleSortColumn = (key: string) => setSortColumn((current) => (current === key ? null : key));
 
   return (
     <div className="space-y-4">
@@ -106,7 +107,7 @@ export function CarOffersView({ car, offers, lowestByYear, years, currentUserId 
         <h2 className="text-base font-black text-panel-text">
           قیمت فروشندگان
           <span className="ms-2 rounded-lg bg-panel-line/[0.06] px-2 py-0.5 text-[11px] font-bold text-panel-muted">
-            {toPersianDigits(offers.length)} فروشنده · {toPersianDigits(years.length)} سال
+            {toPersianDigits(offers.length)} فروشنده · {toPersianDigits(columns.length)} سال و رنگ
           </span>
         </h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -133,13 +134,13 @@ export function CarOffersView({ car, offers, lowestByYear, years, currentUserId 
               </button>
             ))}
           </div>
-          {sortYear && (
+          {sortedColumn && (
             <button
               type="button"
-              onClick={() => setSortYear(null)}
+              onClick={() => setSortColumn(null)}
               className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-3 text-[11px] font-bold text-panel-accent"
             >
-              فقط سال {toPersianDigits(sortYear)}
+              فقط {toPersianDigits(sortedColumn.year)} · {sortedColumn.colorName}
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -160,12 +161,11 @@ export function CarOffersView({ car, offers, lowestByYear, years, currentUserId 
               <th scope="col" className={headClass}>نام خودرو</th>
               <th scope="col" className={headClass}>برند</th>
               <th scope="col" className={headClass}>مدل</th>
-              <th scope="col" className={headClass}>رنگ</th>
-              {years.map((year, index) => {
-                const active = sortYear === year;
+              {columns.map((column, index) => {
+                const active = sortColumn === column.key;
                 return (
                   <th
-                    key={year}
+                    key={column.key}
                     scope="col"
                     aria-sort={active ? "ascending" : undefined}
                     className={cn(
@@ -176,14 +176,14 @@ export function CarOffersView({ car, offers, lowestByYear, years, currentUserId 
                   >
                     <button
                       type="button"
-                      onClick={() => toggleSortYear(year)}
-                      title="مرتب‌سازی بر اساس قیمت‌های این سال"
+                      onClick={() => toggleSortColumn(column.key)}
+                      title="مرتب‌سازی بر اساس قیمت‌های این سال و رنگ"
                       className={cn(
                         "flex w-full items-center justify-between gap-2 px-3 py-3.5 transition-colors hover:text-panel-text",
                         active && "text-panel-accent"
                       )}
                     >
-                      <YearHeading year={year} active />
+                      <ColumnHeading column={column} active />
                       <ArrowDownWideNarrow className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
                     </button>
                   </th>
@@ -225,18 +225,15 @@ export function CarOffersView({ car, offers, lowestByYear, years, currentUserId 
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-panel-text-2">{toPersianDigits(car.model)}</td>
-                  <td className="px-3 py-3 text-[13px]">
-                    <ColorLabel name={offer.colorName} code={offer.colorCode} />
-                  </td>
-                  {years.map((year, yearIndex) => (
+                  {columns.map((column, columnIndex) => (
                     <td
-                      key={year}
+                      key={column.key}
                       className={cn(
                         "border-s border-panel-line/[0.06] px-3 py-3",
-                        sortYear === year ? "bg-[#FF6A00]/[0.035]" : yearIndex % 2 === 1 && "bg-panel-line/[0.02]"
+                        sortColumn === column.key ? "bg-[#FF6A00]/[0.035]" : columnIndex % 2 === 1 && "bg-panel-line/[0.02]"
                       )}
                     >
-                      <YearPrices prices={offer.byYear[year]} best={bestFor(offer, year)} highlight={sortBy} />
+                      <YearPrices prices={offer.byColumn[column.key]} best={bestFor(offer, column.key)} highlight={sortBy} />
                     </td>
                   ))}
                 </tr>
@@ -281,27 +278,24 @@ export function CarOffersView({ car, offers, lowestByYear, years, currentUserId 
                   {car.brandName} · {car.name}
                 </span>
                 <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(car.model)}</span>
-                <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
-                  <ColorLabel name={offer.colorName} code={offer.colorCode} />
-                </span>
               </div>
 
               <HorizontalScroller variant="overlay" className="mt-3" viewportClassName="px-4 pb-1">
                 <div className="flex w-max gap-2 pb-3">
-                  {years.map((year) => {
-                    const priced = Boolean(offer.byYear[year]);
+                  {columns.map((column) => {
+                    const priced = Boolean(offer.byColumn[column.key]);
                     return (
                       <div
-                        key={year}
+                        key={column.key}
                         className={cn(
                           "w-[150px] shrink-0 rounded-2xl border px-2.5 py-2",
                           priced ? "border-panel-line/[0.08] bg-panel-bg/60" : "border-dashed border-panel-line/[0.1]"
                         )}
                       >
                         <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
-                          <YearHeading year={year} active={priced} />
+                          <ColumnHeading column={column} active={priced} />
                         </p>
-                        <YearPrices prices={offer.byYear[year]} best={bestFor(offer, year)} highlight={sortBy} className="min-h-[70px]" />
+                        <YearPrices prices={offer.byColumn[column.key]} best={bestFor(offer, column.key)} highlight={sortBy} className="min-h-[70px]" />
                       </div>
                     );
                   })}

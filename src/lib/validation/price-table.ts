@@ -14,16 +14,16 @@ import { toPersianDigits } from "@/lib/utils";
 
 export { PRICE_TABLE_PRICE_MAX_DIGITS };
 
-/** One validated year tier: a year plus at least one of the three prices. */
+/** One validated tier: a year, a colour and at least one of the three prices. */
 export interface PriceTableTierInput extends Record<PriceTablePriceField, string | null> {
   year: string;
+  colorId: string;
 }
 
 /** One submitted row of the customer's price table. */
 export interface PriceTableEntryInput {
   carId: string;
-  colorId: string;
-  /** Non-empty, in the customer's order, with unique years. */
+  /** Non-empty, in the customer's order, with unique (year, colour) pairs. */
   tiers: PriceTableTierInput[];
 }
 
@@ -33,16 +33,17 @@ export type ParsedPriceTableForm =
 
 /**
  * Field-error keys used by the editor:
- * - `<carId>.colorId`             colour select of a row
  * - `<carId>.tiers`               row-level message (no price, too many tiers…)
- * - `<carId>.<index>.<field>`     one input of the tier at `index` (year or a price)
+ * - `<carId>.<index>.<field>`     one input of the tier at `index` (year, colorId or a price)
+ * - `<carId>.<index>.combo`       the tier repeats a (year, colour) pair already in the row
  */
-export function tierErrorKey(carId: string, index: number, field: "year" | PriceTablePriceField): string {
+export function tierErrorKey(carId: string, index: number, field: "year" | "colorId" | "combo" | PriceTablePriceField): string {
   return `${carId}.${index}.${field}`;
 }
 
 const rawTierSchema = z.object({
   year: z.string().trim().max(32),
+  colorId: z.string().regex(/^\d*$/, { error: "رنگ انتخاب‌شده نامعتبر است" }),
   priceUsd: z.string().trim().max(64),
   clearancePrice: z.string().trim().max(64),
   instantPrice: z.string().trim().max(64),
@@ -50,7 +51,6 @@ const rawTierSchema = z.object({
 
 const rawEntrySchema = z.object({
   carId: z.string().regex(/^\d+$/, { error: "شناسه خودرو نامعتبر است" }),
-  colorId: z.string().regex(/^\d*$/, { error: "رنگ انتخاب‌شده نامعتبر است" }),
   tiers: z.array(rawTierSchema).max(PRICE_TABLE_MAX_TIERS * 2),
 });
 
@@ -72,11 +72,11 @@ function isBlankTier(tier: z.infer<typeof rawTierSchema>): boolean {
 /**
  * Parse the JSON `entries` field of the "save my price table" form.
  *
- * - A tier whose three prices are blank is ignored (its year alone means nothing).
- * - A row with no colour and no priced tier is "not filled in" and dropped.
- * - A filled row needs a colour and at least one priced tier.
- * - Every priced tier needs a valid 4-digit year that is unique within the row,
- *   and at least one of the raw, clearance or instant prices.
+ * - A tier whose three prices are blank is ignored (its year/colour alone mean nothing).
+ * - A row without any priced tier is "not filled in" and dropped.
+ * - Every priced tier needs a valid 4-digit year, a colour and at least one
+ *   price; its (year, colour) pair must be unique within the row — the same
+ *   year may repeat with a different colour.
  */
 export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
   const raw = formData.get("entries");
@@ -93,11 +93,11 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      const [index, field] = issue.path;
-      if (typeof index === "number" && typeof field === "string") {
+      const [index] = issue.path;
+      if (typeof index === "number") {
         const item = (json as { carId?: unknown }[])[index];
         const carId = typeof item?.carId === "string" ? item.carId : String(index);
-        const key = field === "colorId" ? `${carId}.colorId` : `${carId}.tiers`;
+        const key = `${carId}.tiers`;
         if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
     }
@@ -112,36 +112,53 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
     if (seen.has(row.carId)) continue;
     seen.add(row.carId);
 
-    const hasColor = row.colorId.length > 0;
     const pricedCount = row.tiers.filter((tier) => !isBlankTier(tier)).length;
-    if (!hasColor && pricedCount === 0) continue; // blank row → nothing saved for this car
+    if (pricedCount === 0) continue; // blank row → nothing saved for this car
 
     let rowValid = true;
     const tiers: PriceTableTierInput[] = [];
-    const years = new Set<string>();
+    const combos = new Set<string>();
 
     if (pricedCount > PRICE_TABLE_MAX_TIERS) {
-      fieldErrors[`${row.carId}.tiers`] = `حداکثر ${PRICE_TABLE_MAX_TIERS} سال برای هر خودرو قابل ثبت است`;
+      fieldErrors[`${row.carId}.tiers`] = `حداکثر ${toPersianDigits(PRICE_TABLE_MAX_TIERS)} ردیف قیمت برای هر خودرو قابل ثبت است`;
       rowValid = false;
     }
 
     row.tiers.forEach((rawTier, index) => {
       if (isBlankTier(rawTier)) return;
 
-      const tier: PriceTableTierInput = { year: digitsOnly(rawTier.year), priceUsd: null, clearancePrice: null, instantPrice: null };
+      const tier: PriceTableTierInput = {
+        year: digitsOnly(rawTier.year),
+        colorId: rawTier.colorId,
+        priceUsd: null,
+        clearancePrice: null,
+        instantPrice: null,
+      };
 
+      let yearOk = false;
       if (!tier.year) {
         fieldErrors[tierErrorKey(row.carId, index, "year")] = "سال را وارد کنید";
-        rowValid = false;
       } else if (!isValidTierYear(tier.year)) {
         fieldErrors[tierErrorKey(row.carId, index, "year")] =
           `سال باید ۴ رقمی و بین ${toPersianDigits(PRICE_TABLE_YEAR_MIN)} تا ${toPersianDigits(PRICE_TABLE_YEAR_MAX)} باشد`;
-        rowValid = false;
-      } else if (years.has(tier.year)) {
-        fieldErrors[tierErrorKey(row.carId, index, "year")] = "این سال تکراری است";
-        rowValid = false;
       } else {
-        years.add(tier.year);
+        yearOk = true;
+      }
+
+      if (!tier.colorId) {
+        fieldErrors[tierErrorKey(row.carId, index, "colorId")] = "رنگ را انتخاب کنید";
+      }
+
+      if (yearOk && tier.colorId) {
+        const combo = `${tier.year}:${tier.colorId}`;
+        if (combos.has(combo)) {
+          fieldErrors[tierErrorKey(row.carId, index, "combo")] = "این سال با همین رنگ قبلاً در این خودرو ثبت شده است";
+          rowValid = false;
+        } else {
+          combos.add(combo);
+        }
+      } else {
+        rowValid = false;
       }
 
       for (const { key } of PRICE_TABLE_PRICE_FIELDS) {
@@ -158,22 +175,13 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
       tiers.push(tier);
     });
 
-    if (!hasColor) {
-      fieldErrors[`${row.carId}.colorId`] = "رنگ خودرو را انتخاب کنید";
-      rowValid = false;
-    }
-    if (pricedCount === 0) {
-      fieldErrors[`${row.carId}.tiers`] = "حداقل یکی از قیمت‌ها را وارد کنید";
-      rowValid = false;
-    }
-
-    if (rowValid) entries.push({ carId: row.carId, colorId: row.colorId, tiers });
+    if (rowValid) entries.push({ carId: row.carId, tiers });
   }
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
       success: false,
-      message: "برخی از ردیف‌های جدول ناقص هستند؛ برای هر ردیف رنگ، سال و حداقل یکی از قیمت‌ها را وارد کنید",
+      message: "برخی از ردیف‌های جدول ناقص هستند؛ برای هر ردیف قیمت، سال، رنگ و حداقل یکی از قیمت‌ها را وارد کنید",
       fieldErrors,
     };
   }

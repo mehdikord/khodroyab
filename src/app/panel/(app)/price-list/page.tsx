@@ -57,7 +57,7 @@ export default async function PanelPriceListPage() {
               </h1>
               <p className="mt-1.5 flex items-center gap-1.5 text-xs leading-6 text-panel-muted sm:text-sm">
                 <Sparkles className="h-3.5 w-3.5 shrink-0 text-panel-accent" />
-                کمترین قیمت خام، ترخیصی و فوری هر خودرو به تفکیک سال ساخت، از بین جدول قیمت همه فروشندگان
+                کمترین قیمت خام، ترخیصی و فوری هر خودرو به تفکیک سال ساخت و رنگ، از بین جدول قیمت همه فروشندگان
               </p>
             </div>
             <LiveClock className="self-start" />
@@ -86,8 +86,8 @@ export default async function PanelPriceListPage() {
         <>
           <PriceListBrowser rows={rows} />
           <p className="text-[11px] leading-6 text-panel-faint">
-            همه قیمت‌ها به دلار هستند. هر ستون یک سال ساخت است و کمترین قیمت خام، ترخیصی و فوری آن سال را از بین جدول قیمت فروشندگان
-            نشان می‌دهد؛ «—» یعنی برای آن سال قیمتی ثبت نشده است. برای دیدن قیمت همه فروشندگان روی هر ردیف بزنید.
+            همه قیمت‌ها به دلار هستند. هر ستون یک سال ساخت و رنگ است و کمترین قیمت خام، ترخیصی و فوری آن را از بین جدول قیمت فروشندگان
+            نشان می‌دهد؛ «—» یعنی برای آن سال و رنگ قیمتی ثبت نشده است. برای دیدن قیمت همه فروشندگان روی هر ردیف بزنید.
           </p>
         </>
       )}

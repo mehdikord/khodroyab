@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { listActiveSponsors } from "@/lib/sponsors";
+import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
 import { SponsorsMarquee } from "@/components/panel/SponsorsMarquee";
 import { UserAuthCard } from "@/components/panel/UserAuthCard";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-/** Customer login / registration screen at exactly `/panel`, with the active sponsors' logo strip at the bottom. */
+/** Customer login / registration screen at exactly `/panel`, with the active sponsors' logo strip at the top. */
 export default async function PanelLoginPage() {
   // A *valid* session skips the login screen. A stale/invalid cookie simply
   // falls through to the form (never trusted without verification).
@@ -31,7 +32,19 @@ export default async function PanelLoginPage() {
       <div className="panel-ambient pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10 pt-[max(2.5rem,env(safe-area-inset-top))] sm:justify-center sm:py-12">
+      {sponsors.length > 0 && (
+        <SponsorsMarquee
+          sponsors={sponsors}
+          className="admin-animate-in relative z-10 border-b border-panel-line/[0.06] bg-panel-surface/40 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm"
+        />
+      )}
+
+      <div
+        className={cn(
+          "relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10 sm:justify-center sm:py-12",
+          sponsors.length > 0 ? "pt-8" : "pt-[max(2.5rem,env(safe-area-inset-top))]"
+        )}
+      >
         {/* Brand */}
         <div className="admin-animate-in flex flex-col items-center text-center">
           <PanelLogo markOnly size="lg" />
@@ -52,10 +65,6 @@ export default async function PanelLoginPage() {
           <UserAuthCard />
         </div>
       </div>
-
-      {sponsors.length > 0 && (
-        <SponsorsMarquee sponsors={sponsors} className="admin-animate-in relative z-10 pb-2" />
-      )}
 
       <p className="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 text-center text-xs text-panel-faint">
         © {new Date().getFullYear()} خودرو یاب — KHODROYAB

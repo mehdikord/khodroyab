@@ -32,9 +32,15 @@ async function guardRequest(): Promise<{ ok: false; message: string } | { ok: tr
   return { ok: true, userId };
 }
 
-/** Stable comparison key of a row's colour + tiers, to skip rows that did not change. */
-function entrySignature(colorId: string | null, tiers: PriceTableEntryInput["tiers"]): string {
-  return JSON.stringify([colorId, tiers.map((tier) => [tier.year, tier.priceUsd, tier.clearancePrice, tier.instantPrice])]);
+type TierSignatureInput = Pick<PriceTableEntryInput["tiers"][number], "year" | "priceUsd" | "clearancePrice" | "instantPrice"> & {
+  colorId: string | bigint;
+};
+
+/** Stable comparison key of a row's tiers, to skip rows that did not change. */
+function entrySignature(tiers: TierSignatureInput[]): string {
+  return JSON.stringify(
+    tiers.map((tier) => [tier.year, tier.colorId.toString(), tier.priceUsd, tier.clearancePrice, tier.instantPrice])
+  );
 }
 
 /**
@@ -44,8 +50,8 @@ function entrySignature(colorId: string | null, tiers: PriceTableEntryInput["tie
  * - Eligible cars missing from the submission are removed from the table.
  * - Entries for cars that are currently *not* eligible are left untouched, so
  *   they reappear if the admin re-enables the car later.
- * - Each submitted row's year tiers replace the stored ones; rows whose colour
- *   and tiers are unchanged are not rewritten.
+ * - Each submitted row's (year, colour) tiers replace the stored ones; rows
+ *   whose tiers are unchanged are not rewritten.
  */
 export async function saveMyPriceTableAction(formData: FormData): Promise<SavePriceTableResult> {
   const guard = await guardRequest();
@@ -74,13 +80,18 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
       };
     }
 
-    const colorIds = Array.from(new Set(parsed.entries.map((entry) => entry.colorId)), (id) => BigInt(id));
+    const colorIds = Array.from(
+      new Set(parsed.entries.flatMap((entry) => entry.tiers.map((tier) => tier.colorId))),
+      (id) => BigInt(id)
+    );
     const existingColors = await prisma.color.findMany({ where: { id: { in: colorIds } }, select: { id: true } });
     const colorSet = new Set(existingColors.map((color) => color.id.toString()));
     for (const entry of parsed.entries) {
-      if (!colorSet.has(entry.colorId)) {
-        fieldErrors[`${entry.carId}.colorId`] = "این رنگ دیگر وجود ندارد؛ رنگ دیگری انتخاب کنید";
-      }
+      entry.tiers.forEach((tier, index) => {
+        if (!colorSet.has(tier.colorId)) {
+          fieldErrors[`${entry.carId}.${index}.colorId`] = "این رنگ دیگر وجود ندارد؛ رنگ دیگری انتخاب کنید";
+        }
+      });
     }
     if (Object.keys(fieldErrors).length > 0) {
       return { ok: false, message: "برخی از رنگ‌های انتخاب‌شده حذف شده‌اند؛ صفحه را به‌روزرسانی کنید", fieldErrors };
@@ -92,18 +103,17 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
       where: { userId, carId: { in: submittedIds } },
       select: {
         carId: true,
-        colorId: true,
         prices: {
-          select: { year: true, priceUsd: true, clearancePrice: true, instantPrice: true },
+          select: { year: true, colorId: true, priceUsd: true, clearancePrice: true, instantPrice: true },
           orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
         },
       },
     });
     const existingSignature = new Map(
-      existing.map((entry) => [entry.carId.toString(), entrySignature(entry.colorId?.toString() ?? null, entry.prices)])
+      existing.map((entry) => [entry.carId.toString(), entrySignature(entry.prices)])
     );
     const changed = parsed.entries.filter(
-      (entry) => existingSignature.get(entry.carId) !== entrySignature(entry.colorId, entry.tiers)
+      (entry) => existingSignature.get(entry.carId) !== entrySignature(entry.tiers)
     );
 
     await prisma.$transaction(
@@ -114,17 +124,21 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
 
         for (const entry of changed) {
           const carId = BigInt(entry.carId);
-          const colorId = BigInt(entry.colorId);
           const saved = await tx.userPriceTableEntry.upsert({
             where: { userId_carId: { userId, carId } },
-            create: { userId, carId, colorId },
-            // Touch `updatedAt` even when only the tiers changed.
-            update: { colorId, updatedAt: new Date() },
+            create: { userId, carId },
+            // Touch `updatedAt`: the row itself has no other column that changes.
+            update: { updatedAt: new Date() },
             select: { id: true },
           });
           await tx.userPriceTablePrice.deleteMany({ where: { entryId: saved.id } });
           await tx.userPriceTablePrice.createMany({
-            data: entry.tiers.map((tier, index) => ({ entryId: saved.id, sortOrder: index, ...tier })),
+            data: entry.tiers.map((tier, index) => ({
+              ...tier,
+              entryId: saved.id,
+              colorId: BigInt(tier.colorId),
+              sortOrder: index,
+            })),
           });
         }
       },

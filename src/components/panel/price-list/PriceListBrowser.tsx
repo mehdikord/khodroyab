@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Search, SearchX, Tags, UsersRound, X } from "lucide-react";
 
 import type { PriceListRow } from "@/lib/price-list";
-import { digitsOnly } from "@/lib/price-table-shared";
+import { digitsOnly, mergePriceColumns } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColorLabel, YearHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColorLabel, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 
 interface PriceListBrowserProps {
@@ -26,10 +26,11 @@ function hasAnyPrice(row: PriceListRow): boolean {
 }
 
 /**
- * Market-wide price list: every price-table car with, for each production
- * year, the lowest raw / clearance / instant price across all sellers. There
- * is one column per year that appears among the visible cars (oldest first);
- * a car without prices for a year shows "—". Rows open the car's page.
+ * Market-wide price list: every price-table car with, for each (production
+ * year, colour), the lowest raw / clearance / instant price across all
+ * sellers. There is one column per (year, colour) that appears among the
+ * visible cars (oldest year first); a car without prices for a column shows
+ * "—". Rows open the car's page.
  *
  * Desktop: a table whose car column stays pinned while the year columns
  * scroll horizontally. Below `lg`: cards with a scrollable strip of years.
@@ -62,19 +63,17 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
         row.brandName.toLowerCase().includes(normalized) ||
         row.model.toLowerCase().includes(normalized) ||
         (row.colorName?.toLowerCase().includes(normalized) ?? false) ||
+        row.columns.some((column) => column.colorName.toLowerCase().includes(normalized)) ||
         (digits.length > 0 &&
-          (row.year.includes(digits) || row.model.includes(digits) || row.years.some((year) => year.includes(digits))))
+          (row.year.includes(digits) || row.model.includes(digits) || row.columns.some((column) => column.year.includes(digits))))
       );
     });
   }, [rows, query, brand, pricedOnly]);
 
   const isFiltered = Boolean(query.trim() || brand || pricedOnly);
 
-  /** Year columns: every year priced for any visible car, oldest first. */
-  const yearColumns = useMemo(
-    () => Array.from(new Set(visibleRows.flatMap((row) => row.years))).sort((a, b) => Number(a) - Number(b)),
-    [visibleRows]
-  );
+  /** Price columns: every (year, colour) priced for any visible car, oldest year first. */
+  const priceColumns = useMemo(() => mergePriceColumns(visibleRows.flatMap((row) => row.columns)), [visibleRows]);
 
   function openRow(event: React.MouseEvent<HTMLTableRowElement>, row: PriceListRow) {
     // Let real links inside the row (and text selection) behave natively.
@@ -226,16 +225,16 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                   <th scope="col" className={headClass}>مدل</th>
                   <th scope="col" className={headClass}>رنگ</th>
                   <th scope="col" className={headClass}>سال ساخت</th>
-                  {yearColumns.length === 0 ? (
+                  {priceColumns.length === 0 ? (
                     <th scope="col" className={headClass}>قیمت‌ها</th>
                   ) : (
-                    yearColumns.map((year, index) => (
+                    priceColumns.map((column, index) => (
                       <th
-                        key={year}
+                        key={column.key}
                         scope="col"
                         className={cn(headClass, "min-w-[168px] border-s border-panel-line/[0.08]", index % 2 === 1 && "bg-panel-line/[0.025]")}
                       >
-                        <YearHeading year={year} active />
+                        <ColumnHeading column={column} active />
                       </th>
                     ))
                   )}
@@ -281,17 +280,17 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                         <ColorLabel name={row.colorName} code={row.colorCode} />
                       </td>
                       <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.year)}</td>
-                      {yearColumns.length === 0 ? (
+                      {priceColumns.length === 0 ? (
                         <td className="px-3 py-3.5">
                           <YearPrices prices={undefined} className="min-h-0 justify-start" />
                         </td>
                       ) : (
-                        yearColumns.map((year, index) => (
+                        priceColumns.map((column, index) => (
                           <td
-                            key={year}
+                            key={column.key}
                             className={cn("border-s border-panel-line/[0.06] px-3 py-3", index % 2 === 1 && "bg-panel-line/[0.02]")}
                           >
-                            <YearPrices prices={row.byYear[year]} />
+                            <YearPrices prices={row.byColumn[column.key]} />
                           </td>
                         ))
                       )}
@@ -336,21 +335,21 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                     </div>
                   </Link>
 
-                  {yearColumns.length > 0 && (
+                  {priceColumns.length > 0 && (
                     <HorizontalScroller variant="overlay" className="relative" viewportClassName="px-4 pb-1">
                       <div className="flex w-max gap-2 pb-2">
-                        {yearColumns.map((year) => (
+                        {priceColumns.map((column) => (
                           <div
-                            key={year}
+                            key={column.key}
                             className={cn(
                               "w-[150px] shrink-0 rounded-2xl border px-2.5 py-2",
-                              row.byYear[year] ? "border-panel-line/[0.08] bg-panel-bg/60" : "border-dashed border-panel-line/[0.1] bg-transparent"
+                              row.byColumn[column.key] ? "border-panel-line/[0.08] bg-panel-bg/60" : "border-dashed border-panel-line/[0.1] bg-transparent"
                             )}
                           >
                             <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
-                              <YearHeading year={year} active={Boolean(row.byYear[year])} />
+                              <ColumnHeading column={column} active={Boolean(row.byColumn[column.key])} />
                             </p>
-                            <YearPrices prices={row.byYear[year]} className="min-h-[70px]" />
+                            <YearPrices prices={row.byColumn[column.key]} className="min-h-[70px]" />
                           </div>
                         ))}
                       </div>
@@ -360,7 +359,7 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                   <p className={cn("relative px-4 pb-4 pt-2 text-[11px] font-semibold", priced ? "text-panel-muted" : "text-panel-faint")}>
                     <span className="inline-flex items-center gap-1.5">
                       <UsersRound className="h-3.5 w-3.5" />
-                      {priced ? `کمترین قیمت هر سال از بین ${toPersianDigits(row.sellerCount)} فروشنده` : "هنوز فروشنده‌ای قیمت ثبت نکرده است"}
+                      {priced ? `کمترین قیمت هر سال و رنگ از بین ${toPersianDigits(row.sellerCount)} فروشنده` : "هنوز فروشنده‌ای قیمت ثبت نکرده است"}
                     </span>
                   </p>
                 </article>

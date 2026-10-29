@@ -33,7 +33,8 @@ export default async function PriceListCarPage({ params }: PageProps) {
 
   const detail = await getPriceListCarDetail(params.carId);
   if (!detail) notFound();
-  const { car, offers, lowest, lowestByYear, years } = detail;
+  const { car, offers, lowest, lowestByColumn, columns } = detail;
+  const years = Array.from(new Set(columns.map((column) => column.year)));
   const sellerCount = offers.length;
 
   return (
@@ -117,11 +118,11 @@ export default async function PriceListCarPage({ params }: PageProps) {
         </div>
       ) : (
         <>
-          <CarOffersView car={car} offers={offers} lowestByYear={lowestByYear} years={years} currentUserId={user.id} />
+          <CarOffersView car={car} offers={offers} lowestByColumn={lowestByColumn} columns={columns} currentUserId={user.id} />
           <p className="text-[11px] leading-6 text-panel-faint">
-            قیمت‌ها به دلار و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت جداگانه ثبت شده‌اند؛ هر ستون یک سال است و «—» یعنی
-            فروشنده برای آن سال قیمتی ثبت نکرده است. کمترین قیمت هر سال با نشان تاج سبز مشخص شده و با زدن عنوان هر سال، فروشندگان بر
-            اساس قیمت همان سال مرتب می‌شوند.
+            قیمت‌ها به دلار و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال و رنگ است و
+            «—» یعنی فروشنده برای آن سال و رنگ قیمتی ثبت نکرده است. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده و با زدن عنوان هر ستون،
+            فروشندگان بر اساس قیمت همان ستون مرتب می‌شوند.
           </p>
         </>
       )}

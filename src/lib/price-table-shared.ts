@@ -57,3 +57,32 @@ export function defaultTierYear(carYear: string): string {
 export function compareTierYearsDesc(a: string, b: string): number {
   return Number(b) - Number(a);
 }
+
+/* ───────────────────────── Price columns (year × colour) ───────────────────────── */
+
+/** One price column of the market price lists: a (production year, colour) pair. */
+export interface PriceColumn {
+  /** `"<year>:<colorId>"` — key of the column in the per-column price maps. */
+  key: string;
+  year: string;
+  colorId: string;
+  colorName: string;
+  /** Hex colour code, e.g. "#ffffff". */
+  colorCode: string;
+}
+
+export function priceColumnKey(year: string, colorId: string): string {
+  return `${year}:${colorId}`;
+}
+
+/** Column order: oldest year first, then colour name. */
+export function comparePriceColumns(a: PriceColumn, b: PriceColumn): number {
+  return Number(a.year) - Number(b.year) || a.colorName.localeCompare(b.colorName, "fa") || a.colorId.localeCompare(b.colorId);
+}
+
+/** De-duplicated, ordered union of the given columns. */
+export function mergePriceColumns(columns: Iterable<PriceColumn>): PriceColumn[] {
+  const byKey = new Map<string, PriceColumn>();
+  for (const column of Array.from(columns)) if (!byKey.has(column.key)) byKey.set(column.key, column);
+  return Array.from(byKey.values()).sort(comparePriceColumns);
+}

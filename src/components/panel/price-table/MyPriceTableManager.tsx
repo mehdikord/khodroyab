@@ -40,15 +40,18 @@ interface MyPriceTableManagerProps {
   initialEntries: PriceTableEntryRecord[];
 }
 
-/** One year tier as edited: `key` is a client-only id, the rest are digit strings ("" = blank). */
+/**
+ * One price tier as edited: `key` is a client-only id; year and prices are
+ * digit strings and `colorId` a colour id ("" = blank / not chosen).
+ */
 interface TierDraft extends Record<PriceTablePriceField, string> {
   key: string;
   year: string;
+  colorId: string;
 }
 
-/** One car as edited: colour id ("" = none) and its year tiers (never empty). */
+/** One car as edited: its tiers (never empty). */
 interface Draft {
-  colorId: string;
   tiers: TierDraft[];
 }
 
@@ -59,12 +62,13 @@ type RowFilter = "all" | "filled" | "empty";
 let tierSeq = 0;
 const nextTierKey = () => `tier-${++tierSeq}`;
 
-function emptyTier(year: string): TierDraft {
-  return { key: nextTierKey(), year, priceUsd: "", clearancePrice: "", instantPrice: "" };
+function emptyTier(year: string, colorId: string): TierDraft {
+  return { key: nextTierKey(), year, colorId, priceUsd: "", clearancePrice: "", instantPrice: "" };
 }
 
+/** A fresh row: one tier with the car's year and the car's colour (both editable). */
 function emptyDraft(car: PriceTableCarRecord): Draft {
-  return { colorId: "", tiers: [emptyTier(defaultTierYear(car.year))] };
+  return { tiers: [emptyTier(defaultTierYear(car.year), car.colorId ?? "")] };
 }
 
 function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[]): Drafts {
@@ -75,16 +79,16 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[])
     drafts[car.id] =
       entry && entry.tiers.length > 0
         ? {
-            colorId: entry.colorId ?? "",
             tiers: entry.tiers.map((tier) => ({
               key: nextTierKey(),
               year: tier.year,
+              colorId: tier.colorId,
               priceUsd: tier.priceUsd ?? "",
               clearancePrice: tier.clearancePrice ?? "",
               instantPrice: tier.instantPrice ?? "",
             })),
           }
-        : { ...emptyDraft(car), colorId: entry?.colorId ?? "" };
+        : emptyDraft(car);
   }
   return drafts;
 }
@@ -94,18 +98,22 @@ function isTierPriced(tier: TierDraft): boolean {
 }
 
 function isFilled(draft: Draft): boolean {
-  return draft.colorId.length > 0 || draft.tiers.some(isTierPriced);
+  return draft.tiers.some(isTierPriced);
 }
 
 function sameDraft(a: Draft, b: Draft): boolean {
-  if (a.colorId !== b.colorId || a.tiers.length !== b.tiers.length) return false;
+  if (a.tiers.length !== b.tiers.length) return false;
   return a.tiers.every((tier, index) => {
     const other = b.tiers[index];
-    return tier.year === other.year && PRICE_TABLE_PRICE_FIELDS.every(({ key }) => tier[key] === other[key]);
+    return (
+      tier.year === other.year &&
+      tier.colorId === other.colorId &&
+      PRICE_TABLE_PRICE_FIELDS.every(({ key }) => tier[key] === other[key])
+    );
   });
 }
 
-/** Year proposed for a new tier: one after the newest year already in the row. */
+/** Year proposed for a "new year" tier: one after the newest year already in the row. */
 function suggestNextYear(draft: Draft, car: PriceTableCarRecord): string {
   const years = draft.tiers.map((tier) => tier.year).filter(isValidTierYear).map(Number);
   if (years.length === 0) return defaultTierYear(car.year);
@@ -113,13 +121,17 @@ function suggestNextYear(draft: Draft, car: PriceTableCarRecord): string {
   return isValidTierYear(next) ? next : "";
 }
 
-/** Years that appear more than once in a row (shown as a live warning). */
-function duplicateYears(draft: Draft): Set<string> {
-  const counts = new Map<string, number>();
+/** Tier keys whose (year, colour) pair already appears earlier in the row (live warning). */
+function duplicateTierKeys(draft: Draft): Set<string> {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
   for (const tier of draft.tiers) {
-    if (tier.year.length === 4) counts.set(tier.year, (counts.get(tier.year) ?? 0) + 1);
+    if (tier.year.length !== 4 || !tier.colorId) continue;
+    const combo = `${tier.year}:${tier.colorId}`;
+    if (seen.has(combo)) duplicates.add(tier.key);
+    else seen.add(combo);
   }
-  return new Set(Array.from(counts).filter(([, count]) => count > 1).map(([year]) => year));
+  return duplicates;
 }
 
 const SHORT_PRICE_LABELS: Record<PriceTablePriceField, string> = {
@@ -128,6 +140,8 @@ const SHORT_PRICE_LABELS: Record<PriceTablePriceField, string> = {
   instantPrice: "فوری",
 };
 
+const DUPLICATE_MESSAGE = "این سال با همین رنگ قبلاً در این خودرو ثبت شده است";
+
 const inputBase = cn(
   "w-full rounded-xl border bg-panel-bg text-panel-text outline-none transition-all placeholder:text-panel-faint",
   "focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15 disabled:cursor-not-allowed disabled:opacity-60"
@@ -135,8 +149,8 @@ const inputBase = cn(
 
 const borderFor = (hasError: boolean) => (hasError ? "border-red-500/60" : "border-panel-line/[0.12] hover:border-panel-line/25");
 
-/** Tier grid: year | raw | clearance | instant | remove (shared by the header and every tier row on `sm+`). */
-const tierGridClass = "sm:grid sm:grid-cols-[7.5rem_repeat(3,minmax(0,1fr))_2.5rem] sm:items-start sm:gap-2";
+/** Tier grid on `md+`: year | colour | raw | clearance | instant | remove (header and every tier row). */
+const tierGridClass = "md:grid md:grid-cols-[6.5rem_minmax(8.5rem,10rem)_repeat(3,minmax(0,1fr))_2.5rem] md:items-start md:gap-2";
 
 const FILTERS: { key: RowFilter; label: string }[] = [
   { key: "all", label: "همه" },
@@ -144,17 +158,18 @@ const FILTERS: { key: RowFilter; label: string }[] = [
   { key: "empty", label: "بدون قیمت" },
 ];
 
-function ErrorText({ message }: { message: string | undefined }) {
+function ErrorText({ message, className }: { message: string | undefined; className?: string }) {
   if (!message) return null;
-  return <p className="mt-1 text-[10px] font-semibold leading-4 text-panel-danger-2">{message}</p>;
+  return <p className={cn("mt-1 text-[10px] font-semibold leading-4 text-panel-danger-2", className)}>{message}</p>;
 }
 
 /**
  * The customer's own price table, edited inline. Every car the admin allowed
- * is a card with a colour and one or more *year tiers*: a production year
- * (typed by the customer, prefilled with the car's year) and the raw,
- * clearance and instant USD prices for that year. "افزودن سال" adds another
- * tier. Changes are saved together.
+ * is a card with one or more *price tiers*: a production year (typed by the
+ * customer, prefilled with the car's year), a colour from the catalogue and
+ * the raw, clearance and instant USD prices. The same year may appear with
+ * different colours, but a (year, colour) pair only once per car. Changes are
+ * saved together.
  */
 export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTableManagerProps) {
   const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries));
@@ -203,11 +218,12 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
         car.name.toLowerCase().includes(normalized) ||
         car.brandName.toLowerCase().includes(normalized) ||
         car.model.toLowerCase().includes(normalized) ||
+        (draft?.tiers.some((tier) => colorById.get(tier.colorId)?.name.toLowerCase().includes(normalized)) ?? false) ||
         (digits.length > 0 &&
           (car.year.includes(digits) || car.model.includes(digits) || (draft?.tiers.some((tier) => tier.year.includes(digits)) ?? false)))
       );
     });
-  }, [cars, drafts, query, filter]);
+  }, [cars, drafts, query, filter, colorById]);
 
   function showToast(kind: ToastState["kind"], message: string) {
     setToast({ kind, message });
@@ -228,26 +244,34 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
 
   function updateTier(carId: string, tierKey: string, patch: Partial<TierDraft>) {
     updateDraft(carId, (draft) => ({
-      ...draft,
       tiers: draft.tiers.map((tier) => (tier.key === tierKey ? { ...tier, ...patch } : tier)),
     }));
   }
 
-  function addTier(car: PriceTableCarRecord) {
+  /** Append a tier and focus its first empty input. */
+  function appendTier(car: PriceTableCarRecord, tier: TierDraft) {
+    if (draftOf(car).tiers.length >= PRICE_TABLE_MAX_TIERS) return;
+    updateDraft(car.id, (current) => ({ tiers: [...current.tiers, tier] }));
+    const focusField = !tier.year ? "year" : !tier.colorId ? "colorId" : "priceUsd";
+    window.requestAnimationFrame(() => document.getElementById(`${tier.key}-${focusField}`)?.focus());
+  }
+
+  /** "سال جدید": the year after the newest one, in the last tier's colour. */
+  function addYear(car: PriceTableCarRecord) {
     const draft = draftOf(car);
-    if (draft.tiers.length >= PRICE_TABLE_MAX_TIERS) return;
-    const tier = emptyTier(suggestNextYear(draft, car));
-    updateDraft(car.id, (current) => ({ ...current, tiers: [...current.tiers, tier] }));
-    // Year is prefilled, so jump straight to the first price of the new tier.
-    window.requestAnimationFrame(() => {
-      document.getElementById(`${tier.key}-${tier.year ? "priceUsd" : "year"}`)?.focus();
-    });
+    const last = draft.tiers[draft.tiers.length - 1];
+    appendTier(car, emptyTier(suggestNextYear(draft, car), last?.colorId ?? ""));
+  }
+
+  /** "رنگ دیگر": the last tier's year, colour left for the customer to pick. */
+  function addColor(car: PriceTableCarRecord) {
+    const draft = draftOf(car);
+    const last = draft.tiers[draft.tiers.length - 1];
+    appendTier(car, emptyTier(last?.year || defaultTierYear(car.year), ""));
   }
 
   function removeTier(carId: string, tierKey: string) {
-    updateDraft(carId, (draft) =>
-      draft.tiers.length <= 1 ? draft : { ...draft, tiers: draft.tiers.filter((tier) => tier.key !== tierKey) }
-    );
+    updateDraft(carId, (draft) => (draft.tiers.length <= 1 ? draft : { tiers: draft.tiers.filter((tier) => tier.key !== tierKey) }));
   }
 
   function clearRow(car: PriceTableCarRecord) {
@@ -269,10 +293,10 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
     formData.set(
       "entries",
       JSON.stringify(
-        cars.map((car) => {
-          const draft = draftOf(car);
-          return { carId: car.id, colorId: draft.colorId, tiers: draft.tiers.map(({ key: _key, ...tier }) => tier) };
-        })
+        cars.map((car) => ({
+          carId: car.id,
+          tiers: draftOf(car).tiers.map(({ key: _key, ...tier }) => tier),
+        }))
       )
     );
 
@@ -313,7 +337,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
             ) : (
               <>
                 {toPersianDigits(stats.filled)} از {toPersianDigits(cars.length)} خودرو قیمت‌گذاری شده
-                {stats.tiers > 0 && <span className="text-panel-faint"> · {toPersianDigits(stats.tiers)} ردیف قیمت سالانه</span>}
+                {stats.tiers > 0 && <span className="text-panel-faint"> · {toPersianDigits(stats.tiers)} ردیف قیمت</span>}
               </>
             )}
           </p>
@@ -350,16 +374,13 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
       {/* How it works */}
       <ol className="admin-animate-in grid grid-cols-1 gap-2 sm:grid-cols-3" style={{ animationDelay: "40ms" }}>
         {[
-          { icon: Palette, title: "رنگ را انتخاب کنید", text: "رنگ خودرویی که قیمت می‌دهید." },
-          { icon: CalendarDays, title: "سال و قیمت‌ها را وارد کنید", text: "سال پیش‌فرض، سال ساخت خودرو است و قابل تغییر است." },
-          { icon: CalendarPlus, title: "سال‌های دیگر را اضافه کنید", text: "برای هر سال، قیمت خام، ترخیصی و فوری جدا ثبت می‌شود." },
+          { icon: CalendarDays, title: "سال و رنگ را انتخاب کنید", text: "سال پیش‌فرض، سال ساخت خودرو است و هر دو قابل تغییرند." },
+          { icon: Table2, title: "قیمت‌ها را وارد کنید", text: "قیمت خام، ترخیصی و فوری به دلار؛ یکی از آن‌ها کافی است." },
+          { icon: Layers, title: "ردیف‌های بیشتر اضافه کنید", text: "سال جدید، یا همان سال با رنگ دیگر؛ هر سال و رنگ فقط یک بار." },
         ].map((step, index) => {
           const Icon = step.icon;
           return (
-            <li
-              key={step.title}
-              className="flex items-start gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-surface px-3.5 py-3"
-            >
+            <li key={step.title} className="flex items-start gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-surface px-3.5 py-3">
               <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#FF6A00]/25 bg-[#FF6A00]/10 text-panel-accent">
                 <Icon className="h-4 w-4" />
                 <span className="absolute -end-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF6A00] text-[9px] font-black text-[#07090C]">
@@ -377,7 +398,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
 
       {cars.length > 0 && colors.length === 0 && (
         <p className="admin-animate-in rounded-2xl border border-panel-warning/30 bg-panel-warning/10 px-4 py-3 text-[11px] font-semibold leading-6 text-panel-warning sm:text-xs">
-          هنوز رنگی توسط مدیر تعریف نشده است؛ تا زمان تعریف رنگ‌ها امکان ثبت ردیف جدید وجود ندارد.
+          هنوز رنگی توسط مدیر تعریف نشده است؛ تا زمان تعریف رنگ‌ها امکان ثبت قیمت وجود ندارد.
         </p>
       )}
 
@@ -417,7 +438,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="جستجو در نام، برند، مدل یا سال..."
+                placeholder="جستجو در نام، برند، مدل، سال یا رنگ..."
                 className="h-11 w-full rounded-xl border border-panel-line/[0.12] bg-panel-surface pe-10 ps-11 text-sm text-panel-text outline-none transition-all placeholder:text-panel-faint focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"
               />
               {query && (
@@ -465,131 +486,117 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
               const draft = draftOf(car);
               const dirty = dirtyIds.has(car.id);
               const filled = isFilled(draft);
-              const colorError = fieldErrors[`${car.id}.colorId`];
               const rowError = fieldErrors[`${car.id}.tiers`];
-              const selectedColor = colorById.get(draft.colorId) ?? null;
-              const duplicates = duplicateYears(draft);
+              const duplicates = duplicateTierKeys(draft);
               const canAddTier = draft.tiers.length < PRICE_TABLE_MAX_TIERS;
               const suggestedYear = canAddTier ? suggestNextYear(draft, car) : "";
+              const lastYear = draft.tiers[draft.tiers.length - 1]?.year ?? "";
+              const hasErrors = Object.keys(fieldErrors).some((key) => key.startsWith(`${car.id}.`)) || duplicates.size > 0;
 
               return (
                 <article
                   key={car.id}
                   className={cn(
                     "relative overflow-hidden rounded-2xl border bg-panel-surface transition-colors",
-                    dirty
-                      ? "border-[#FF6A00]/40 shadow-[0_0_0_1px_rgba(255,106,0,0.08),0_18px_40px_-28px_rgba(255,106,0,0.6)]"
-                      : rowError || colorError
-                        ? "border-red-500/40"
+                    hasErrors
+                      ? "border-red-500/40"
+                      : dirty
+                        ? "border-[#FF6A00]/40 shadow-[0_0_0_1px_rgba(255,106,0,0.08),0_18px_40px_-28px_rgba(255,106,0,0.6)]"
                         : "border-panel-line/[0.1]"
                   )}
                 >
                   {dirty && <span aria-hidden="true" className="absolute inset-y-0 start-0 w-[3px] bg-gradient-to-b from-[#FF6A00] to-[#FF8A2A]" />}
 
-                  <div className="flex flex-col lg:flex-row">
-                    {/* Car + colour */}
-                    <div className="shrink-0 space-y-3 border-b border-panel-line/[0.08] bg-panel-surface-2/40 p-3.5 sm:p-4 lg:w-72 lg:border-b-0 lg:border-e">
-                      <div className="flex items-start gap-2.5">
-                        <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg bg-panel-line/[0.06] px-1.5 font-mono text-[11px] font-bold text-panel-faint">
-                          {toPersianDigits((indexById.get(car.id) ?? 0) + 1)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-1.5 break-words text-sm font-extrabold leading-5 text-panel-text">
-                            <span
-                              aria-hidden="true"
-                              className={cn(
-                                "h-1.5 w-1.5 shrink-0 rounded-full",
-                                dirty ? "bg-[#FF6A00] shadow-[0_0_8px_#FF6A00]" : filled ? "bg-panel-success" : "bg-panel-line/30"
-                              )}
-                            />
-                            {car.name}
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-panel-faint">{car.brandName}</p>
-                          <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
-                            <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 font-semibold text-panel-muted-2">
-                              مدل {toPersianDigits(car.model)}
-                            </span>
-                            <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 font-semibold text-panel-muted-2">
-                              سال {toPersianDigits(car.year)}
-                            </span>
-                            {dirty && (
-                              <span className="rounded-md bg-[#FF6A00]/10 px-1.5 py-0.5 font-bold text-panel-accent">ذخیره نشده</span>
+                  {/* Car header */}
+                  <div className="flex items-start gap-2.5 border-b border-panel-line/[0.08] bg-panel-surface-2/40 px-3.5 py-3 sm:px-4">
+                    <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg bg-panel-line/[0.06] px-1.5 font-mono text-[11px] font-bold text-panel-faint">
+                      {toPersianDigits((indexById.get(car.id) ?? 0) + 1)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-extrabold leading-5 text-panel-text">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "h-1.5 w-1.5 shrink-0 rounded-full",
+                              dirty ? "bg-[#FF6A00] shadow-[0_0_8px_#FF6A00]" : filled ? "bg-panel-success" : "bg-panel-line/30"
                             )}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => clearRow(car)}
-                          disabled={isPending || !filled}
-                          title="پاک کردن این خودرو"
-                          aria-label={`پاک کردن ردیف ${car.name}`}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-panel-line/[0.1] text-panel-faint transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-panel-danger disabled:cursor-not-allowed disabled:opacity-30"
-                        >
-                          <Eraser className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <div>
-                        <label htmlFor={`color-${car.id}`} className="mb-1 block text-[10px] font-bold text-panel-muted">
-                          رنگ
-                        </label>
-                        <div className="relative">
-                          <select
-                            id={`color-${car.id}`}
-                            value={draft.colorId}
-                            onChange={(e) => {
-                              const colorId = e.target.value;
-                              updateDraft(car.id, (current) => ({ ...current, colorId }));
-                            }}
-                            aria-invalid={Boolean(colorError)}
-                            disabled={isPending}
-                            className={cn(inputBase, borderFor(Boolean(colorError)), "h-10 px-3 text-[13px]", selectedColor && "ps-8")}
-                          >
-                            <option value="">انتخاب رنگ</option>
-                            {colors.map((color) => (
-                              <option key={color.id} value={color.id}>
-                                {color.name}
-                              </option>
-                            ))}
-                          </select>
-                          {selectedColor && (
-                            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-                              <ColorSwatch code={selectedColor.code} />
-                            </span>
-                          )}
-                        </div>
-                        <ErrorText message={colorError} />
+                          />
+                          {car.name}
+                        </span>
+                        <span className="text-[11px] font-semibold text-panel-faint">{car.brandName}</span>
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
+                        <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 font-semibold text-panel-muted-2">مدل {toPersianDigits(car.model)}</span>
+                        <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 font-semibold text-panel-muted-2">سال {toPersianDigits(car.year)}</span>
+                        {dirty && <span className="rounded-md bg-[#FF6A00]/10 px-1.5 py-0.5 font-bold text-panel-accent">ذخیره نشده</span>}
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => clearRow(car)}
+                      disabled={isPending || !filled}
+                      title="پاک کردن قیمت‌های این خودرو"
+                      aria-label={`پاک کردن ردیف ${car.name}`}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-panel-line/[0.1] text-panel-faint transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-panel-danger disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <Eraser className="h-4 w-4" />
+                    </button>
+                  </div>
 
-                    {/* Year tiers */}
-                    <div className="min-w-0 flex-1 space-y-2 p-3 sm:p-4">
-                      <div className={cn(tierGridClass, "hidden px-1 text-[10px] font-extrabold text-panel-muted sm:grid")} aria-hidden="true">
-                        <span>سال ساخت</span>
-                        {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                          <span key={field.key}>{field.label} ($)</span>
-                        ))}
-                        <span />
-                      </div>
+                  {/* Tiers */}
+                  <div className="space-y-2 p-3 sm:p-4">
+                    <div className={cn(tierGridClass, "hidden px-2 text-[10px] font-extrabold text-panel-muted md:grid")} aria-hidden="true">
+                      <span>سال ساخت</span>
+                      <span>رنگ</span>
+                      {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                        <span key={field.key}>{field.label} ($)</span>
+                      ))}
+                      <span />
+                    </div>
 
-                      {draft.tiers.map((tier, index) => {
-                        const yearError =
-                          fieldErrors[`${car.id}.${index}.year`] ??
-                          (duplicates.has(tier.year) ? "این سال تکراری است" : undefined);
-                        const priced = isTierPriced(tier);
-                        return (
-                          <div
-                            key={tier.key}
+                    {draft.tiers.map((tier, index) => {
+                      const duplicate = duplicates.has(tier.key);
+                      const comboError = fieldErrors[`${car.id}.${index}.combo`] ?? (duplicate ? DUPLICATE_MESSAGE : undefined);
+                      const yearError = fieldErrors[`${car.id}.${index}.year`];
+                      const colorError = fieldErrors[`${car.id}.${index}.colorId`];
+                      const selectedColor = colorById.get(tier.colorId) ?? null;
+                      const priced = isTierPriced(tier);
+
+                      const removeButton = (className: string) =>
+                        draft.tiers.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removeTier(car.id, tier.key)}
+                            disabled={isPending}
+                            title="حذف این ردیف"
+                            aria-label={`حذف ردیف ${toPersianDigits(index + 1)} از ${car.name}`}
                             className={cn(
-                              tierGridClass,
-                              "panel-card-in rounded-xl border p-2 transition-colors",
-                              priced ? "border-panel-line/[0.08] bg-panel-bg/50" : "border-dashed border-panel-line/[0.12] bg-transparent"
+                              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-panel-line/[0.1] text-panel-faint transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-panel-danger disabled:opacity-40",
+                              className
                             )}
                           >
-                            {/* Year (+ remove on phones) */}
-                            <div className="flex items-start gap-2 sm:block">
-                              <div className="min-w-0 flex-1">
-                                <label htmlFor={`${tier.key}-year`} className="mb-1 block text-[10px] font-bold text-panel-muted sm:sr-only">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ) : null;
+
+                      return (
+                        <div
+                          key={tier.key}
+                          className={cn(
+                            "panel-card-in rounded-xl border p-2 transition-colors",
+                            comboError
+                              ? "border-red-500/50 bg-red-500/[0.04]"
+                              : priced
+                                ? "border-panel-line/[0.08] bg-panel-bg/50"
+                                : "border-dashed border-panel-line/[0.12] bg-transparent"
+                          )}
+                        >
+                          <div className={tierGridClass}>
+                            {/* Year + colour (+ remove on phones) */}
+                            <div className="grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-start gap-2 md:contents">
+                              <div className="min-w-0">
+                                <label htmlFor={`${tier.key}-year`} className="mb-1 block text-[10px] font-bold text-panel-muted md:sr-only">
                                   سال ساخت
                                 </label>
                                 <div className="relative">
@@ -606,38 +613,62 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
                                     onChange={(e) => updateTier(car.id, tier.key, { year: normalizeYear(e.target.value) })}
                                     placeholder="سال"
                                     aria-label={`سال ساخت ردیف ${toPersianDigits(index + 1)} ${car.name}`}
-                                    aria-invalid={Boolean(yearError)}
+                                    aria-invalid={Boolean(yearError || comboError)}
                                     disabled={isPending}
                                     className={cn(
                                       inputBase,
-                                      borderFor(Boolean(yearError)),
-                                      "h-10 ps-8 pe-2 text-center font-mono text-[13px] font-black tracking-wider text-panel-accent"
+                                      borderFor(Boolean(yearError || comboError)),
+                                      "h-10 pe-2 ps-8 text-center font-mono text-[13px] font-black tracking-wider text-panel-accent"
                                     )}
                                   />
                                 </div>
                                 <ErrorText message={yearError} />
                               </div>
-                              {draft.tiers.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeTier(car.id, tier.key)}
-                                  disabled={isPending}
-                                  aria-label={`حذف سال ${toPersianDigits(tier.year)} از ${car.name}`}
-                                  className="mt-[18px] inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-panel-line/[0.1] text-panel-faint transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-panel-danger disabled:opacity-40 sm:hidden"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
+
+                              <div className="min-w-0">
+                                <label htmlFor={`${tier.key}-colorId`} className="mb-1 block text-[10px] font-bold text-panel-muted md:sr-only">
+                                  رنگ
+                                </label>
+                                <div className="relative">
+                                  <select
+                                    id={`${tier.key}-colorId`}
+                                    value={tier.colorId}
+                                    onChange={(e) => updateTier(car.id, tier.key, { colorId: e.target.value })}
+                                    aria-label={`رنگ ردیف ${toPersianDigits(index + 1)} ${car.name}`}
+                                    aria-invalid={Boolean(colorError || comboError)}
+                                    disabled={isPending}
+                                    className={cn(
+                                      inputBase,
+                                      borderFor(Boolean(colorError || comboError)),
+                                      "h-10 pe-2 text-[13px]",
+                                      selectedColor ? "ps-8" : "ps-3"
+                                    )}
+                                  >
+                                    <option value="">انتخاب رنگ</option>
+                                    {colors.map((color) => (
+                                      <option key={color.id} value={color.id}>
+                                        {color.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center">
+                                    {selectedColor ? <ColorSwatch code={selectedColor.code} /> : null}
+                                  </span>
+                                </div>
+                                <ErrorText message={colorError} />
+                              </div>
+
+                              {removeButton("mt-[18px] md:hidden")}
                             </div>
 
                             {/* Prices: 3 columns on phones too */}
-                            <div className="mt-2 grid grid-cols-3 gap-1.5 sm:contents">
+                            <div className="mt-2 grid grid-cols-3 gap-1.5 md:contents">
                               {PRICE_TABLE_PRICE_FIELDS.map((field) => {
                                 const error = fieldErrors[`${car.id}.${index}.${field.key}`];
                                 const inputId = `${tier.key}-${field.key}`;
                                 return (
                                   <div key={field.key} className="min-w-0">
-                                    <label htmlFor={inputId} className="mb-1 block truncate text-[10px] font-bold text-panel-muted sm:sr-only">
+                                    <label htmlFor={inputId} className="mb-1 block truncate text-[10px] font-bold text-panel-muted md:sr-only">
                                       {SHORT_PRICE_LABELS[field.key]}
                                     </label>
                                     <div className="relative">
@@ -649,16 +680,16 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
                                         value={formatPersianNumber(tier[field.key])}
                                         onChange={(e) => updateTier(car.id, tier.key, { [field.key]: normalizeUsdPrice(e.target.value) })}
                                         placeholder={SHORT_PRICE_LABELS[field.key]}
-                                        aria-label={`${field.label} سال ${toPersianDigits(tier.year)} ${car.name}`}
+                                        aria-label={`${field.label} ردیف ${toPersianDigits(index + 1)} ${car.name}`}
                                         aria-invalid={Boolean(error)}
                                         disabled={isPending}
                                         className={cn(
                                           inputBase,
                                           borderFor(Boolean(error)),
-                                          "h-10 px-2 text-[12px] font-semibold sm:pe-7 sm:ps-3 sm:text-[13px]"
+                                          "h-10 px-2 text-[12px] font-semibold md:pe-7 md:ps-3 md:text-[13px]"
                                         )}
                                       />
-                                      <span className="pointer-events-none absolute inset-y-0 end-2.5 hidden items-center text-xs font-black text-panel-faint sm:flex">
+                                      <span className="pointer-events-none absolute inset-y-0 end-2.5 hidden items-center text-xs font-black text-panel-faint md:flex">
                                         $
                                       </span>
                                     </div>
@@ -669,49 +700,60 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
                             </div>
 
                             {/* Remove (tablet / desktop) */}
-                            <div className="hidden sm:block">
-                              {draft.tiers.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeTier(car.id, tier.key)}
-                                  disabled={isPending}
-                                  title="حذف این سال"
-                                  aria-label={`حذف سال ${toPersianDigits(tier.year)} از ${car.name}`}
-                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-panel-line/[0.1] text-panel-faint transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-panel-danger disabled:opacity-40"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
+                            <div className="hidden md:block">{removeButton("")}</div>
                           </div>
-                        );
-                      })}
 
-                      <ErrorText message={rowError} />
+                          {comboError && (
+                            <p className="mt-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold text-panel-danger-2">
+                              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                              {comboError}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
 
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                        <button
-                          type="button"
-                          onClick={() => addTier(car)}
-                          disabled={isPending || !canAddTier}
-                          className={cn(
-                            "group inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-[#FF6A00]/40 bg-[#FF6A00]/[0.05] px-3.5 text-xs font-extrabold text-panel-accent transition-all",
-                            "hover:border-solid hover:border-[#FF6A00]/60 hover:bg-[#FF6A00]/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                          )}
-                        >
-                          <CalendarPlus className="h-4 w-4 transition-transform group-hover:scale-110" />
-                          افزودن سال
-                          {suggestedYear && (
-                            <span className="rounded-md bg-[#FF6A00]/15 px-1.5 py-0.5 font-mono text-[10px] text-panel-accent">
-                              {toPersianDigits(suggestedYear)}
-                            </span>
-                          )}
-                        </button>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-panel-faint">
-                          <Layers className="h-3 w-3" />
-                          {toPersianDigits(draft.tiers.length)} از {toPersianDigits(PRICE_TABLE_MAX_TIERS)} سال
-                        </span>
-                      </div>
+                    <ErrorText message={rowError} />
+
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => addYear(car)}
+                        disabled={isPending || !canAddTier}
+                        className={cn(
+                          "group inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-[#FF6A00]/40 bg-[#FF6A00]/[0.05] px-3.5 text-xs font-extrabold text-panel-accent transition-all",
+                          "hover:border-solid hover:border-[#FF6A00]/60 hover:bg-[#FF6A00]/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        )}
+                      >
+                        <CalendarPlus className="h-4 w-4 transition-transform group-hover:scale-110" />
+                        سال جدید
+                        {suggestedYear && (
+                          <span className="rounded-md bg-[#FF6A00]/15 px-1.5 py-0.5 font-mono text-[10px] text-panel-accent">
+                            {toPersianDigits(suggestedYear)}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => addColor(car)}
+                        disabled={isPending || !canAddTier || colors.length < 2}
+                        className={cn(
+                          "group inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-panel-line/[0.18] bg-panel-line/[0.03] px-3.5 text-xs font-extrabold text-panel-text-2 transition-all",
+                          "hover:border-solid hover:border-[#FF6A00]/50 hover:text-panel-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        )}
+                      >
+                        <Palette className="h-4 w-4 transition-transform group-hover:scale-110" />
+                        رنگ دیگر
+                        {lastYear && (
+                          <span className="rounded-md bg-panel-line/[0.08] px-1.5 py-0.5 font-mono text-[10px] text-panel-muted">
+                            {toPersianDigits(lastYear)}
+                          </span>
+                        )}
+                      </button>
+                      <span className="ms-auto inline-flex items-center gap-1 text-[10px] font-semibold text-panel-faint">
+                        <Layers className="h-3 w-3" />
+                        {toPersianDigits(draft.tiers.length)} از {toPersianDigits(PRICE_TABLE_MAX_TIERS)} ردیف
+                      </span>
                     </div>
                   </div>
                 </article>
@@ -725,9 +767,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
       {isDirty && (
         <div className="panel-card-in sticky bottom-[calc(var(--panel-dock-space)+0.25rem)] z-30">
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#FF6A00]/30 bg-panel-surface/95 px-4 py-3 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
-            <p className="text-xs font-bold text-panel-text-2">
-              {toPersianDigits(dirtyIds.size)} خودرو تغییر کرده و ذخیره نشده است
-            </p>
+            <p className="text-xs font-bold text-panel-text-2">{toPersianDigits(dirtyIds.size)} خودرو تغییر کرده و ذخیره نشده است</p>
             <div className="flex items-center gap-2">
               <button
                 type="button"

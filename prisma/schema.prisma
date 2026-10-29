@@ -109,8 +109,8 @@ model Color {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  cars              Car[]
-  priceTableEntries UserPriceTableEntry[]
+  cars             Car[]
+  priceTablePrices UserPriceTablePrice[]
 
   @@map("colors")
 }
@@ -301,38 +301,37 @@ model UserCarSaleTermPriceHistory {
 // A customer's personal price table: one row per (user, car). Only cars with
 // `cars.price_table = true` may appear here; the admin controls that flag.
 // The prices themselves live in `user_price_table_prices`, one row per
-// production year the customer chose to price.
+// (production year, colour) combination the customer chose to price.
 model UserPriceTableEntry {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   userId    BigInt   @map("user_id") @db.UnsignedBigInt
   carId     BigInt   @map("car_id") @db.UnsignedBigInt
-  /// Colour picked by the customer from the `colors` catalogue.
-  colorId   BigInt?  @map("color_id") @db.UnsignedBigInt
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  color Color? @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  car  Car  @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   prices UserPriceTablePrice[]
 
   @@unique([userId, carId])
   @@index([carId])
-  @@index([colorId])
   @@map("user_price_table_entries")
 }
 
 // ─── Table 17: user_price_table_prices ───────────────────────────────────────
 // One price tier of a price-table row: the raw / clearance / instant USD
-// prices for a production year typed by the customer. The year is the
-// customer's own and is independent of `cars.year`. Only tiers with at least
-// one price are stored.
+// prices for a production year typed by the customer and a colour from the
+// `colors` catalogue. The year is the customer's own and is independent of
+// `cars.year`. A (year, colour) pair is unique within a row, so the same year
+// may appear with different colours. Only tiers with at least one price are stored.
 model UserPriceTablePrice {
   id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   entryId        BigInt   @map("entry_id") @db.UnsignedBigInt
   /// Production year, 4 ASCII digits (Gregorian or Jalali), e.g. "2025".
   year           String   @db.VarChar(10)
+  /// Colour of this tier, picked from the `colors` catalogue.
+  colorId        BigInt   @map("color_id") @db.UnsignedBigInt
   /// Raw price (قیمت خام) in US dollars (digit-only string, same convention as sale-term prices).
   priceUsd       String?  @map("price_usd") @db.VarChar(255)
   /// Clearance price (قیمت ترخیصی) in US dollars, digit-only string.
@@ -345,8 +344,10 @@ model UserPriceTablePrice {
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   entry UserPriceTableEntry @relation(fields: [entryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  color Color               @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  @@unique([entryId, year])
+  @@unique([entryId, year, colorId])
+  @@index([colorId])
   @@map("user_price_table_prices")
 }
 

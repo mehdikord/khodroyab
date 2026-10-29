@@ -14,12 +14,13 @@ interface PriceTableViewProps {
 
 const headClass = "whitespace-nowrap px-3 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-panel-muted";
 
-function ColorCell({ entry }: { entry: PriceTableEntryRecord | null }) {
-  if (!entry?.colorName || !entry.colorCode) return <span className="text-panel-faint">{PRICE_TABLE_EMPTY}</span>;
+/** Colour of a tier with its swatch. */
+function TierColor({ tier, className }: { tier: PriceTableTierRecord | null; className?: string }) {
+  if (!tier) return <span className={cn("text-panel-faint", className)}>{PRICE_TABLE_EMPTY}</span>;
   return (
-    <span className="inline-flex items-center gap-1.5 text-panel-text-2">
-      <ColorSwatch code={entry.colorCode} className="h-3.5 w-3.5" />
-      <span className="break-words">{entry.colorName}</span>
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-panel-text-2", className)}>
+      <ColorSwatch code={tier.colorCode} className="h-3.5 w-3.5" />
+      {tier.colorName}
     </span>
   );
 }
@@ -58,14 +59,15 @@ function tiersOf(entry: PriceTableEntryRecord | null): (PriceTableTierRecord | n
   return entry && entry.tiers.length > 0 ? entry.tiers : [null];
 }
 
+const tierKey = (tier: PriceTableTierRecord | null) => (tier ? `${tier.year}:${tier.colorId}` : "empty");
+
 /**
  * Read-only price table (as shown on a seller's public profile). Every
- * eligible car is listed; a priced car shows one line per production year the
- * seller entered (year + raw / clearance / instant price). Gaps show "---".
+ * eligible car is listed; a priced car shows one line per (year, colour) the
+ * seller entered, with the raw / clearance / instant price. Gaps show "---".
  *
- * Desktop (`md+`): one `<tbody>` per car, car and colour cells spanning its
- * year lines so the price columns stay aligned. Phones: one card per car with
- * a compact year × price grid.
+ * Desktop (`md+`): one `<tbody>` per car, the car cell spanning its lines so
+ * the price columns stay aligned. Phones: one card per car.
  */
 export function PriceTableView({ rows, className }: PriceTableViewProps) {
   return (
@@ -82,10 +84,10 @@ export function PriceTableView({ rows, className }: PriceTableViewProps) {
                 نام خودرو
               </th>
               <th scope="col" className={headClass}>
-                رنگ
+                سال ساخت
               </th>
               <th scope="col" className={headClass}>
-                سال ساخت
+                رنگ
               </th>
               {PRICE_TABLE_PRICE_FIELDS.map((field) => (
                 <th key={field.key} scope="col" className={headClass}>
@@ -103,7 +105,7 @@ export function PriceTableView({ rows, className }: PriceTableViewProps) {
                 className={cn("border-b border-panel-line/[0.06] transition-colors last:border-b-0", filled ? "hover:bg-panel-line/[0.025]" : "text-panel-faint")}
               >
                 {tiers.map((tier, tierIndex) => (
-                  <tr key={tier?.year ?? "empty"} className={cn(tierIndex > 0 && "border-t border-dashed border-panel-line/[0.07]")}>
+                  <tr key={tierKey(tier)} className={cn(tierIndex > 0 && "border-t border-dashed border-panel-line/[0.07]")}>
                     {tierIndex === 0 && (
                       <>
                         <td rowSpan={tiers.length} className="hidden px-3 py-3 text-center align-top font-mono text-[11px] text-panel-faint lg:table-cell">
@@ -116,17 +118,17 @@ export function PriceTableView({ rows, className }: PriceTableViewProps) {
                           </p>
                           {tiers.length > 1 && (
                             <span className="mt-1.5 inline-flex rounded-md bg-[#FF6A00]/10 px-1.5 py-0.5 text-[10px] font-bold text-panel-accent">
-                              {toPersianDigits(tiers.length)} سال
+                              {toPersianDigits(tiers.length)} قیمت
                             </span>
                           )}
-                        </td>
-                        <td rowSpan={tiers.length} className="px-3 py-3 align-top text-[13px]">
-                          <ColorCell entry={row.entry} />
                         </td>
                       </>
                     )}
                     <td className="whitespace-nowrap px-3 py-2.5">
                       {tier ? <YearPill year={tier.year} /> : <span className="text-panel-faint">{PRICE_TABLE_EMPTY}</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-[13px]">
+                      <TierColor tier={tier} />
                     </td>
                     {PRICE_TABLE_PRICE_FIELDS.map((field) => (
                       <td key={field.key} className="px-3 py-2.5">
@@ -150,40 +152,33 @@ export function PriceTableView({ rows, className }: PriceTableViewProps) {
               key={row.car.id}
               className={cn("overflow-hidden rounded-2xl border bg-panel-surface", filled ? "border-panel-line/[0.1]" : "border-dashed border-panel-line/[0.1]")}
             >
-              <div className="flex items-start justify-between gap-3 px-3.5 py-3">
-                <div className="min-w-0">
-                  <p className={cn("break-words text-[13px] font-bold leading-5", filled ? "text-panel-text" : "text-panel-muted")}>{row.car.name}</p>
-                  <p className="mt-0.5 text-[10px] leading-4 text-panel-faint">
-                    {row.car.brandName} · مدل {toPersianDigits(row.car.model)}
-                  </p>
-                </div>
-                <span className="shrink-0 text-[11px]">
-                  <ColorCell entry={row.entry} />
-                </span>
+              <div className="px-3.5 py-3">
+                <p className={cn("break-words text-[13px] font-bold leading-5", filled ? "text-panel-text" : "text-panel-muted")}>{row.car.name}</p>
+                <p className="mt-0.5 text-[10px] leading-4 text-panel-faint">
+                  {row.car.brandName} · مدل {toPersianDigits(row.car.model)}
+                </p>
               </div>
 
               {filled ? (
-                <div className="border-t border-panel-line/[0.08] bg-panel-bg/40">
-                  <div className="grid grid-cols-[4.5rem_repeat(3,minmax(0,1fr))] gap-1.5 px-3 pt-2 text-[9px] font-extrabold text-panel-muted">
-                    <span>سال</span>
-                    {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                      <span key={field.key} className="truncate text-center">
-                        {field.label.replace("قیمت ", "")}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="divide-y divide-dashed divide-panel-line/[0.08]">
-                    {row.entry!.tiers.map((tier) => (
-                      <div key={tier.year} className="grid grid-cols-[4.5rem_repeat(3,minmax(0,1fr))] items-center gap-1.5 px-3 py-2">
-                        <YearPill year={tier.year} className="justify-center px-1.5 text-[11px]" />
+                <div className="divide-y divide-dashed divide-panel-line/[0.08] border-t border-panel-line/[0.08] bg-panel-bg/40">
+                  {row.entry!.tiers.map((tier) => (
+                    <div key={tierKey(tier)} className="space-y-2 px-3 py-2.5">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <YearPill year={tier.year} className="text-[11px]" />
+                        <TierColor tier={tier} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
                         {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                          <span key={field.key} className="flex justify-center">
-                            <PriceBadge price={tier[field.key]} size="sm" />
-                          </span>
+                          <div key={field.key} className="min-w-0 rounded-lg bg-panel-surface/70 px-1.5 py-1.5 text-center">
+                            <p className="truncate text-[9px] font-extrabold text-panel-muted">{field.label.replace("قیمت ", "")}</p>
+                            <div className="mt-1 flex justify-center">
+                              <PriceBadge price={tier[field.key]} size="sm" />
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="border-t border-dashed border-panel-line/[0.08] px-3.5 py-2 text-[11px] text-panel-faint">قیمتی ثبت نشده است</p>

@@ -12,12 +12,18 @@ export interface PriceTableCarRecord {
   carTypeName: string;
   model: string;
   year: string;
+  /** Colour the admin set on the car (default colour of a new price tier). */
+  colorId: string | null;
 }
 
-/** One year tier of a row: the three USD prices for a production year. */
+/** One tier of a row: the three USD prices for a (production year, colour) pair. */
 export interface PriceTableTierRecord {
   /** Production year typed by the customer (independent of the car's catalogue year). */
   year: string;
+  colorId: string;
+  colorName: string;
+  /** Hex code of the colour, e.g. "#ffffff". */
+  colorCode: string;
   /** Raw price: digit-only USD string, e.g. "12500"; `null` when left blank. */
   priceUsd: string | null;
   /** Clearance price, same format as `priceUsd`. */
@@ -26,14 +32,10 @@ export interface PriceTableTierRecord {
   instantPrice: string | null;
 }
 
-/** What a customer has entered for one car: a colour and one or more year tiers. */
+/** What a customer has entered for one car: one or more (year, colour) price tiers. */
 export interface PriceTableEntryRecord {
   carId: string;
-  colorId: string | null;
-  colorName: string | null;
-  /** Hex code of the chosen colour, e.g. "#ffffff". */
-  colorCode: string | null;
-  /** Year tiers in the customer's order (never empty for a saved entry). */
+  /** Tiers in the customer's order (never empty for a saved entry). */
   tiers: PriceTableTierRecord[];
 }
 
@@ -51,6 +53,7 @@ const priceTableCarSelect = {
   name: true,
   model: true,
   year: true,
+  colorId: true,
   brand: { select: { name: true } },
   carType: { select: { name: true } },
 } satisfies Prisma.CarSelect;
@@ -65,6 +68,7 @@ function toCarRecord(car: PriceTableCarRow): PriceTableCarRecord {
     carTypeName: car.carType.name,
     model: car.model,
     year: car.year,
+    colorId: car.colorId?.toString() ?? null,
   };
 }
 
@@ -84,10 +88,15 @@ export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTa
     where: { userId, car: { priceTable: true } },
     select: {
       carId: true,
-      colorId: true,
-      color: { select: { name: true, code: true } },
       prices: {
-        select: { year: true, priceUsd: true, clearancePrice: true, instantPrice: true },
+        select: {
+          year: true,
+          colorId: true,
+          priceUsd: true,
+          clearancePrice: true,
+          instantPrice: true,
+          color: { select: { name: true, code: true } },
+        },
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       },
     },
@@ -95,10 +104,12 @@ export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTa
   });
   return entries.map((entry) => ({
     carId: entry.carId.toString(),
-    colorId: entry.colorId?.toString() ?? null,
-    colorName: entry.color?.name ?? null,
-    colorCode: entry.color?.code ?? null,
-    tiers: entry.prices,
+    tiers: entry.prices.map(({ color, colorId, ...tier }) => ({
+      ...tier,
+      colorId: colorId.toString(),
+      colorName: color.name,
+      colorCode: color.code,
+    })),
   }));
 }
 

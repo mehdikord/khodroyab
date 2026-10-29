@@ -3,7 +3,7 @@ import { CalendarDays, Crown } from "lucide-react";
 
 import { SafeImage } from "@/components/panel/SafeImage";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import { PRICE_TABLE_EMPTY, PRICE_TABLE_PRICE_FIELDS, type PriceTablePriceField } from "@/lib/price-table-shared";
+import { PRICE_TABLE_EMPTY, PRICE_TABLE_PRICE_FIELDS, type PriceColumn, type PriceTablePriceField } from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 function initials(name: string, count: number): string {
@@ -107,20 +107,26 @@ export const SHORT_PRICE_LABELS: Record<PriceTablePriceField, string> = {
   instantPrice: "فوری",
 };
 
-/** Header of a year column: "سال ۲۰۲۵". */
-export function YearHeading({ year, active = false, className }: { year: string; active?: boolean; className?: string }) {
+/** Header of a price column: "۲۰۲۵" over the colour swatch + name. */
+export function ColumnHeading({ column, active = false, className }: { column: PriceColumn; active?: boolean; className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap", className)}>
-      <CalendarDays className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
-      سال <span className="font-mono text-[12px] font-black text-panel-text">{toPersianDigits(year)}</span>
+    <span className={cn("flex flex-col items-start gap-1 whitespace-nowrap normal-case tracking-normal", className)}>
+      <span className="inline-flex items-center gap-1.5">
+        <CalendarDays className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
+        سال <span className="font-mono text-[12px] font-black text-panel-text">{toPersianDigits(column.year)}</span>
+      </span>
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-panel-text-2">
+        <ColorSwatch code={column.colorCode} className="h-3 w-3" />
+        {column.colorName}
+      </span>
     </span>
   );
 }
 
 /**
- * Content of one year cell: the raw, clearance and instant prices stacked
- * with short labels, or a single dash when nothing was priced for the year.
- * `best` marks fields that equal the year's lowest price.
+ * Content of one price cell: the raw, clearance and instant prices stacked
+ * with short labels, or a single dash when nothing was priced for that
+ * (year, colour). `best` marks fields that equal the column's lowest price.
  */
 export function YearPrices({
   prices,
