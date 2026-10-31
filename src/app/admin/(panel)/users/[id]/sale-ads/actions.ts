@@ -15,6 +15,14 @@ import { isAdStatus, type AdStatus } from "@/lib/ad-status";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { parseUserCarForm, type UserCarSaleTermInput } from "@/lib/validation/user-cars";
+import {
+  discardAdImageFiles,
+  prepareAdExtras,
+  storeNewAdImages,
+  syncAdImages,
+  syncAdOptions,
+  type StoredAdImages,
+} from "@/lib/user-car-extras";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
@@ -52,6 +60,8 @@ function revalidateUserPages(userId: bigint) {
   revalidatePath(`/admin/users/${userId.toString()}/sale-ads`);
   revalidatePath("/admin/ads");
   revalidatePath("/admin/ads/pending");
+  revalidatePath("/panel/ads");
+  revalidatePath("/panel/search");
 }
 
 function toSaleTermData(entry: UserCarSaleTermInput) {
@@ -131,6 +141,17 @@ export async function createUserCarAction(userIdRaw: string, formData: FormData)
   const termErrors = await validateSaleTermIds(parsed.data.saleTerms);
   if (termErrors) return { ok: false, message: "شرایط فروش انتخاب‌شده نامعتبر است", fieldErrors: termErrors };
 
+  const extras = await prepareAdExtras(formData, []);
+  if (!extras.ok) return extras;
+
+  let storedImages: StoredAdImages;
+  try {
+    storedImages = await storeNewAdImages(extras.images);
+  } catch (error) {
+    console.error("[user-cars:create] image upload failed", error);
+    return { ok: false, message: "خطا در ذخیره تصاویر آگهی" };
+  }
+
   // Ads created by an administrator are trusted and approved automatically.
   // The 6-digit code is random; on the (rare) unique collision we simply retry.
   for (let attempt = 1; attempt <= AD_CODE_MAX_ATTEMPTS; attempt += 1) {
@@ -143,7 +164,11 @@ export async function createUserCarAction(userIdRaw: string, formData: FormData)
           status: "approved",
           qautity: parsed.data.qautity,
           description: parsed.data.description,
+          year: parsed.data.year,
+          colorId: BigInt(parsed.data.colorId),
           isActive: parsed.data.isActive,
+          images: { create: storedImages.newRows },
+          options: { create: extras.optionRows },
           saleTerms: { create: parsed.data.saleTerms.map((entry) => withInitialPriceHistory(toSaleTermData(entry), entry)) },
         },
         include: userCarInclude,
@@ -154,6 +179,7 @@ export async function createUserCarAction(userIdRaw: string, formData: FormData)
     } catch (error) {
       if (isAdCodeCollision(error) && attempt < AD_CODE_MAX_ATTEMPTS) continue;
       console.error("[user-cars:create] failed", error);
+      await discardAdImageFiles(storedImages.newRows.map((row) => row.imageUrl));
       return {
         ok: false,
         message: isAdCodeCollision(error)
@@ -185,7 +211,12 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
   const [existing, car] = await Promise.all([
     prisma.userCar.findUnique({
       where: { id: userCarId },
-      select: { id: true, userId: true, saleTerms: { select: { id: true, price: true } } },
+      select: {
+        id: true,
+        userId: true,
+        saleTerms: { select: { id: true, price: true } },
+        images: { select: { id: true, imageUrl: true } },
+      },
     }),
     prisma.car.findUnique({ where: { id: carId }, select: { id: true } }),
   ]);
@@ -194,6 +225,17 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
 
   const termErrors = await validateSaleTermIds(parsed.data.saleTerms);
   if (termErrors) return { ok: false, message: "شرایط فروش انتخاب‌شده نامعتبر است", fieldErrors: termErrors };
+
+  const extras = await prepareAdExtras(formData, existing.images);
+  if (!extras.ok) return extras;
+
+  let storedImages: StoredAdImages;
+  try {
+    storedImages = await storeNewAdImages(extras.images);
+  } catch (error) {
+    console.error("[user-cars:update] image upload failed", error);
+    return { ok: false, message: "خطا در ذخیره تصاویر آگهی" };
+  }
 
   const existingTermIds = new Set(existing.saleTerms.map((t) => t.id.toString()));
   const existingPriceById = new Map(existing.saleTerms.map((t) => [t.id.toString(), t.price]));
@@ -210,10 +252,15 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
           carId,
           qautity: parsed.data.qautity,
           description: parsed.data.description,
+          year: parsed.data.year,
+          colorId: BigInt(parsed.data.colorId),
           isActive: parsed.data.isActive,
           ...(parsed.data.status ? { status: parsed.data.status } : {}),
         },
       });
+
+      await syncAdImages(tx, userCarId, extras.images, storedImages);
+      await syncAdOptions(tx, userCarId, extras.optionRows);
 
       if (idsToDelete.length > 0) {
         await tx.userCarSaleTerm.deleteMany({ where: { id: { in: idsToDelete }, userCarId } });
@@ -235,9 +282,11 @@ export async function updateUserCarAction(idRaw: string, formData: FormData): Pr
       return tx.userCar.findUniqueOrThrow({ where: { id: userCarId }, include: userCarInclude });
     });
 
+    await discardAdImageFiles(extras.images.removedUrls);
     revalidateUserPages(existing.userId);
     return { ok: true, record: userCarToRecord(updated) };
   } catch (error) {
+    await discardAdImageFiles(storedImages.newRows.map((row) => row.imageUrl));
     console.error("[user-cars:update] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
@@ -301,7 +350,7 @@ export async function deleteUserCarAction(idRaw: string): Promise<UserCarSimpleA
   const userCarId = parseBigInt(idRaw);
   if (userCarId === null) return { ok: false, message: INVALID_ID_MESSAGE };
 
-  const existing = await prisma.userCar.findUnique({ where: { id: userCarId }, select: { userId: true } });
+  const existing = await prisma.userCar.findUnique({ where: { id: userCarId }, select: { userId: true, images: { select: { imageUrl: true } } } });
   if (!existing) return { ok: false, message: "آگهی یافت نشد" };
 
   try {
@@ -315,6 +364,7 @@ export async function deleteUserCarAction(idRaw: string): Promise<UserCarSimpleA
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 
+  await discardAdImageFiles(existing.images.map((image) => image.imageUrl));
   revalidateUserPages(existing.userId);
   return { ok: true };
 }

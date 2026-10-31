@@ -5,8 +5,10 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { hasCompanyName, publicDisplayName } from "@/lib/display-name";
 import { normalizeDigits } from "@/lib/validation/admin";
+import { adOptionsToDisplay, userCarImagesOrder, userCarOptionsInclude } from "@/lib/user-cars";
 
 import {
+  type AdDetailRecord,
   type SearchAdRecord,
   type SearchAdSaleTerm,
   type SearchPricePoint,
@@ -55,12 +57,13 @@ function buildWhere(filters: SearchFilterValues): Prisma.UserCarWhereInput {
       { car: { model: { contains: filters.q } } },
       { car: { brand: { name: { contains: filters.q } } } },
       { car: { carType: { name: { contains: filters.q } } } },
+      { color: { name: { contains: filters.q } } },
       { user: { name: { contains: filters.q } } },
       { user: { companyName: { contains: filters.q } } },
     ];
     if (digits) {
       or.push({ code: { contains: digits } });
-      or.push({ car: { year: { contains: digits } } });
+      or.push({ year: { contains: digits } });
     }
     and.push({ OR: or });
   }
@@ -74,11 +77,14 @@ function buildWhere(filters: SearchFilterValues): Prisma.UserCarWhereInput {
   const saleTermId = toBigIntOrNull(filters.saleTerm);
   if (saleTermId !== null) and.push({ saleTerms: { some: { saleTermId, isActive: true } } });
 
+  const colorId = toBigIntOrNull(filters.color);
+  if (colorId !== null) and.push({ colorId });
+
   // Years are stored as 4-digit strings, so lexicographic comparison is safe.
   const yearFrom = normalizeDigits(filters.yearFrom);
   const yearTo = normalizeDigits(filters.yearTo);
-  if (/^\d{4}$/.test(yearFrom)) and.push({ car: { year: { gte: yearFrom } } });
-  if (/^\d{4}$/.test(yearTo)) and.push({ car: { year: { lte: yearTo } } });
+  if (/^\d{4}$/.test(yearFrom)) and.push({ year: { gte: yearFrom } });
+  if (/^\d{4}$/.test(yearTo)) and.push({ year: { lte: yearTo } });
 
   return and.length > 0 ? { ...PUBLIC_AD_WHERE, AND: and } : { ...PUBLIC_AD_WHERE };
 }
@@ -92,9 +98,9 @@ function buildOrderBy(sort: SearchSort): Prisma.UserCarOrderByWithRelationInput[
     case "name":
       return [{ car: { name: "asc" } }, { id: "desc" }];
     case "year_desc":
-      return [{ car: { year: "desc" } }, { createdAt: "desc" }, { id: "desc" }];
+      return [{ year: "desc" }, { createdAt: "desc" }, { id: "desc" }];
     case "year_asc":
-      return [{ car: { year: "asc" } }, { createdAt: "desc" }, { id: "desc" }];
+      return [{ year: "asc" }, { createdAt: "desc" }, { id: "desc" }];
     case "newest":
     default:
       return [{ createdAt: "desc" }, { id: "desc" }];
@@ -110,11 +116,16 @@ const searchInclude = {
       carImages: { select: { imageUrl: true }, orderBy: { id: "asc" }, take: 1 },
     },
   },
+  color: { select: { name: true, code: true } },
+  images: { select: { imageUrl: true }, orderBy: userCarImagesOrder, take: 1 },
   saleTerms: {
     where: { isActive: true },
     select: {
       id: true,
       price: true,
+      sale: true,
+      perecentage: true,
+      description: true,
       createdAt: true,
       saleTerm: { select: { title: true, isActive: true } },
       priceHistory: { select: { price: true, createdAt: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
@@ -162,11 +173,13 @@ function toSearchAdRecord(row: SearchAdRow): SearchAdRecord {
     code: row.code,
     carName: row.car.name,
     carModel: row.car.model,
-    carYear: row.car.year,
+    carYear: row.year,
+    colorName: row.color?.name ?? null,
+    colorCode: row.color?.code ?? null,
     carTypeName: row.car.carType.name,
     brandName: row.car.brand.name,
     brandImage: row.car.brand.image,
-    imageUrl: row.car.carImages[0]?.imageUrl ?? null,
+    imageUrl: row.images[0]?.imageUrl ?? row.car.carImages[0]?.imageUrl ?? null,
     userId: row.user.id.toString(),
     userName: publicDisplayName(row.user),
     userIsCompany: hasCompanyName(row.user),
@@ -207,7 +220,7 @@ export async function searchApprovedAds(filters: SearchFilterValues, requestedPa
 export async function getSearchOptions(): Promise<SearchOptions> {
   const hasPublicAd = { userCars: { some: PUBLIC_AD_WHERE } } satisfies Prisma.CarWhereInput;
 
-  const [brands, carTypes, saleTerms, years] = await Promise.all([
+  const [brands, carTypes, saleTerms, colors, years] = await Promise.all([
     prisma.brand.findMany({
       where: { cars: { some: hasPublicAd } },
       select: { id: true, name: true, image: true },
@@ -223,8 +236,13 @@ export async function getSearchOptions(): Promise<SearchOptions> {
       select: { id: true, title: true },
       orderBy: { title: "asc" },
     }),
-    prisma.car.findMany({
-      where: hasPublicAd,
+    prisma.color.findMany({
+      where: { userCars: { some: PUBLIC_AD_WHERE } },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.userCar.findMany({
+      where: PUBLIC_AD_WHERE,
       select: { year: true },
       distinct: ["year"],
       orderBy: { year: "desc" },
@@ -235,7 +253,58 @@ export async function getSearchOptions(): Promise<SearchOptions> {
     brands: brands.map((brand) => ({ id: brand.id.toString(), name: brand.name, image: brand.image })),
     carTypes: carTypes.map((type) => ({ id: type.id.toString(), name: type.name })),
     saleTerms: saleTerms.map((term) => ({ id: term.id.toString(), name: term.title })),
-    years: years.map((car) => car.year).filter((year) => /^\d{4}$/.test(year)),
+    colors: colors.map((color) => ({ id: color.id.toString(), name: color.name, code: color.code })),
+    years: years.map((ad) => ad.year).filter((year) => /^\d{4}$/.test(year)),
+  };
+}
+
+const adDetailInclude = {
+  ...searchInclude,
+  car: {
+    include: {
+      brand: { select: { name: true, image: true } },
+      carType: { select: { name: true } },
+      carImages: { select: { imageUrl: true }, orderBy: { id: "asc" } },
+    },
+  },
+  images: { select: { imageUrl: true }, orderBy: userCarImagesOrder },
+  options: userCarOptionsInclude,
+} satisfies Prisma.UserCarInclude;
+
+/**
+ * One ad for its dedicated page. Other customers only reach approved, active
+ * ads; the owner also reaches their own pending, rejected or deactivated ones.
+ */
+export async function getAdDetail(idRaw: string, viewerId: string): Promise<AdDetailRecord | null> {
+  const id = toBigIntOrNull(idRaw);
+  const viewer = toBigIntOrNull(viewerId);
+  if (id === null || viewer === null) return null;
+
+  const row = await prisma.userCar.findFirst({
+    where: { id, OR: [PUBLIC_AD_WHERE, { userId: viewer }] },
+    include: adDetailInclude,
+  });
+  if (!row) return null;
+
+  const ownPhotos = row.images.map((image) => image.imageUrl);
+  const liveTerms = row.saleTerms.filter((term) => term.saleTerm.isActive);
+
+  return {
+    ...toSearchAdRecord(row),
+    status: row.status,
+    isActive: row.isActive,
+    isOwner: row.userId === viewer,
+    qautity: row.qautity,
+    description: row.description,
+    galleryUrls: ownPhotos.length > 0 ? ownPhotos : row.car.carImages.map((image) => image.imageUrl),
+    galleryIsCatalogue: ownPhotos.length === 0,
+    options: adOptionsToDisplay(row.options),
+    saleTerms: liveTerms.map((term) => ({
+      ...toSearchSaleTerm(term),
+      sale: term.sale,
+      perecentage: term.perecentage,
+      description: term.description,
+    })),
   };
 }
 

@@ -22,7 +22,7 @@ export default async function AdminPriceTablePage() {
 
   const cars = await prisma.car.findMany({
     include: carRecordInclude,
-    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }, { id: "asc" }],
+    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { id: "asc" }],
   });
 
   return <PriceTableManager initialCars={cars.map(carToRecord)} />;

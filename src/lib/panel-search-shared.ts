@@ -25,6 +25,7 @@ export interface SearchFilterValues {
   brand: string;
   carType: string;
   saleTerm: string;
+  color: string;
   yearFrom: string;
   yearTo: string;
   sort: SearchSort;
@@ -34,12 +35,15 @@ export interface SearchOption {
   id: string;
   name: string;
   image?: string | null;
+  /** Hex code, for colour options. */
+  code?: string;
 }
 
 export interface SearchOptions {
   brands: SearchOption[];
   carTypes: SearchOption[];
   saleTerms: SearchOption[];
+  colors: SearchOption[];
   years: string[];
 }
 
@@ -82,7 +86,9 @@ export interface SearchAdRecord {
   carTypeName: string;
   brandName: string;
   brandImage: string | null;
-  /** First image registered for the car, or null when none exists. */
+  colorName: string | null;
+  colorCode: string | null;
+  /** Cover: the ad's primary photo, else the car's first catalogue photo. */
   imageUrl: string | null;
   userId: string;
   /** Public seller name: business name when set, else the person's name. */
@@ -92,6 +98,29 @@ export interface SearchAdRecord {
   userImage: string | null;
   saleTerms: SearchAdSaleTerm[];
   createdAtLabel: string;
+}
+
+/** A sale term on the ad detail page, with its full commercial details. */
+export interface AdDetailSaleTerm extends SearchAdSaleTerm {
+  sale: string | null;
+  perecentage: string | null;
+  description: string | null;
+}
+
+/** Everything the dedicated ad page shows. */
+export interface AdDetailRecord extends Omit<SearchAdRecord, "saleTerms"> {
+  status: "pending" | "approved" | "rejected";
+  isActive: boolean;
+  /** True when the viewer owns the ad (may see it unapproved, and edit it). */
+  isOwner: boolean;
+  qautity: string;
+  description: string;
+  /** Gallery: the ad's photos (primary first), else the car's catalogue photos. */
+  galleryUrls: string[];
+  /** True when `galleryUrls` are catalogue photos rather than the seller's own. */
+  galleryIsCatalogue: boolean;
+  options: { optionId: string; name: string; value: string }[];
+  saleTerms: AdDetailSaleTerm[];
 }
 
 export interface SearchResult {

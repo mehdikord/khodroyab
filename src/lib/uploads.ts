@@ -5,7 +5,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 /**
- * Centralised storage for files uploaded through the admin panel.
+ * Centralised storage for files uploaded through the admin and customer panels.
  *
  * Files are written under `UPLOAD_ROOT` and exposed at `/uploads/<subdir>/<file>`
  * by the route handler in `src/app/uploads/[...path]/route.ts`.
@@ -26,7 +26,7 @@ export const UPLOAD_ROOT = path.resolve(
 export const UPLOAD_URL_PREFIX = "/uploads";
 
 /** Sub-directories a caller may write to. Keeps paths predictable and listable. */
-export type UploadSubdir = "brands" | "cars" | "users" | "sale-terms" | "sponsors";
+export type UploadSubdir = "brands" | "cars" | "users" | "sale-terms" | "sponsors" | "ads";
 
 export const MIME_TO_EXTENSION: Record<string, string> = {
   "image/png": "png",

@@ -6,6 +6,8 @@ import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
 import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
+import { colorToRecord } from "@/lib/colors";
+import { optionRecordInclude, optionToRecord } from "@/lib/options";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { isAdStatus, type AdStatus } from "@/lib/ad-status";
 import { normalizeDigits } from "@/lib/validation/admin";
@@ -68,7 +70,7 @@ export default async function AdminAllAdsPage({ searchParams }: PageProps) {
     if (digits) {
       or.push({ code: { contains: digits } });
       or.push({ user: { phone: { contains: digits } } });
-      or.push({ car: { year: { contains: digits } } });
+      or.push({ year: { contains: digits } });
     }
     and.push({ OR: or });
   }
@@ -84,7 +86,7 @@ export default async function AdminAllAdsPage({ searchParams }: PageProps) {
   if (and.length > 0) where.AND = and;
 
   /* ───── Load everything in parallel ───── */
-  const [total, statusGroups, cars, saleTerms, users] = await Promise.all([
+  const [total, statusGroups, cars, saleTerms, users, colors, options] = await Promise.all([
     prisma.userCar.count({ where }),
     prisma.userCar.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.car.findMany({
@@ -93,6 +95,8 @@ export default async function AdminAllAdsPage({ searchParams }: PageProps) {
     }),
     prisma.saleTerm.findMany({ where: { isActive: true }, orderBy: { title: "asc" } }),
     prisma.user.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: "asc" } }),
+    prisma.color.findMany({ orderBy: { name: "asc" } }),
+    prisma.option.findMany({ where: { isActive: true }, include: optionRecordInclude, orderBy: { id: "asc" } }),
   ]);
 
   const pageCount = Math.max(1, Math.ceil(total / ADS_PAGE_SIZE));
@@ -126,6 +130,8 @@ export default async function AdminAllAdsPage({ searchParams }: PageProps) {
       statusCounts={statusCounts}
       cars={cars.map(carToRecord)}
       saleTerms={saleTerms.map(saleTermToRecord)}
+      colors={colors.map(colorToRecord)}
+      options={options.map(optionToRecord)}
       users={users.map((user) => ({ id: user.id.toString(), name: user.name, phone: user.phone }))}
     />
   );

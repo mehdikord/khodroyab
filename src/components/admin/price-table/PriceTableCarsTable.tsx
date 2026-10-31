@@ -28,7 +28,7 @@ export function PriceTableCarsTable({ cars, pendingId, disabled, onToggle }: Pri
               برند / نوع
             </th>
             <th scope="col" className="hidden px-4 py-4 text-right font-bold uppercase tracking-wider text-[#8B93A1] sm:table-cell">
-              مدل / سال
+              مدل
             </th>
             <th scope="col" className="px-4 py-4 text-center font-bold uppercase tracking-wider text-[#8B93A1]">
               وضعیت
@@ -47,7 +47,7 @@ export function PriceTableCarsTable({ cars, pendingId, disabled, onToggle }: Pri
                   <p className="font-semibold text-[#F5F5F5]">{car.name}</p>
                   <p className="mt-0.5 text-[11px] text-[#8B93A1] md:hidden">{car.brandName} · {car.carTypeName}</p>
                   <p className="mt-0.5 text-[11px] text-[#5E6672] sm:hidden">
-                    مدل {toPersianDigits(car.model)} · سال {toPersianDigits(car.year)}
+                    مدل {toPersianDigits(car.model)}
                   </p>
                 </td>
                 <td className="hidden px-4 py-4 md:table-cell">
@@ -56,7 +56,6 @@ export function PriceTableCarsTable({ cars, pendingId, disabled, onToggle }: Pri
                 </td>
                 <td className="hidden px-4 py-4 text-[#8B93A1] sm:table-cell">
                   <p>{toPersianDigits(car.model)}</p>
-                  <p className="text-xs">{toPersianDigits(car.year)}</p>
                 </td>
                 <td className="px-4 py-4 text-center">
                   <Badge tone={car.priceTable ? "success" : "muted"}>{car.priceTable ? "مجاز" : "غیرمجاز"}</Badge>

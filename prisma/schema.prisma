@@ -12,6 +12,7 @@ datasource db {
 
 enum OptionType {
   text
+  number
   select
   checkbox
 }
@@ -99,7 +100,7 @@ model CarType {
 }
 
 // ─── Table 16: colors ────────────────────────────────────────────────────────
-// Colour catalogue managed by the administrator. Used by cars and by the
+// Colour catalogue managed by the administrator. Used by sale ads and by the
 // customers' price tables.
 model Color {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
@@ -109,7 +110,7 @@ model Color {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  cars             Car[]
+  userCars         UserCar[]
   priceTablePrices UserPriceTablePrice[]
 
   @@map("colors")
@@ -120,11 +121,9 @@ model Car {
   id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   brandId    BigInt   @map("brand_id") @db.UnsignedBigInt
   carTypeId  BigInt   @map("car_type_id") @db.UnsignedBigInt
-  colorId    BigInt?  @map("color_id") @db.UnsignedBigInt
   name       String   @db.VarChar(255)
   slug       String   @db.VarChar(255)
   model      String   @db.VarChar(255)
-  year       String   @db.VarChar(255)
   /// When true, customers may list this car in their personal price table.
   priceTable Boolean  @default(false) @map("price_table")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(0)
@@ -132,16 +131,13 @@ model Car {
 
   brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   carType CarType @relation(fields: [carTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  color   Color?  @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  carOptions        CarOption[]
   userCars          UserCar[]
   carImages         CarImage[]
   priceTableEntries UserPriceTableEntry[]
 
   @@index([brandId])
   @@index([carTypeId])
-  @@index([colorId])
   @@map("cars")
 }
 
@@ -160,17 +156,23 @@ model CarImage {
 }
 
 // ─── Table 6: options ────────────────────────────────────────────────────────
+// Global "car registration form" fields. Every active option is shown on the
+// sale-ad form; the values live on the ad (`user_car_options`).
 model Option {
   id          BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
   name        String     @db.VarChar(255)
   type        OptionType @default(text)
-  placeholder String     @db.VarChar(255)
+  /// `select` only: whether several items may be chosen at once.
+  multiple    Boolean    @default(false)
+  isRequired  Boolean    @default(false) @map("is_required")
+  /// Inactive options are hidden from the form; existing ad values stay visible.
+  isActive    Boolean    @default(true) @map("is_active")
   description String     @db.VarChar(255)
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamp(0)
 
   optionItems OptionItem[]
-  carOptions  CarOption[]
+  userCars    UserCarOption[]
 
   @@map("options")
 }
@@ -180,31 +182,14 @@ model OptionItem {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   optionId  BigInt   @map("option_id") @db.UnsignedBigInt
   title     String   @db.VarChar(255)
-  item      String   @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  option Option @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  option   Option          @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userCars UserCarOption[]
 
   @@index([optionId])
   @@map("option_items")
-}
-
-// ─── Table 8: car_options ────────────────────────────────────────────────────
-model CarOption {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  carId     BigInt   @map("car_id") @db.UnsignedBigInt
-  optionId  BigInt   @map("option_id") @db.UnsignedBigInt
-  val       String   @db.VarChar(255)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
-
-  car    Car    @relation(fields: [carId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  option Option @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
-  @@index([carId])
-  @@index([optionId])
-  @@map("car_options")
 }
 
 // ─── Table 9: sale_terms ─────────────────────────────────────────────────────
@@ -233,19 +218,67 @@ model UserCar {
   status      UserCarStatus @default(pending)
   qautity     String        @db.VarChar(255)
   description String        @db.VarChar(255)
+  /// Production year of this listing, 4 ASCII digits (Gregorian or Jalali).
+  year        String        @db.VarChar(10)
+  /// Colour from the `colors` catalogue. Required by the form; null only on legacy ads.
+  colorId     BigInt?       @map("color_id") @db.UnsignedBigInt
   isActive    Boolean       @default(true) @map("is_active")
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  car  Car  @relation(fields: [carId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  color Color? @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   saleTerms UserCarSaleTerm[]
+  images    UserCarImage[]
+  options   UserCarOption[]
 
   @@index([userId])
   @@index([carId])
+  @@index([colorId])
+  @@index([year])
   @@index([status])
   @@map("user_cars")
+}
+
+// ─── Table 19: user_car_images ───────────────────────────────────────────────
+// Photos uploaded for one ad. Exactly one row is primary when any exist.
+model UserCarImage {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userCarId BigInt   @map("user_car_id") @db.UnsignedBigInt
+  imageUrl  String   @map("image_url") @db.VarChar(255)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  userCar UserCar @relation(fields: [userCarId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userCarId])
+  @@map("user_car_images")
+}
+
+// ─── Table 20: user_car_options ──────────────────────────────────────────────
+// Values an ad holds for the global options. `select` options store one row per
+// chosen item (`option_item_id`); text, number and checked checkbox store `val`.
+// An unchecked checkbox or an empty field has no row.
+model UserCarOption {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userCarId    BigInt   @map("user_car_id") @db.UnsignedBigInt
+  optionId     BigInt   @map("option_id") @db.UnsignedBigInt
+  optionItemId BigInt?  @map("option_item_id") @db.UnsignedBigInt
+  val          String?  @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  userCar    UserCar     @relation(fields: [userCarId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  option     Option      @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  optionItem OptionItem? @relation(fields: [optionItemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userCarId])
+  @@index([optionId])
+  @@index([optionItemId])
+  @@map("user_car_options")
 }
 
 // ─── Table 11: user_car_sale_terms ───────────────────────────────────────────
@@ -323,7 +356,7 @@ model UserPriceTableEntry {
 // One price tier of a price-table row: the raw / clearance / instant USD
 // prices for a production year typed by the customer and a colour from the
 // `colors` catalogue. The year is the customer's own and is independent of
-// `cars.year`. A (year, colour) pair is unique within a row, so the same year
+// the year of any sale ad. A (year, colour) pair is unique within a row, so the same year
 // may appear with different colours. Only tiers with at least one price are stored.
 model UserPriceTablePrice {
   id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt

@@ -49,10 +49,11 @@ async function guardRequest(): Promise<
   return null;
 }
 
-/** Colours appear on the cars page and in every customer's price table. */
+/** Colours appear on sale ads and in every customer's price table. */
 function revalidateColorPages() {
   revalidatePath("/admin/colors");
-  revalidatePath("/admin/cars");
+  revalidatePath("/admin/ads");
+  revalidatePath("/panel/ads");
   revalidatePath("/panel/price-table");
   revalidatePath("/panel/sellers/[id]", "page");
 }
@@ -146,7 +147,7 @@ export async function deleteColorAction(
       return {
         ok: false,
         message:
-          "این رنگ برای خودروها یا جدول قیمت کاربران استفاده شده است و امکان حذف آن وجود ندارد. ابتدا رنگ آن موارد را تغییر دهید.",
+          "این رنگ در آگهی‌ها یا جدول قیمت کاربران استفاده شده است و امکان حذف آن وجود ندارد. ابتدا رنگ آن موارد را تغییر دهید.",
       };
     }
     console.error("[colors:delete] failed", error);

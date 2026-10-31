@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   Clock3,
   ImageOff,
-  ListX,
   PauseCircle,
   ShieldCheck,
   Tag,
@@ -64,15 +63,6 @@ export function AttentionList({ attention }: AttentionListProps) {
       href: "/admin/cars",
       icon: ImageOff,
       severity: "warning",
-    },
-    {
-      key: "no-options",
-      label: "خودرو بدون ویژگی",
-      description: "مشخصات فنی برای آن ثبت نشده است",
-      count: attention.carsWithoutOptions,
-      href: "/admin/cars",
-      icon: ListX,
-      severity: "info",
     },
     {
       key: "brands-no-cars",

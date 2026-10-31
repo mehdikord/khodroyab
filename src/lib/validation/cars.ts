@@ -8,11 +8,6 @@ export const carCoreSchema = z.object({
   carTypeId: z
     .string({ error: "انتخاب نوع خودرو الزامی است" })
     .min(1, { error: "انتخاب نوع خودرو الزامی است" }),
-  /** Optional: an empty string means "no colour". */
-  colorId: z
-    .string()
-    .regex(/^\d*$/, { error: "رنگ انتخاب‌شده نامعتبر است" })
-    .optional(),
   name: z
     .string({ error: "نام خودرو الزامی است" })
     .trim()
@@ -28,21 +23,14 @@ export const carCoreSchema = z.object({
     .trim()
     .min(1, { error: "مدل خودرو الزامی است" })
     .max(255, { error: "مدل خودرو حداکثر ۲۵۵ کاراکتر است" }),
-  year: z
-    .string({ error: "سال ساخت الزامی است" })
-    .trim()
-    .min(1, { error: "سال ساخت الزامی است" })
-    .max(255, { error: "سال ساخت حداکثر ۲۵۵ کاراکتر است" }),
 });
 
 export interface CarFormValues {
   brandId: string;
   carTypeId: string;
-  colorId: string | null;
   name: string;
   slug: string;
   model: string;
-  year: string;
 }
 
 export type ParsedCarForm =
@@ -52,20 +40,16 @@ export type ParsedCarForm =
 export function parseCarForm(formData: FormData): ParsedCarForm {
   const rawBrandId = formData.get("brandId");
   const rawCarTypeId = formData.get("carTypeId");
-  const rawColorId = formData.get("colorId");
   const rawName = formData.get("name");
   const rawSlug = formData.get("slug");
   const rawModel = formData.get("model");
-  const rawYear = formData.get("year");
 
   const parseResult = carCoreSchema.safeParse({
     brandId: rawBrandId,
     carTypeId: rawCarTypeId,
-    colorId: rawColorId ?? undefined,
     name: rawName,
     slug: rawSlug,
     model: rawModel,
-    year: rawYear,
   });
 
   if (!parseResult.success) {
@@ -92,11 +76,9 @@ export function parseCarForm(formData: FormData): ParsedCarForm {
     success: true,
     data: {
       ...parseResult.data,
-      colorId: parseResult.data.colorId || null,
       name: parseResult.data.name.trim(),
       slug,
       model: parseResult.data.model.trim(),
-      year: parseResult.data.year.trim(),
     },
   };
 }

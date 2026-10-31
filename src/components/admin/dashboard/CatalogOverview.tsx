@@ -48,10 +48,10 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
     },
     {
       key: "options",
-      label: "ویژگی‌ها",
+      label: "فرم ثبت خودرو",
       value: catalog.options,
-      hint: `${formatPersianNumber(catalog.optionItems)} گزینه · ${formatPersianNumber(catalog.carOptions)} مقدار`,
-      href: "/admin/options",
+      hint: `${formatPersianNumber(catalog.optionItems)} گزینه · ${formatPersianNumber(catalog.adOptionValues)} مقدار`,
+      href: "/admin/car-form",
       icon: SlidersHorizontal,
     },
     {

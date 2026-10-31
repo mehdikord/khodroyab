@@ -7,52 +7,34 @@ export const optionItemSchema = z.object({
     .trim()
     .min(1, { error: "عنوان گزینه نمی‌تواند خالی باشد" })
     .max(255, { error: "عنوان گزینه حداکثر ۲۵۵ کاراکتر است" }),
-  item: z
-    .string({ error: "مقدار گزینه الزامی است" })
-    .trim()
-    .min(1, { error: "مقدار گزینه نمی‌تواند خالی باشد" })
-    .max(255, { error: "مقدار گزینه حداکثر ۲۵۵ کاراکتر است" }),
 });
 
 export const optionCoreSchema = z.object({
   name: z
-    .string({ error: "نام ویژگی الزامی است" })
+    .string({ error: "عنوان ویژگی الزامی است" })
     .trim()
-    .min(1, { error: "نام ویژگی الزامی است" })
-    .max(255, { error: "نام ویژگی حداکثر ۲۵۵ کاراکتر می‌تواند باشد" }),
-  type: z.enum(["text", "select", "checkbox"], {
+    .min(1, { error: "عنوان ویژگی الزامی است" })
+    .max(255, { error: "عنوان ویژگی حداکثر ۲۵۵ کاراکتر می‌تواند باشد" }),
+  type: z.enum(["text", "number", "select", "checkbox"], {
     error: "نوع ویژگی نامعتبر است",
   }),
-  placeholder: z
-    .string()
-    .trim()
-    .max(255, { error: "متن راهنما حداکثر ۲۵۵ کاراکتر است" })
-    .default(""),
+  multiple: z.boolean().default(false),
+  isRequired: z.boolean().default(false),
   description: z
     .string()
     .trim()
-    .max(255, { error: "توضیحات حداکثر ۲۵۵ کاراکتر است" })
+    .max(255, { error: "توضیح کوتاه حداکثر ۲۵۵ کاراکتر است" })
     .default(""),
   items: z.array(optionItemSchema).default([]),
 });
 
-export interface OptionFormValues {
-  name: string;
-  type: "text" | "select" | "checkbox";
-  placeholder: string;
-  description: string;
-  items: Array<{ id?: string; title: string; item: string }>;
-}
+export type OptionFormValues = z.output<typeof optionCoreSchema>;
 
 export type ParsedOptionForm =
   | { success: true; data: OptionFormValues }
   | { success: false; fieldErrors: Record<string, string>; message: string };
 
 export function parseOptionForm(formData: FormData): ParsedOptionForm {
-  const rawName = formData.get("name");
-  const rawType = formData.get("type");
-  const rawPlaceholder = formData.get("placeholder") ?? "";
-  const rawDescription = formData.get("description") ?? "";
   const rawItemsJson = formData.get("items");
 
   let itemsParsed: unknown = [];
@@ -69,10 +51,11 @@ export function parseOptionForm(formData: FormData): ParsedOptionForm {
   }
 
   const parseResult = optionCoreSchema.safeParse({
-    name: rawName,
-    type: rawType,
-    placeholder: rawPlaceholder,
-    description: rawDescription,
+    name: formData.get("name"),
+    type: formData.get("type"),
+    multiple: formData.get("multiple") === "true",
+    isRequired: formData.get("isRequired") === "true",
+    description: formData.get("description") ?? "",
     items: itemsParsed,
   });
 
@@ -91,18 +74,34 @@ export function parseOptionForm(formData: FormData): ParsedOptionForm {
     };
   }
 
-  if (parseResult.data.type === "select" && parseResult.data.items.length === 0) {
+  const data = parseResult.data;
+  if (data.type === "select" && data.items.length === 0) {
     return {
       success: false,
       fieldErrors: {
-        items: "برای ویژگی از نوع انتخابی (select)، ثبت حداقل یک گزینه الزامی است.",
+        items: "برای ویژگی چند گزینه‌ای، ثبت حداقل یک گزینه الزامی است.",
       },
       message: "حداقل یک گزینه برای این ویژگی باید تعریف شود",
     };
   }
 
+  const titles = data.items.map((item) => item.title);
+  if (data.type === "select" && new Set(titles).size !== titles.length) {
+    return {
+      success: false,
+      fieldErrors: { items: "عنوان گزینه‌ها نباید تکراری باشد." },
+      message: "عنوان گزینه‌ها نباید تکراری باشد",
+    };
+  }
+
   return {
     success: true,
-    data: parseResult.data,
+    data: {
+      ...data,
+      multiple: data.type === "select" && data.multiple,
+      // Leaving a checkbox unticked is itself an answer, so it is never required.
+      isRequired: data.type !== "checkbox" && data.isRequired,
+      items: data.type === "select" ? data.items : [],
+    },
   };
 }

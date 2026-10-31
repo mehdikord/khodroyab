@@ -11,14 +11,11 @@ export interface PriceTableCarRecord {
   brandName: string;
   carTypeName: string;
   model: string;
-  year: string;
-  /** Colour the admin set on the car (default colour of a new price tier). */
-  colorId: string | null;
 }
 
 /** One tier of a row: the three USD prices for a (production year, colour) pair. */
 export interface PriceTableTierRecord {
-  /** Production year typed by the customer (independent of the car's catalogue year). */
+  /** Production year typed by the customer (independent of any sale ad's year). */
   year: string;
   colorId: string;
   colorName: string;
@@ -52,8 +49,6 @@ const priceTableCarSelect = {
   id: true,
   name: true,
   model: true,
-  year: true,
-  colorId: true,
   brand: { select: { name: true } },
   carType: { select: { name: true } },
 } satisfies Prisma.CarSelect;
@@ -67,8 +62,6 @@ function toCarRecord(car: PriceTableCarRow): PriceTableCarRecord {
     brandName: car.brand.name,
     carTypeName: car.carType.name,
     model: car.model,
-    year: car.year,
-    colorId: car.colorId?.toString() ?? null,
   };
 }
 
@@ -77,7 +70,7 @@ export async function listPriceTableCars(): Promise<PriceTableCarRecord[]> {
   const cars = await prisma.car.findMany({
     where: { priceTable: true },
     select: priceTableCarSelect,
-    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }, { id: "asc" }],
+    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { id: "asc" }],
   });
   return cars.map(toCarRecord);
 }

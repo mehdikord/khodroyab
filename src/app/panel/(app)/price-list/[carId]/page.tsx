@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth/user-auth";
 import { getPriceListCarDetail } from "@/lib/price-list";
 import { PRICE_TABLE_PRICE_FIELDS } from "@/lib/price-table-shared";
 import { toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColorLabel, PriceTag } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, PriceTag } from "@/components/panel/price-list/price-list-ui";
 import { CarOffersView } from "@/components/panel/price-list/CarOffersView";
 
 export const dynamic = "force-dynamic";
@@ -63,12 +63,6 @@ export default async function PriceListCarPage({ params }: PageProps) {
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(car.model)}</span>
-                <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">سال {toPersianDigits(car.year)}</span>
-                {car.colorName && (
-                  <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
-                    <ColorLabel name={car.colorName} code={car.colorCode} />
-                  </span>
-                )}
                 <span className="inline-flex items-center gap-1 rounded-lg bg-[#FF6A00]/10 px-2 py-1 font-bold text-panel-accent">
                   <UsersRound className="h-3.5 w-3.5" />
                   {toPersianDigits(sellerCount)} فروشنده

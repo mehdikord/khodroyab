@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useMemo, useRef, useState, useTransition } from "react";
-import { Plus, Search, Settings } from "lucide-react";
+import { ClipboardList, Plus, Search } from "lucide-react";
 
 import { OptionsTable } from "@/components/admin/options/OptionsTable";
 import { OptionFormModal } from "@/components/admin/options/OptionFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
-import { deleteOptionAction } from "@/app/admin/(panel)/options/actions";
+import { deleteOptionAction, toggleOptionActiveAction } from "@/app/admin/(panel)/car-form/actions";
 import type { OptionRecord } from "@/lib/options";
 import { toPersianDigits } from "@/lib/utils";
 
@@ -26,6 +26,7 @@ export function OptionsManager({ initialOptions }: OptionsManagerProps) {
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<OptionRecord | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const [isDeleting, startDeleteTransition] = useTransition();
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,6 +63,19 @@ export function OptionsManager({ initialOptions }: OptionsManagerProps) {
 
   function handleError(message: string) {
     showToast("error", message);
+  }
+
+  function handleToggleActive(option: OptionRecord, next: boolean) {
+    setBusyId(option.id);
+    void toggleOptionActiveAction(option.id, next).then((result) => {
+      setBusyId(null);
+      if (result.ok) {
+        setOptions((prev) => prev.map((opt) => (opt.id === result.record.id ? result.record : opt)));
+        showToast("success", next ? `ویژگی «${option.name}» فعال شد.` : `ویژگی «${option.name}» غیرفعال شد.`);
+      } else {
+        showToast("error", result.message);
+      }
+    });
   }
 
   function handleConfirmDelete() {
@@ -118,14 +132,14 @@ export function OptionsManager({ initialOptions }: OptionsManagerProps) {
         <div>
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#FF6A00]/30 bg-[#FF6A00]/10 text-[#FF8A2A]">
-              <Settings className="h-5 w-5" />
+              <ClipboardList className="h-5 w-5" />
             </div>
             <div>
               <h1 className="text-lg font-extrabold leading-6 text-[#F5F5F5]">
-                مدیریت ویژگی‌ها
+                فرم ثبت خودرو
               </h1>
               <p className="mt-0.5 text-xs text-[#8B93A1]">
-                {toPersianDigits(options.length)} ویژگی در سیستم ثبت شده است
+                {toPersianDigits(options.length)} ویژگی عمومی؛ کاربران هنگام ثبت آگهی مقدار آن‌ها را وارد می‌کنند
               </p>
             </div>
           </div>
@@ -160,6 +174,8 @@ export function OptionsManager({ initialOptions }: OptionsManagerProps) {
         options={filteredOptions}
         onEdit={(option) => setModal({ mode: "edit", option })}
         onDelete={(option) => setDeleteTarget(option)}
+        onToggleActive={handleToggleActive}
+        busyId={busyId}
       />
     </div>
   );

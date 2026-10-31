@@ -18,6 +18,8 @@ import {
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { CarRecord } from "@/lib/cars";
 import type { SaleTermRecord } from "@/lib/sale-terms";
+import type { ColorRecord } from "@/lib/colors";
+import type { OptionRecord } from "@/lib/options";
 import { AD_STATUS_LABELS, type AdStatus } from "@/lib/ad-status";
 import { cn, toPersianDigits } from "@/lib/utils";
 
@@ -34,6 +36,8 @@ interface AdsManagerProps {
   statusCounts: AdsStatusCounts;
   cars: CarRecord[];
   saleTerms: SaleTermRecord[];
+  colors: ColorRecord[];
+  options: OptionRecord[];
   users: AdsUserOption[];
 }
 
@@ -47,6 +51,8 @@ export function AdsManager({
   statusCounts,
   cars,
   saleTerms,
+  colors,
+  options,
   users,
 }: AdsManagerProps) {
   const router = useRouter();
@@ -136,6 +142,8 @@ export function AdsManager({
           ad={editTarget}
           cars={cars}
           saleTerms={saleTerms}
+          colors={colors}
+          options={options}
           onClose={() => setEditTarget(null)}
           onSuccess={(record) => {
             replaceAd(record);

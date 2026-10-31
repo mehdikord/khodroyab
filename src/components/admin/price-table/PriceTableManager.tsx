@@ -46,8 +46,7 @@ export function PriceTableManager({ initialCars }: PriceTableManagerProps) {
       return (
         car.name.toLowerCase().includes(normalized) ||
         car.brandName.toLowerCase().includes(normalized) ||
-        car.model.toLowerCase().includes(normalized) ||
-        car.year.includes(normalized)
+        car.model.toLowerCase().includes(normalized)
       );
     });
   }, [cars, query, filter]);

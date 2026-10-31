@@ -25,7 +25,6 @@ import type { PriceTableCarRecord, PriceTableEntryRecord } from "@/lib/price-tab
 import {
   PRICE_TABLE_MAX_TIERS,
   PRICE_TABLE_PRICE_FIELDS,
-  defaultTierYear,
   digitsOnly,
   isValidTierYear,
   normalizeUsdPrice,
@@ -66,9 +65,9 @@ function emptyTier(year: string, colorId: string): TierDraft {
   return { key: nextTierKey(), year, colorId, priceUsd: "", clearancePrice: "", instantPrice: "" };
 }
 
-/** A fresh row: one tier with the car's year and the car's colour (both editable). */
-function emptyDraft(car: PriceTableCarRecord): Draft {
-  return { tiers: [emptyTier(defaultTierYear(car.year), car.colorId ?? "")] };
+/** A fresh row: one blank tier for the customer to fill in. */
+function emptyDraft(): Draft {
+  return { tiers: [emptyTier("", "")] };
 }
 
 function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[]): Drafts {
@@ -88,7 +87,7 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[])
               instantPrice: tier.instantPrice ?? "",
             })),
           }
-        : emptyDraft(car);
+        : emptyDraft();
   }
   return drafts;
 }
@@ -114,9 +113,9 @@ function sameDraft(a: Draft, b: Draft): boolean {
 }
 
 /** Year proposed for a "new year" tier: one after the newest year already in the row. */
-function suggestNextYear(draft: Draft, car: PriceTableCarRecord): string {
+function suggestNextYear(draft: Draft): string {
   const years = draft.tiers.map((tier) => tier.year).filter(isValidTierYear).map(Number);
-  if (years.length === 0) return defaultTierYear(car.year);
+  if (years.length === 0) return "";
   const next = String(Math.max(...years) + 1);
   return isValidTierYear(next) ? next : "";
 }
@@ -185,7 +184,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
   const carById = useMemo(() => new Map(cars.map((car) => [car.id, car])), [cars]);
   const indexById = useMemo(() => new Map(cars.map((car, index) => [car.id, index])), [cars]);
 
-  const draftOf = (car: PriceTableCarRecord) => drafts[car.id] ?? emptyDraft(car);
+  const draftOf = (car: PriceTableCarRecord) => drafts[car.id] ?? emptyDraft();
 
   const dirtyIds = useMemo(
     () => new Set(cars.filter((car) => drafts[car.id] && saved[car.id] && !sameDraft(drafts[car.id], saved[car.id])).map((car) => car.id)),
@@ -220,7 +219,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
         car.model.toLowerCase().includes(normalized) ||
         (draft?.tiers.some((tier) => colorById.get(tier.colorId)?.name.toLowerCase().includes(normalized)) ?? false) ||
         (digits.length > 0 &&
-          (car.year.includes(digits) || car.model.includes(digits) || (draft?.tiers.some((tier) => tier.year.includes(digits)) ?? false)))
+          (car.model.includes(digits) || (draft?.tiers.some((tier) => tier.year.includes(digits)) ?? false)))
       );
     });
   }, [cars, drafts, query, filter, colorById]);
@@ -234,7 +233,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
   function updateDraft(carId: string, change: (draft: Draft) => Draft) {
     const car = carById.get(carId);
     if (!car) return;
-    setDrafts((prev) => ({ ...prev, [carId]: change(prev[carId] ?? emptyDraft(car)) }));
+    setDrafts((prev) => ({ ...prev, [carId]: change(prev[carId] ?? emptyDraft()) }));
     setFieldErrors((prev) => {
       const prefix = `${carId}.`;
       if (!Object.keys(prev).some((key) => key.startsWith(prefix))) return prev;
@@ -260,14 +259,14 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
   function addYear(car: PriceTableCarRecord) {
     const draft = draftOf(car);
     const last = draft.tiers[draft.tiers.length - 1];
-    appendTier(car, emptyTier(suggestNextYear(draft, car), last?.colorId ?? ""));
+    appendTier(car, emptyTier(suggestNextYear(draft), last?.colorId ?? ""));
   }
 
   /** "رنگ دیگر": the last tier's year, colour left for the customer to pick. */
   function addColor(car: PriceTableCarRecord) {
     const draft = draftOf(car);
     const last = draft.tiers[draft.tiers.length - 1];
-    appendTier(car, emptyTier(last?.year || defaultTierYear(car.year), ""));
+    appendTier(car, emptyTier(last?.year ?? "", ""));
   }
 
   function removeTier(carId: string, tierKey: string) {
@@ -275,7 +274,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
   }
 
   function clearRow(car: PriceTableCarRecord) {
-    updateDraft(car.id, () => emptyDraft(car));
+    updateDraft(car.id, () => emptyDraft());
   }
 
   function discardChanges() {
@@ -489,7 +488,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
               const rowError = fieldErrors[`${car.id}.tiers`];
               const duplicates = duplicateTierKeys(draft);
               const canAddTier = draft.tiers.length < PRICE_TABLE_MAX_TIERS;
-              const suggestedYear = canAddTier ? suggestNextYear(draft, car) : "";
+              const suggestedYear = canAddTier ? suggestNextYear(draft) : "";
               const lastYear = draft.tiers[draft.tiers.length - 1]?.year ?? "";
               const hasErrors = Object.keys(fieldErrors).some((key) => key.startsWith(`${car.id}.`)) || duplicates.size > 0;
 
@@ -528,7 +527,6 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
                       </p>
                       <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
                         <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 font-semibold text-panel-muted-2">مدل {toPersianDigits(car.model)}</span>
-                        <span className="rounded-md bg-panel-line/[0.06] px-1.5 py-0.5 font-semibold text-panel-muted-2">سال {toPersianDigits(car.year)}</span>
                         {dirty && <span className="rounded-md bg-[#FF6A00]/10 px-1.5 py-0.5 font-bold text-panel-accent">ذخیره نشده</span>}
                       </div>
                     </div>

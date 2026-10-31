@@ -47,12 +47,6 @@ export function isValidTierYear(year: string): boolean {
   return value >= PRICE_TABLE_YEAR_MIN && value <= PRICE_TABLE_YEAR_MAX;
 }
 
-/** Year a new row starts with: the car's catalogue year when it is a usable year, else blank. */
-export function defaultTierYear(carYear: string): string {
-  const year = normalizeYear(carYear);
-  return isValidTierYear(year) ? year : "";
-}
-
 /** Order tiers newest year first (used by read-only views). */
 export function compareTierYearsDesc(a: string, b: string): number {
   return Number(b) - Number(a);

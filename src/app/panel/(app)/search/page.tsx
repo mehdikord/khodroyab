@@ -37,6 +37,7 @@ function parseFilters(searchParams: SearchParams): SearchFilterValues {
     brand: single(searchParams.brand).slice(0, 20),
     carType: single(searchParams.carType).slice(0, 20),
     saleTerm: single(searchParams.saleTerm).slice(0, 20),
+    color: single(searchParams.color).slice(0, 20),
     yearFrom: single(searchParams.yearFrom).slice(0, 4),
     yearTo: single(searchParams.yearTo).slice(0, 4),
     sort: isSearchSort(sortRaw) ? sortRaw : "newest",
@@ -50,6 +51,7 @@ function filtersToQuery(filters: SearchFilterValues): string {
   if (filters.brand) params.set("brand", filters.brand);
   if (filters.carType) params.set("carType", filters.carType);
   if (filters.saleTerm) params.set("saleTerm", filters.saleTerm);
+  if (filters.color) params.set("color", filters.color);
   if (filters.yearFrom) params.set("yearFrom", filters.yearFrom);
   if (filters.yearTo) params.set("yearTo", filters.yearTo);
   if (filters.sort !== "newest") params.set("sort", filters.sort);
@@ -70,7 +72,7 @@ export default async function PanelSearchPage({ searchParams }: { searchParams: 
   const [result, options] = await Promise.all([searchApprovedAds(filters, requestedPage), getSearchOptions()]);
 
   const hasFilters =
-    Boolean(filters.q || filters.brand || filters.carType || filters.saleTerm || filters.yearFrom || filters.yearTo);
+    Boolean(filters.q || filters.brand || filters.carType || filters.saleTerm || filters.color || filters.yearFrom || filters.yearTo);
   const baseQuery = filtersToQuery(filters);
   const filtersKey = JSON.stringify(filters);
 

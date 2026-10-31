@@ -59,8 +59,13 @@ export function SaleAdsTable({ ads, onEdit, onDelete, onToggleActive, busyId }: 
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-[#07090C] text-[#FF8A2A]">
-                      <Car className="h-5 w-5" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#07090C] text-[#FF8A2A]">
+                      {ad.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ad.imageUrl} alt={`${ad.brandName} ${ad.carName}`} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <Car className="h-5 w-5" />
+                      )}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-[#F5F5F5]">
@@ -68,6 +73,7 @@ export function SaleAdsTable({ ads, onEdit, onDelete, onToggleActive, busyId }: 
                       </p>
                       <p className="mt-0.5 text-[11px] text-[#8B93A1]">
                         {ad.carTypeName} · مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)}
+                        {ad.colorName && ` · ${ad.colorName}`}
                       </p>
                       {ad.description && (
                         <p className="mt-1 max-w-[280px] truncate text-[11px] text-[#5E6672]" title={ad.description}>

@@ -87,8 +87,13 @@ export function AdsTable({ ads, busyId, onEdit, onDelete, onToggleActive, onChan
 
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#07090C] text-[#FF8A2A]">
-                      <Car className="h-4 w-4" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/[0.08] bg-[#07090C] text-[#FF8A2A]">
+                      {ad.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ad.imageUrl} alt={`${ad.brandName} ${ad.carName}`} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <Car className="h-4 w-4" />
+                      )}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-[#F5F5F5]">
@@ -96,6 +101,7 @@ export function AdsTable({ ads, busyId, onEdit, onDelete, onToggleActive, onChan
                       </p>
                       <p className="mt-0.5 text-[11px] text-[#8B93A1]">
                         {ad.carTypeName} · مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)}
+                        {ad.colorName && ` · ${ad.colorName}`}
                       </p>
                     </div>
                   </div>

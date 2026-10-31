@@ -96,8 +96,8 @@ export function AdsFilters({ filters, cars, users, statusCounts }: AdsFiltersPro
         .map((car) => ({
           value: car.id,
           label: filters.brandId ? car.name : `${car.brandName} ${car.name}`,
-          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)} · سال ${toPersianDigits(car.year)}`,
-          keywords: `${car.model} ${car.year} ${car.slug}`,
+          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`,
+          keywords: `${car.model} ${car.slug}`,
         })),
     [cars, filters.brandId]
   );

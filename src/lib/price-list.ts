@@ -20,12 +20,8 @@ export interface PriceListCarInfo {
   id: string;
   name: string;
   model: string;
-  year: string;
   brandName: string;
   brandImage: string | null;
-  /** Colour the admin set on the car itself. */
-  colorName: string | null;
-  colorCode: string | null;
 }
 
 /** Prices keyed by price column (`"<year>:<colorId>"`); a missing key means "not priced". */
@@ -85,9 +81,7 @@ const carInfoSelect = {
   id: true,
   name: true,
   model: true,
-  year: true,
   brand: { select: { name: true, image: true } },
-  color: { select: { name: true, code: true } },
 } satisfies Prisma.CarSelect;
 
 type CarInfoRow = Prisma.CarGetPayload<{ select: typeof carInfoSelect }>;
@@ -97,11 +91,8 @@ function toCarInfo(car: CarInfoRow): PriceListCarInfo {
     id: car.id.toString(),
     name: car.name,
     model: car.model,
-    year: car.year,
     brandName: car.brand.name,
     brandImage: car.brand.image,
-    colorName: car.color?.name ?? null,
-    colorCode: car.color?.code ?? null,
   };
 }
 
@@ -158,7 +149,7 @@ export async function listPriceListRows(): Promise<PriceListRow[]> {
         select: { prices: { select: tierSelect } },
       },
     },
-    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }, { id: "asc" }],
+    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { id: "asc" }],
   });
 
   return cars.map((car) => {

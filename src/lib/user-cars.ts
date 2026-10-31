@@ -6,9 +6,26 @@ import type { Prisma } from "@prisma/client";
 import type { AdStatus } from "@/lib/ad-status";
 
 /** Relations required to build a `UserCarRecord`. */
+export const userCarOptionsInclude = {
+  include: { option: { select: { name: true, type: true } }, optionItem: { select: { title: true } } },
+  orderBy: [{ optionId: "asc" }, { id: "asc" }],
+} satisfies Prisma.UserCar$optionsArgs;
+
+/** Primary photo first, then upload order. */
+export const userCarImagesOrder = [{ isPrimary: "desc" }, { id: "asc" }] satisfies Prisma.UserCarImageOrderByWithRelationInput[];
+
 export const userCarInclude = {
   user: { select: { id: true, name: true, phone: true, image: true } },
-  car: { include: { brand: true, carType: true } },
+  car: {
+    include: {
+      brand: true,
+      carType: true,
+      carImages: { select: { imageUrl: true }, orderBy: { id: "asc" }, take: 1 },
+    },
+  },
+  color: true,
+  images: { orderBy: userCarImagesOrder },
+  options: userCarOptionsInclude,
   saleTerms: { include: { saleTerm: true }, orderBy: { id: "asc" } },
 } satisfies Prisma.UserCarInclude;
 
@@ -27,6 +44,52 @@ export interface UserCarSaleTermRecord {
   isActive: boolean;
 }
 
+export interface UserCarImageRecord {
+  id: string;
+  url: string;
+  isPrimary: boolean;
+}
+
+/** Form value of one option: text/number string, chosen item ids, or a checked box. */
+export type AdOptionValue = string | string[] | boolean;
+
+/** Read-only line of an ad's feature list. */
+export interface AdOptionDisplay {
+  optionId: string;
+  name: string;
+  value: string;
+}
+
+type UserCarOptionRow = Prisma.UserCarOptionGetPayload<typeof userCarOptionsInclude>;
+
+/** Group an ad's stored values into one display line per option. */
+export function adOptionsToDisplay(rows: UserCarOptionRow[]): AdOptionDisplay[] {
+  const lines = new Map<string, AdOptionDisplay>();
+  for (const row of rows) {
+    const optionId = row.optionId.toString();
+    const value = row.option.type === "checkbox" ? "دارد" : row.optionItem?.title ?? row.val ?? "";
+    const line = lines.get(optionId);
+    if (line) line.value = `${line.value}، ${value}`;
+    else lines.set(optionId, { optionId, name: row.option.name, value });
+  }
+  return Array.from(lines.values());
+}
+
+/** Rebuild the form state of an ad's stored values. */
+function adOptionsToFormValues(rows: UserCarOptionRow[]): Record<string, AdOptionValue> {
+  const values: Record<string, AdOptionValue> = {};
+  for (const row of rows) {
+    const optionId = row.optionId.toString();
+    if (row.option.type === "checkbox") values[optionId] = true;
+    else if (row.option.type === "select") {
+      const chosen = (values[optionId] as string[] | undefined) ?? [];
+      if (row.optionItemId !== null) chosen.push(row.optionItemId.toString());
+      values[optionId] = chosen;
+    } else values[optionId] = row.val ?? "";
+  }
+  return values;
+}
+
 export interface UserCarRecord {
   id: string;
   /** Public, unique 6-digit ad code. */
@@ -40,7 +103,17 @@ export interface UserCarRecord {
   brandId: string;
   carName: string;
   carModel: string;
+  /** Production year entered on this ad. */
   carYear: string;
+  colorId: string | null;
+  colorName: string | null;
+  colorCode: string | null;
+  /** The ad's own photos, primary first. */
+  images: UserCarImageRecord[];
+  /** Cover: the ad's primary photo, else the car's catalogue photo. */
+  imageUrl: string | null;
+  optionValues: Record<string, AdOptionValue>;
+  optionLines: AdOptionDisplay[];
   brandName: string;
   carTypeName: string;
   qautity: string;
@@ -72,7 +145,14 @@ export function userCarToRecord(userCar: UserCarWithRelations): UserCarRecord {
     brandId: userCar.car.brandId.toString(),
     carName: userCar.car.name,
     carModel: userCar.car.model,
-    carYear: userCar.car.year,
+    carYear: userCar.year,
+    colorId: userCar.colorId?.toString() ?? null,
+    colorName: userCar.color?.name ?? null,
+    colorCode: userCar.color?.code ?? null,
+    images: userCar.images.map((image) => ({ id: image.id.toString(), url: image.imageUrl, isPrimary: image.isPrimary })),
+    imageUrl: userCar.images[0]?.imageUrl ?? userCar.car.carImages[0]?.imageUrl ?? null,
+    optionValues: adOptionsToFormValues(userCar.options),
+    optionLines: adOptionsToDisplay(userCar.options),
     brandName: userCar.car.brand.name,
     carTypeName: userCar.car.carType.name,
     qautity: userCar.qautity,

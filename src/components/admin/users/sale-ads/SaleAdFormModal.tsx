@@ -3,6 +3,8 @@
 import React, { useId, useMemo, useState, useTransition } from "react";
 import { AlertCircle, HandCoins, Hash, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
 
+import { AdImagesField, AdSpecFields } from "@/components/ads/AdExtraFields";
+import { useAdExtras } from "@/components/ads/useAdExtras";
 import { Modal } from "@/components/admin/ui/Modal";
 import { Toggle } from "@/components/admin/ui/Toggle";
 import { SearchableSelect, type SearchableSelectOption } from "@/components/admin/ui/SearchableSelect";
@@ -13,6 +15,8 @@ import {
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { CarRecord } from "@/lib/cars";
 import type { SaleTermRecord } from "@/lib/sale-terms";
+import type { ColorRecord } from "@/lib/colors";
+import type { OptionRecord } from "@/lib/options";
 import { AD_STATUSES, AD_STATUS_DESCRIPTIONS, AD_STATUS_LABELS, type AdStatus } from "@/lib/ad-status";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
@@ -24,6 +28,8 @@ interface SaleAdFormModalProps {
   ad: UserCarRecord | null;
   cars: CarRecord[];
   saleTerms: SaleTermRecord[];
+  colors: ColorRecord[];
+  options: OptionRecord[];
   onClose: () => void;
   onSuccess: (record: UserCarRecord) => void;
   onError: (message: string) => void;
@@ -67,6 +73,8 @@ export function SaleAdFormModal({
   ad,
   cars,
   saleTerms,
+  colors,
+  options,
   onClose,
   onSuccess,
   onError,
@@ -80,6 +88,7 @@ export function SaleAdFormModal({
   const initialCar = ad ? cars.find((car) => car.id === ad.carId) ?? null : null;
   const [brandId, setBrandId] = useState(initialCar?.brandId ?? "");
   const [carId, setCarId] = useState(ad?.carId ?? "");
+  const extras = useAdExtras(ad);
   const [qautity, setQautity] = useState(ad?.qautity ?? "1");
   const [description, setDescription] = useState(ad?.description ?? "");
   const [isActive, setIsActive] = useState(ad?.isActive ?? true);
@@ -126,8 +135,8 @@ export function SaleAdFormModal({
         .map((car) => ({
           value: car.id,
           label: car.name,
-          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)} · سال ${toPersianDigits(car.year)}`,
-          keywords: `${car.model} ${car.year} ${car.slug}`,
+          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`,
+          keywords: `${car.model} ${car.slug}`,
         })),
     [cars, brandId]
   );
@@ -175,6 +184,7 @@ export function SaleAdFormModal({
     formData.set("description", description);
     formData.set("isActive", String(isActive));
     if (isEdit) formData.set("status", status);
+    extras.appendTo(formData);
     formData.set(
       "saleTerms",
       JSON.stringify(
@@ -296,7 +306,7 @@ export function SaleAdFormModal({
                 disabled={isPending || noCars || !brandId}
                 hasError={Boolean(fieldErrors.carId)}
                 placeholder={brandId ? "خودرو را انتخاب کنید" : "ابتدا برند را انتخاب کنید"}
-                searchPlaceholder="جستجوی نام، مدل یا سال…"
+                searchPlaceholder="جستجوی نام یا مدل…"
                 emptyText="خودرویی برای این برند پیدا نشد"
               />
               <FieldError message={fieldErrors.carId} />
@@ -306,9 +316,13 @@ export function SaleAdFormModal({
           {selectedCar && (
             <p className="-mt-2 text-[11px] text-[#5E6672]">
               انتخاب شده: {selectedCar.brandName} {selectedCar.name} · {selectedCar.carTypeName} · مدل{" "}
-              {toPersianDigits(selectedCar.model)} · سال {toPersianDigits(selectedCar.year)}
+              {toPersianDigits(selectedCar.model)}
             </p>
           )}
+
+          <AdImagesField theme="admin" extras={extras} fieldErrors={fieldErrors} disabled={isPending} />
+
+          <AdSpecFields theme="admin" extras={extras} colors={colors} options={options} fieldErrors={fieldErrors} disabled={isPending} />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -341,7 +355,7 @@ export function SaleAdFormModal({
               onChange={(e) => setDescription(e.target.value)}
               maxLength={255}
               rows={3}
-              placeholder="توضیح کوتاه درباره خودرو، رنگ، وضعیت تحویل و…"
+              placeholder="توضیح کوتاه درباره خودرو، وضعیت تحویل و…"
               className={cn(inputClassName(Boolean(fieldErrors.description)), "h-auto resize-none py-3 leading-7")}
             />
             <div className="flex items-center justify-between">

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { normalizeDigits } from "@/lib/validation/admin";
 import { toPersianDigits } from "@/lib/utils";
 import { AD_STATUSES } from "@/lib/ad-status";
+import { isValidTierYear, normalizeYear } from "@/lib/price-table-shared";
 
 /* ───────────────────────── sale-term entry ───────────────────────── */
 
@@ -63,6 +64,18 @@ export const userCarSchema = z.object({
     .trim()
     .max(255, { error: "توضیحات حداکثر ۲۵۵ کاراکتر است" })
     .default(""),
+  year: z
+    .string({ error: "سال ساخت الزامی است" })
+    .trim()
+    .min(1, { error: "سال ساخت الزامی است" })
+    .transform((value) => normalizeYear(value))
+    .refine((value) => isValidTierYear(value), {
+      error: "سال ساخت باید یک عدد ۴ رقمی معتبر باشد",
+    }),
+  colorId: z
+    .string({ error: "انتخاب رنگ الزامی است" })
+    .trim()
+    .regex(/^\d+$/, { error: "انتخاب رنگ الزامی است" }),
   isActive: z.boolean().default(true),
   /** Moderation status; optional because the create flow sets it server-side. */
   status: z
@@ -118,6 +131,8 @@ export function parseUserCarForm(formData: FormData): ParsedUserCarForm {
     carId: formData.get("carId") ?? "",
     qautity: formData.get("qautity") ?? "",
     description: formData.get("description") ?? "",
+    year: formData.get("year") ?? "",
+    colorId: formData.get("colorId") ?? "",
     isActive: formData.get("isActive") !== "false",
     status: (() => {
       const raw = formData.get("status");

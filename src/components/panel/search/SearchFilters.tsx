@@ -26,6 +26,7 @@ const DEFAULTS: SearchFilterValues = {
   brand: "",
   carType: "",
   saleTerm: "",
+  color: "",
   yearFrom: "",
   yearTo: "",
   sort: "newest",
@@ -87,6 +88,7 @@ export function SearchFilters({ filters, options, total }: SearchFiltersProps) {
     brand: useId(),
     carType: useId(),
     saleTerm: useId(),
+    color: useId(),
     yearFrom: useId(),
     yearTo: useId(),
   };
@@ -143,16 +145,18 @@ export function SearchFilters({ filters, options, total }: SearchFiltersProps) {
   const brandName = options.brands.find((b) => b.id === filters.brand)?.name;
   const carTypeName = options.carTypes.find((t) => t.id === filters.carType)?.name;
   const saleTermName = options.saleTerms.find((s) => s.id === filters.saleTerm)?.name;
+  const colorName = options.colors.find((c) => c.id === filters.color)?.name;
 
   const activeChips: { key: FilterKey; label: string }[] = [];
   if (filters.q) activeChips.push({ key: "q", label: `جستجو: ${filters.q}` });
   if (brandName) activeChips.push({ key: "brand", label: `برند: ${brandName}` });
   if (carTypeName) activeChips.push({ key: "carType", label: `نوع: ${carTypeName}` });
   if (saleTermName) activeChips.push({ key: "saleTerm", label: `شرایط: ${saleTermName}` });
+  if (colorName) activeChips.push({ key: "color", label: `رنگ: ${colorName}` });
   if (filters.yearFrom) activeChips.push({ key: "yearFrom", label: `از سال ${toPersianDigits(filters.yearFrom)}` });
   if (filters.yearTo) activeChips.push({ key: "yearTo", label: `تا سال ${toPersianDigits(filters.yearTo)}` });
 
-  const advancedCount = ["brand", "carType", "saleTerm", "yearFrom", "yearTo"].filter(
+  const advancedCount = ["brand", "carType", "saleTerm", "color", "yearFrom", "yearTo"].filter(
     (key) => filters[key as FilterKey]
   ).length;
 
@@ -233,7 +237,7 @@ export function SearchFilters({ filters, options, total }: SearchFiltersProps) {
       {/* Advanced panel */}
       {advancedOpen && (
         <div className="admin-animate-fade rounded-2xl border border-panel-line/[0.1] bg-panel-surface p-4 shadow-card-depth">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <Select id={ids.brand} label="برند" value={draft.brand} onChange={(brand) => setDraft({ ...draft, brand })}>
               <option value="">همه برندها</option>
               {options.brands.map((brand) => (
@@ -265,6 +269,14 @@ export function SearchFilters({ filters, options, total }: SearchFiltersProps) {
               {options.saleTerms.map((term) => (
                 <option key={term.id} value={term.id}>
                   {term.name}
+                </option>
+              ))}
+            </Select>
+            <Select id={ids.color} label="رنگ" value={draft.color} onChange={(color) => setDraft({ ...draft, color })}>
+              <option value="">همه رنگ‌ها</option>
+              {options.colors.map((color) => (
+                <option key={color.id} value={color.id}>
+                  {color.name}
                 </option>
               ))}
             </Select>

@@ -90,7 +90,7 @@ export interface DashboardData {
     carTypes: number;
     options: number;
     optionItems: number;
-    carOptions: number;
+    adOptionValues: number;
     carImages: number;
     saleTerms: number;
     activeSaleTerms: number;
@@ -100,7 +100,6 @@ export interface DashboardData {
     pendingAds: number;
     inactiveAds: number;
     carsWithoutImages: number;
-    carsWithoutOptions: number;
     brandsWithoutCars: number;
     inactiveBrands: number;
     inactiveSaleTerms: number;
@@ -205,12 +204,11 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
     totalCarTypes,
     totalOptions,
     totalOptionItems,
-    totalCarOptions,
+    totalAdOptionValues,
     totalCarImages,
     totalSaleTerms,
     inactiveSaleTerms,
     carsWithoutImages,
-    carsWithoutOptions,
     brandsWithoutCars,
     recentAdDates,
     recentUserDates,
@@ -229,12 +227,11 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
     prisma.carType.count(),
     prisma.option.count(),
     prisma.optionItem.count(),
-    prisma.carOption.count(),
+    prisma.userCarOption.count(),
     prisma.carImage.count(),
     prisma.saleTerm.count(),
     prisma.saleTerm.count({ where: { isActive: false } }),
     prisma.car.count({ where: { carImages: { none: {} } } }),
-    prisma.car.count({ where: { carOptions: { none: {} } } }),
     prisma.brand.count({ where: { cars: { none: {} } } }),
     prisma.userCar.findMany({
       where: { createdAt: { gte: previousStart } },
@@ -341,7 +338,7 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       carTypes: totalCarTypes,
       options: totalOptions,
       optionItems: totalOptionItems,
-      carOptions: totalCarOptions,
+      adOptionValues: totalAdOptionValues,
       carImages: totalCarImages,
       saleTerms: totalSaleTerms,
       activeSaleTerms: totalSaleTerms - inactiveSaleTerms,
@@ -351,8 +348,7 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       pendingAds: statusCounts.pending,
       inactiveAds,
       carsWithoutImages,
-      carsWithoutOptions,
-      brandsWithoutCars,
+        brandsWithoutCars,
       inactiveBrands,
       inactiveSaleTerms,
       inactiveUsers,
@@ -367,7 +363,7 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       isActive: ad.isActive,
       carName: ad.car.name,
       carModel: ad.car.model,
-      carYear: ad.car.year,
+      carYear: ad.year,
       brandName: ad.car.brand.name,
       userId: ad.user.id.toString(),
       userName: ad.user.name,

@@ -4,11 +4,12 @@ import React, { useId, useState, useTransition } from "react";
 import { AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Modal } from "@/components/admin/ui/Modal";
+import { Toggle } from "@/components/admin/ui/Toggle";
 import {
   createOptionAction,
   updateOptionAction,
-} from "@/app/admin/(panel)/options/actions";
-import type { OptionRecord } from "@/lib/options";
+} from "@/app/admin/(panel)/car-form/actions";
+import type { OptionRecord, OptionTypeValue } from "@/lib/options";
 import { cn } from "@/lib/utils";
 
 interface OptionFormModalProps {
@@ -22,7 +23,6 @@ interface OptionFormModalProps {
 interface ItemDraft {
   id?: string;
   title: string;
-  item: string;
 }
 
 const inputClassName = (hasError: boolean) =>
@@ -42,44 +42,40 @@ export function OptionFormModal({
   const isEdit = mode === "edit";
   const nameId = useId();
   const typeId = useId();
-  const placeholderId = useId();
   const descriptionId = useId();
 
   const [name, setName] = useState(option?.name ?? "");
-  const [type, setType] = useState<"text" | "select" | "checkbox">(
-    option?.type ?? "text"
-  );
-  const [placeholder, setPlaceholder] = useState(option?.placeholder ?? "");
+  const [type, setType] = useState<OptionTypeValue>(option?.type ?? "text");
+  const [multiple, setMultiple] = useState(option?.multiple ?? false);
+  const [isRequired, setIsRequired] = useState(option?.isRequired ?? false);
   const [description, setDescription] = useState(option?.description ?? "");
 
   const [items, setItems] = useState<ItemDraft[]>(() => {
-    if (option?.optionItems && option.optionItems.length > 0) {
-      return option.optionItems.map((oi) => ({
-        id: oi.id,
-        title: oi.title,
-        item: oi.item,
-      }));
+    if (option && option.optionItems.length > 0) {
+      return option.optionItems.map((oi) => ({ id: oi.id, title: oi.title }));
     }
-    return [
-      { title: "", item: "" },
-    ];
+    return [{ title: "" }];
   });
+
+  // Stored ad values depend on these, so they lock once the option is in use.
+  const isUsed = (option?.usageCount ?? 0) > 0;
+  const multipleLocked = isUsed && (option?.multiple ?? false);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleAddItem() {
-    setItems((prev) => [...prev, { title: "", item: "" }]);
+    setItems((prev) => [...prev, { title: "" }]);
   }
 
   function handleRemoveItem(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleItemChange(index: number, field: "title" | "item", value: string) {
+  function handleItemChange(index: number, value: string) {
     setItems((prev) =>
-      prev.map((it, i) => (i === index ? { ...it, [field]: value } : it))
+      prev.map((it, i) => (i === index ? { ...it, title: value } : it))
     );
   }
 
@@ -88,33 +84,20 @@ export function OptionFormModal({
     setFieldErrors({});
     setFormError(null);
 
-    // Filter out completely empty items if any, but validate if select
-    const validItems = items.filter(
-      (it) => it.title.trim() !== "" || it.item.trim() !== ""
-    );
+    const validItems = items.filter((it) => it.title.trim() !== "");
 
-    if (type === "select") {
-      if (validItems.length === 0) {
-        setFieldErrors({
-          items: "برای ویژگی انتخابی (select)، حداقل یک گزینه باید تعریف شود.",
-        });
-        return;
-      }
-
-      for (let i = 0; i < validItems.length; i++) {
-        if (!validItems[i].title.trim() || !validItems[i].item.trim()) {
-          setFieldErrors({
-            items: "عنوان و مقدار تمام گزینه‌ها باید تکمیل شوند.",
-          });
-          return;
-        }
-      }
+    if (type === "select" && validItems.length === 0) {
+      setFieldErrors({
+        items: "برای ویژگی چند گزینه‌ای، حداقل یک گزینه باید تعریف شود.",
+      });
+      return;
     }
 
     const formData = new FormData();
     formData.set("name", name);
     formData.set("type", type);
-    formData.set("placeholder", placeholder);
+    formData.set("multiple", String(type === "select" && multiple));
+    formData.set("isRequired", String(type !== "checkbox" && isRequired));
     formData.set("description", description);
     formData.set("items", JSON.stringify(validItems));
 
@@ -143,7 +126,7 @@ export function OptionFormModal({
       description={
         isEdit
           ? `به‌روزرسانی مشخصات و گزینه‌های ویژگی «${name}»`
-          : "ویژگی فنی یا رفاهی جدیدی به فهرست اضافه کنید"
+          : "این ویژگی در فرم ثبت آگهی همه کاربران نمایش داده می‌شود"
       }
       size="lg"
       footer={
@@ -208,7 +191,7 @@ export function OptionFormModal({
               disabled={isPending}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="مثال: گیربکس، سیستم تهویه، سانروف"
+              placeholder="مثال: گیربکس، کارکرد، سانروف"
               className={inputClassName(Boolean(fieldErrors.name))}
             />
             {fieldErrors.name && (
@@ -224,21 +207,25 @@ export function OptionFormModal({
               htmlFor={typeId}
               className="block text-xs font-bold text-[#D2D7DF]"
             >
-              نوع فیلد <span className="text-[#FF6A00]">*</span>
+              نوع ویژگی <span className="text-[#FF6A00]">*</span>
             </label>
             <select
               id={typeId}
-              disabled={isPending}
+              disabled={isPending || isUsed}
               value={type}
-              onChange={(e) =>
-                setType(e.target.value as "text" | "select" | "checkbox")
-              }
+              onChange={(e) => setType(e.target.value as OptionTypeValue)}
               className={inputClassName(Boolean(fieldErrors.type))}
             >
-              <option value="text">متنی (Text)</option>
-              <option value="select">انتخابی از لیست (Select)</option>
-              <option value="checkbox">تیک‌باکس / بله یا خیر (Checkbox)</option>
+              <option value="text">نوشتاری</option>
+              <option value="number">عددی</option>
+              <option value="select">چند گزینه‌ای</option>
+              <option value="checkbox">چک‌باکس</option>
             </select>
+            {isUsed && (
+              <p className="text-[11px] text-[#5E6672]">
+                این ویژگی در آگهی‌ها مقدار دارد و نوع آن قابل تغییر نیست.
+              </p>
+            )}
             {fieldErrors.type && (
               <p className="text-xs font-semibold text-red-400">
                 {fieldErrors.type}
@@ -247,68 +234,62 @@ export function OptionFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {/* Placeholder */}
-          <div className="space-y-2">
-            <label
-              htmlFor={placeholderId}
-              className="block text-xs font-bold text-[#D2D7DF]"
-            >
-              متن راهنما (Placeholder)
-            </label>
-            <input
-              id={placeholderId}
-              type="text"
-              disabled={isPending}
-              value={placeholder}
-              onChange={(e) => setPlaceholder(e.target.value)}
-              placeholder="مثال: انتخاب کنید یا مقدار را بنویسید..."
-              className={inputClassName(Boolean(fieldErrors.placeholder))}
-            />
-            {fieldErrors.placeholder && (
-              <p className="text-xs font-semibold text-red-400">
-                {fieldErrors.placeholder}
-              </p>
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <label
-              htmlFor={descriptionId}
-              className="block text-xs font-bold text-[#D2D7DF]"
-            >
-              توضیحات ویژگی
-            </label>
-            <input
-              id={descriptionId}
-              type="text"
-              disabled={isPending}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="توضیح کوتاه درباره این ویژگی..."
-              className={inputClassName(Boolean(fieldErrors.description))}
-            />
-            {fieldErrors.description && (
-              <p className="text-xs font-semibold text-red-400">
-                {fieldErrors.description}
-              </p>
-            )}
-          </div>
+        {/* Description */}
+        <div className="space-y-2">
+          <label
+            htmlFor={descriptionId}
+            className="block text-xs font-bold text-[#D2D7DF]"
+          >
+            توضیح کوتاه
+          </label>
+          <input
+            id={descriptionId}
+            type="text"
+            disabled={isPending}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="این متن زیر فیلد در فرم ثبت آگهی نمایش داده می‌شود..."
+            className={inputClassName(Boolean(fieldErrors.description))}
+          />
+          {fieldErrors.description && (
+            <p className="text-xs font-semibold text-red-400">
+              {fieldErrors.description}
+            </p>
+          )}
         </div>
 
-        {/* Dynamic Option Items if type === 'select' */}
+        {type !== "checkbox" && (
+          <div className="flex items-center justify-between rounded-2xl border border-white/[0.07] bg-[#07090C]/60 px-4 py-3">
+            <div>
+              <p className="text-sm font-bold text-[#F5F5F5]">الزامی</p>
+              <p className="mt-0.5 text-[11px] text-[#8B93A1]">
+                {isRequired ? "بدون پر کردن این ویژگی، آگهی ثبت نمی‌شود" : "کاربر می‌تواند این ویژگی را خالی بگذارد"}
+              </p>
+            </div>
+            <Toggle checked={isRequired} onCheckedChange={setIsRequired} label="الزامی بودن ویژگی" disabled={isPending} />
+          </div>
+        )}
+
+        {/* Selectable items */}
         {type === "select" && (
           <div className="space-y-3 rounded-2xl border border-white/[0.08] bg-[#07090C]/60 p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-[#0D1117] px-3 py-2.5">
               <div>
-                <h4 className="text-xs font-bold text-[#F5F5F5]">
-                  گزینه‌های قابل انتخاب (Option Items)
-                </h4>
-                <p className="text-[11px] text-[#8B93A1]">
-                  هر گزینه شامل یک عنوان نمایشی و یک مقدار انگلیسی یا کد مقداری است.
+                <p className="text-xs font-bold text-[#F5F5F5]">نحوه انتخاب</p>
+                <p className="mt-0.5 text-[11px] text-[#8B93A1]">
+                  {multiple ? "کاربر می‌تواند چند گزینه را انتخاب کند" : "کاربر فقط یک گزینه را انتخاب می‌کند"}
                 </p>
+                {fieldErrors.multiple && (
+                  <p className="mt-1 text-xs font-semibold text-red-400">{fieldErrors.multiple}</p>
+                )}
               </div>
+              <Toggle checked={multiple} onCheckedChange={setMultiple} label="امکان انتخاب چند گزینه" disabled={isPending || multipleLocked} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[#F5F5F5]">
+                گزینه‌های قابل انتخاب
+              </h4>
               <button
                 type="button"
                 onClick={handleAddItem}
@@ -337,24 +318,9 @@ export function OptionFormModal({
                       type="text"
                       disabled={isPending}
                       value={item.title}
-                      onChange={(e) =>
-                        handleItemChange(index, "title", e.target.value)
-                      }
-                      placeholder="عنوان (مثال: اتوماتیک ۶ سرعته)"
+                      onChange={(e) => handleItemChange(index, e.target.value)}
+                      placeholder="عنوان گزینه (مثال: اتوماتیک ۶ سرعته)"
                       className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#07090C] px-3 text-xs text-[#F5F5F5] placeholder:text-[#5E6672] focus:border-[#FF6A00] focus:outline-none"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      dir="ltr"
-                      disabled={isPending}
-                      value={item.item}
-                      onChange={(e) =>
-                        handleItemChange(index, "item", e.target.value)
-                      }
-                      placeholder="مقدار / Value (مثال: at_6)"
-                      className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#07090C] px-3 font-mono text-xs text-[#F5F5F5] placeholder:text-[#5E6672] focus:border-[#FF6A00] focus:outline-none text-left"
                     />
                   </div>
                   <button

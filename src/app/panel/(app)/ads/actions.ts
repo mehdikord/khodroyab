@@ -14,6 +14,14 @@ import {
   type UserCarRecord,
 } from "@/lib/user-cars";
 import { parseUserCarForm, type UserCarSaleTermInput } from "@/lib/validation/user-cars";
+import {
+  discardAdImageFiles,
+  prepareAdExtras,
+  storeNewAdImages,
+  syncAdImages,
+  syncAdOptions,
+  type StoredAdImages,
+} from "@/lib/user-car-extras";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
@@ -119,6 +127,17 @@ export async function createMyAdAction(formData: FormData): Promise<MyAdActionRe
   const termErrors = await validateSaleTermIds(parsed.data.saleTerms);
   if (termErrors) return { ok: false, message: "شرایط فروش انتخاب‌شده نامعتبر است", fieldErrors: termErrors };
 
+  const extras = await prepareAdExtras(formData, []);
+  if (!extras.ok) return extras;
+
+  let storedImages: StoredAdImages;
+  try {
+    storedImages = await storeNewAdImages(extras.images);
+  } catch (error) {
+    console.error("[panel:my-ads:create] image upload failed", error);
+    return { ok: false, message: "خطا در ذخیره تصاویر آگهی" };
+  }
+
   for (let attempt = 1; attempt <= AD_CODE_MAX_ATTEMPTS; attempt += 1) {
     try {
       const created = await prisma.userCar.create({
@@ -129,7 +148,11 @@ export async function createMyAdAction(formData: FormData): Promise<MyAdActionRe
           status: "pending",
           qautity: parsed.data.qautity,
           description: parsed.data.description,
+          year: parsed.data.year,
+          colorId: BigInt(parsed.data.colorId),
           isActive: true,
+          images: { create: storedImages.newRows },
+          options: { create: extras.optionRows },
           saleTerms: { create: parsed.data.saleTerms.map((entry) => withInitialPriceHistory(toSaleTermData(entry), entry)) },
         },
         include: userCarInclude,
@@ -139,6 +162,7 @@ export async function createMyAdAction(formData: FormData): Promise<MyAdActionRe
     } catch (error) {
       if (isAdCodeCollision(error) && attempt < AD_CODE_MAX_ATTEMPTS) continue;
       console.error("[panel:my-ads:create] failed", error);
+      await discardAdImageFiles(storedImages.newRows.map((row) => row.imageUrl));
       return { ok: false, message: GENERIC_FAILURE_MESSAGE };
     }
   }
@@ -170,7 +194,11 @@ export async function updateMyAdAction(idRaw: string, formData: FormData): Promi
   const [existing, car] = await Promise.all([
     prisma.userCar.findFirst({
       where: { id: userCarId, userId },
-      select: { id: true, saleTerms: { select: { id: true, price: true } } },
+      select: {
+        id: true,
+        saleTerms: { select: { id: true, price: true } },
+        images: { select: { id: true, imageUrl: true } },
+      },
     }),
     prisma.car.findUnique({ where: { id: carId }, select: { id: true } }),
   ]);
@@ -179,6 +207,17 @@ export async function updateMyAdAction(idRaw: string, formData: FormData): Promi
 
   const termErrors = await validateSaleTermIds(parsed.data.saleTerms);
   if (termErrors) return { ok: false, message: "شرایط فروش انتخاب‌شده نامعتبر است", fieldErrors: termErrors };
+
+  const extras = await prepareAdExtras(formData, existing.images);
+  if (!extras.ok) return extras;
+
+  let storedImages: StoredAdImages;
+  try {
+    storedImages = await storeNewAdImages(extras.images);
+  } catch (error) {
+    console.error("[panel:my-ads:update] image upload failed", error);
+    return { ok: false, message: "خطا در ذخیره تصاویر آگهی" };
+  }
 
   const existingTermIds = new Set(existing.saleTerms.map((t) => t.id.toString()));
   const existingPriceById = new Map(existing.saleTerms.map((t) => [t.id.toString(), t.price]));
@@ -195,10 +234,15 @@ export async function updateMyAdAction(idRaw: string, formData: FormData): Promi
           carId,
           qautity: parsed.data.qautity,
           description: parsed.data.description,
+          year: parsed.data.year,
+          colorId: BigInt(parsed.data.colorId),
           // Every customer edit re-enters moderation.
           status: "pending",
         },
       });
+
+      await syncAdImages(tx, userCarId, extras.images, storedImages);
+      await syncAdOptions(tx, userCarId, extras.optionRows);
 
       if (idsToDelete.length > 0) {
         await tx.userCarSaleTerm.deleteMany({ where: { id: { in: idsToDelete }, userCarId } });
@@ -220,9 +264,11 @@ export async function updateMyAdAction(idRaw: string, formData: FormData): Promi
       return tx.userCar.findUniqueOrThrow({ where: { id: userCarId }, include: userCarInclude });
     });
 
+    await discardAdImageFiles(extras.images.removedUrls);
     revalidateAdPages(userId);
     return { ok: true, record: userCarToRecord(updated) };
   } catch (error) {
+    await discardAdImageFiles(storedImages.newRows.map((row) => row.imageUrl));
     console.error("[panel:my-ads:update] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Building2, CalendarDays, Car, ChevronLeft, HandCoins, UserRound } from "lucide-react";
 
 import type { SearchAdRecord } from "@/lib/panel-search-shared";
+import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { cn, toPersianDigits } from "@/lib/utils";
 import { CopyCodeButton } from "@/components/panel/search/CopyCodeButton";
 import { SafeImage } from "@/components/panel/SafeImage";
@@ -40,19 +41,21 @@ function NoImage() {
 
 /**
  * Public-safe ad card for the customer search: car identity, seller name,
- * first image, sale-term titles (with a price-change badge that opens the
- * price-history chart) and the (copyable) ad code. Never shows the seller's phone.
+ * cover photo, sale-term titles with their price-change badges and the
+ * (copyable) ad code. The whole card opens the ad's page. Never shows the
+ * seller's phone.
  */
 export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
   const visibleTerms = ad.saleTerms.slice(0, MAX_TERMS);
   const hiddenTerms = ad.saleTerms.length - visibleTerms.length;
-  const carLabel = `${ad.brandName} ${ad.carName} · مدل ${ad.carModel}`;
 
   return (
     <article
       className="panel-card-in group relative flex flex-col overflow-hidden rounded-3xl border border-panel-line/[0.08] bg-panel-surface shadow-card-depth transition-all duration-300 hover:-translate-y-0.5 hover:border-[#FF6A00]/35 hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.8),0_0_30px_-8px_rgba(255,106,0,0.35)]"
       style={{ animationDelay: `${delay}ms` }}
     >
+      <Link href={`/panel/ads/${ad.id}`} aria-label={`مشاهده آگهی ${ad.brandName} ${ad.carName}`} className="absolute inset-0 z-[1] rounded-3xl" />
+
       {/* Media */}
       <div className="relative aspect-[16/10] overflow-hidden bg-panel-media">
         {ad.imageUrl ? (
@@ -74,7 +77,7 @@ export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
         />
 
         {/* Ad code – the most important piece of information */}
-        <div className="absolute start-3 top-3">
+        <div className="absolute start-3 top-3 z-[2]">
           <CopyCodeButton code={ad.code} />
         </div>
 
@@ -115,6 +118,15 @@ export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
             <span>
               سال ساخت <span className="font-semibold text-panel-text-2">{toPersianDigits(ad.carYear)}</span>
             </span>
+            {ad.colorName && ad.colorCode && (
+              <>
+                <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
+                <span className="inline-flex items-center gap-1 font-semibold text-panel-text-2">
+                  <ColorSwatch code={ad.colorCode} className="h-3 w-3" />
+                  {ad.colorName}
+                </span>
+              </>
+            )}
           </p>
         </div>
 
@@ -122,7 +134,7 @@ export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
         {!hideSeller && (
           <Link
             href={`/panel/sellers/${ad.userId}`}
-            className="group/seller -mx-1 flex items-center gap-3 rounded-2xl px-1 py-1 transition-colors hover:bg-panel-line/[0.04]"
+            className="group/seller relative z-[2] -mx-1 flex items-center gap-3 rounded-2xl px-1 py-1 transition-colors hover:bg-panel-line/[0.04]"
             aria-label={`مشاهده پروفایل فروشنده ${ad.userName}`}
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#FF6A00]/30 bg-[#FF6A00]/[0.1] text-sm font-black text-panel-accent shadow-[0_8px_20px_-10px_rgba(255,106,0,0.7)] transition-transform group-hover/seller:scale-105">
@@ -162,7 +174,7 @@ export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
             <ul className="flex flex-wrap gap-1.5">
               {visibleTerms.map((term) => (
                 <li key={term.id} className="inline-flex items-center gap-1">
-                  <PriceDeltaBadge term={term} carLabel={carLabel} />
+                  <PriceDeltaBadge term={term} />
                 </li>
               ))}
               {hiddenTerms > 0 && (

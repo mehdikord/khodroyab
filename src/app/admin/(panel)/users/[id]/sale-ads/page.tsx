@@ -7,6 +7,8 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { userToRecord } from "@/lib/users";
 import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
+import { colorToRecord } from "@/lib/colors";
+import { optionRecordInclude, optionToRecord } from "@/lib/options";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { SaleAdsManager } from "@/components/admin/users/sale-ads/SaleAdsManager";
 
@@ -36,7 +38,7 @@ export default async function AdminUserSaleAdsPage({ params }: PageProps) {
     return notFound();
   }
 
-  const [userCars, cars, saleTerms] = await Promise.all([
+  const [userCars, cars, saleTerms, colors, options] = await Promise.all([
     prisma.userCar.findMany({
       where: { userId },
       include: userCarInclude,
@@ -50,6 +52,8 @@ export default async function AdminUserSaleAdsPage({ params }: PageProps) {
       where: { isActive: true },
       orderBy: { title: "asc" },
     }),
+    prisma.color.findMany({ orderBy: { name: "asc" } }),
+    prisma.option.findMany({ where: { isActive: true }, include: optionRecordInclude, orderBy: { id: "asc" } }),
   ]);
 
   return (
@@ -58,6 +62,8 @@ export default async function AdminUserSaleAdsPage({ params }: PageProps) {
       initialAds={userCars.map(userCarToRecord)}
       cars={cars.map(carToRecord)}
       saleTerms={saleTerms.map(saleTermToRecord)}
+      colors={colors.map(colorToRecord)}
+      options={options.map(optionToRecord)}
     />
   );
 }

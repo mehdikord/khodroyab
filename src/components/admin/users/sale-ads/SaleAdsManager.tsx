@@ -17,6 +17,8 @@ import type { UserRecord } from "@/lib/users";
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { CarRecord } from "@/lib/cars";
 import type { SaleTermRecord } from "@/lib/sale-terms";
+import type { ColorRecord } from "@/lib/colors";
+import type { OptionRecord } from "@/lib/options";
 import { toPersianDigits } from "@/lib/utils";
 
 interface SaleAdsManagerProps {
@@ -24,11 +26,13 @@ interface SaleAdsManagerProps {
   initialAds: UserCarRecord[];
   cars: CarRecord[];
   saleTerms: SaleTermRecord[];
+  colors: ColorRecord[];
+  options: OptionRecord[];
 }
 
 type Filter = "all" | "active" | "inactive";
 
-export function SaleAdsManager({ user, initialAds, cars, saleTerms }: SaleAdsManagerProps) {
+export function SaleAdsManager({ user, initialAds, cars, saleTerms, colors, options }: SaleAdsManagerProps) {
   const [ads, setAds] = useState<UserCarRecord[]>(initialAds);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -102,6 +106,8 @@ export function SaleAdsManager({ user, initialAds, cars, saleTerms }: SaleAdsMan
           ad={modalState.ad}
           cars={cars}
           saleTerms={saleTerms}
+          colors={colors}
+          options={options}
           onClose={() => setModalState(null)}
           onSuccess={(record) => {
             if (modalState.mode === "edit") {

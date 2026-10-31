@@ -28,10 +28,10 @@ function isPrismaCode(error: unknown, code: string): boolean {
   return false;
 }
 
-/** A brand, car type or colour picked in the form no longer exists. */
+/** A brand or car type picked in the form no longer exists. */
 const STALE_RELATION_RESULT = {
   ok: false as const,
-  message: "برند، نوع یا رنگ انتخاب‌شده دیگر وجود ندارد؛ صفحه را به‌روزرسانی کنید.",
+  message: "برند یا نوع انتخاب‌شده دیگر وجود ندارد؛ صفحه را به‌روزرسانی کنید.",
 };
 
 async function guardRequest(): Promise<
@@ -66,11 +66,9 @@ export async function createCarAction(
       data: {
         brandId: BigInt(parsed.data.brandId),
         carTypeId: BigInt(parsed.data.carTypeId),
-        colorId: parsed.data.colorId ? BigInt(parsed.data.colorId) : null,
         name: parsed.data.name,
         slug: parsed.data.slug,
         model: parsed.data.model,
-        year: parsed.data.year,
       },
       include: carRecordInclude,
     });
@@ -113,11 +111,9 @@ export async function updateCarAction(
       data: {
         brandId: BigInt(parsed.data.brandId),
         carTypeId: BigInt(parsed.data.carTypeId),
-        colorId: parsed.data.colorId ? BigInt(parsed.data.colorId) : null,
         name: parsed.data.name,
         slug: parsed.data.slug,
         model: parsed.data.model,
-        year: parsed.data.year,
       },
       include: carRecordInclude,
     });

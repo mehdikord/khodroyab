@@ -8,7 +8,7 @@ import { ChevronLeft, Search, SearchX, Tags, UsersRound, X } from "lucide-react"
 import type { PriceListRow } from "@/lib/price-list";
 import { digitsOnly, mergePriceColumns } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColorLabel, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 
 interface PriceListBrowserProps {
@@ -62,10 +62,9 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
         row.name.toLowerCase().includes(normalized) ||
         row.brandName.toLowerCase().includes(normalized) ||
         row.model.toLowerCase().includes(normalized) ||
-        (row.colorName?.toLowerCase().includes(normalized) ?? false) ||
         row.columns.some((column) => column.colorName.toLowerCase().includes(normalized)) ||
         (digits.length > 0 &&
-          (row.year.includes(digits) || row.model.includes(digits) || row.columns.some((column) => column.year.includes(digits))))
+          (row.model.includes(digits) || row.columns.some((column) => column.year.includes(digits))))
       );
     });
   }, [rows, query, brand, pricedOnly]);
@@ -223,8 +222,6 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                     خودرو
                   </th>
                   <th scope="col" className={headClass}>مدل</th>
-                  <th scope="col" className={headClass}>رنگ</th>
-                  <th scope="col" className={headClass}>سال ساخت</th>
                   {priceColumns.length === 0 ? (
                     <th scope="col" className={headClass}>قیمت‌ها</th>
                   ) : (
@@ -276,10 +273,6 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.model)}</td>
-                      <td className="px-3 py-3.5 text-[13px]">
-                        <ColorLabel name={row.colorName} code={row.colorCode} />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.year)}</td>
                       {priceColumns.length === 0 ? (
                         <td className="px-3 py-3.5">
                           <YearPrices prices={undefined} className="min-h-0 justify-start" />
@@ -328,10 +321,6 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
 
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(row.model)}</span>
-                      <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">سال {toPersianDigits(row.year)}</span>
-                      <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold">
-                        <ColorLabel name={row.colorName} code={row.colorCode} />
-                      </span>
                     </div>
                   </Link>
 

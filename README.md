@@ -117,7 +117,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 - اسکیما: [`prisma/schema.prisma`](prisma/schema.prisma) — شامل **۱۳ جدول** با نام‌های فیزیکی دقیق:
 
-  `admins`، `users`، `brands`، `car_types`، `cars`، `options`، `option_items`، `car_options`، `sale_terms`، `user_cars`، `user_car_sale_terms`، `user_car_sale_term_price_histories`، `user_price_table_entries`
+  `admins`، `users`، `brands`، `car_types`، `cars`، `options`، `option_items`، `user_car_options`، `user_car_images`، `sale_terms`، `user_cars`، `user_car_sale_terms`، `user_car_sale_term_price_histories`، `user_price_table_entries`
 
 - ویژگی‌ها: شناسه‌های `BIGINT UNSIGNED` با `AUTO_INCREMENT`، ستون‌های `created_at` (پیش‌فرض `CURRENT_TIMESTAMP`) و `updated_at` در همه جدول‌ها، کلیدهای خارجی با رفتار `Restrict`، ایندکس روی ستون‌های FK، و enum نوع `OptionType` (`text`، `select`، `checkbox` با پیش‌فرض `text`).
 - مهاجرت اولیه: [`prisma/migrations/20261011112247_init/migration.sql`](prisma/migrations/20261011112247_init/migration.sql)

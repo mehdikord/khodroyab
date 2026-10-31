@@ -1,23 +1,31 @@
 "use client";
 
-import React, { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
-import { AlertCircle, Clock3, HandCoins, Loader2, Plus, Trash2, X } from "lucide-react";
+import React, { useId, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertCircle, ArrowRight, Clock3, HandCoins, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { SearchableSelect, type SearchableSelectOption } from "@/components/admin/ui/SearchableSelect";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
+import { AdImagesField, AdSpecFields } from "@/components/ads/AdExtraFields";
+import { useAdExtras } from "@/components/ads/useAdExtras";
 import { createMyAdAction, updateMyAdAction } from "@/app/panel/(app)/ads/actions";
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { CarRecord } from "@/lib/cars";
 import type { SaleTermRecord } from "@/lib/sale-terms";
+import type { ColorRecord } from "@/lib/colors";
+import type { OptionRecord } from "@/lib/options";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 interface MyAdFormProps {
   mode: "create" | "edit";
   ad: UserCarRecord | null;
+  /** Car picked in the first step of the create flow. */
+  initialCarId?: string;
   cars: CarRecord[];
   saleTerms: SaleTermRecord[];
-  onCancel: () => void;
-  onSuccess: (record: UserCarRecord, mode: "create" | "edit") => void;
+  colors: ColorRecord[];
+  options: OptionRecord[];
 }
 
 interface TermRow {
@@ -51,21 +59,24 @@ function FieldError({ message }: { message?: string }) {
 }
 
 /**
- * Inline create/edit form for a customer's own sale ad. Customers never set
- * moderation status or visibility: new ads start pending and every edit
- * returns the ad to the moderation queue.
+ * Details step of a customer's own sale ad: photos, year, colour, the global
+ * options, then sale terms. Customers never set moderation status or
+ * visibility: new ads start pending and every edit returns the ad to the
+ * moderation queue.
  */
-export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyAdFormProps) {
+export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, options }: MyAdFormProps) {
   const isEdit = mode === "edit";
+  const router = useRouter();
   const brandIdId = useId();
   const carIdId = useId();
   const qautityId = useId();
   const descriptionId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const initialCar = ad ? cars.find((car) => car.id === ad.carId) ?? null : null;
+  const initialCar = cars.find((car) => car.id === (ad?.carId ?? initialCarId)) ?? null;
   const [brandId, setBrandId] = useState(initialCar?.brandId ?? "");
-  const [carId, setCarId] = useState(ad?.carId ?? "");
+  const [carId, setCarId] = useState(initialCar?.id ?? "");
+  const extras = useAdExtras(ad);
   const [qautity, setQautity] = useState(ad?.qautity ?? "1");
   const [description, setDescription] = useState(ad?.description ?? "");
   const [rows, setRows] = useState<TermRow[]>(() =>
@@ -83,11 +94,6 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  // Bring the form into view when it opens (it sits above the list).
-  useEffect(() => {
-    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   const brandOptions = useMemo<SearchableSelectOption[]>(() => {
     const counts = new Map<string, { name: string; count: number }>();
@@ -108,8 +114,8 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
         .map((car) => ({
           value: car.id,
           label: car.name,
-          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)} · سال ${toPersianDigits(car.year)}`,
-          keywords: `${car.model} ${car.year} ${car.slug}`,
+          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`,
+          keywords: `${car.model} ${car.slug}`,
         })),
     [cars, brandId]
   );
@@ -148,6 +154,7 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
     formData.set("carId", carId);
     formData.set("qautity", qautity);
     formData.set("description", description);
+    extras.appendTo(formData);
     formData.set(
       "saleTerms",
       JSON.stringify(
@@ -166,7 +173,8 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
     startTransition(async () => {
       const result = isEdit ? await updateMyAdAction(ad!.id, formData) : await createMyAdAction(formData);
       if (result.ok) {
-        onSuccess(result.record, mode);
+        router.push(`/panel/ads/${result.record.id}`);
+        router.refresh();
       } else {
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
         setFormError(result.message);
@@ -187,18 +195,16 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
           <p className="mt-1 text-[11px] leading-5 text-panel-muted">
             {isEdit
               ? `کد آگهی: ${toPersianDigits(ad?.code ?? "")} · ${ad?.brandName} ${ad?.carName}`
-              : "خودرو، تعداد و شرایط فروش را مشخص کنید؛ آگهی پس از بررسی مدیر منتشر می‌شود."}
+              : "مشخصات این خودرو و شرایط فروش را وارد کنید؛ آگهی پس از بررسی مدیر منتشر می‌شود."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isPending}
-          aria-label="بستن فرم"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-panel-line/[0.1] bg-panel-elevated text-panel-muted transition-colors hover:text-panel-text disabled:opacity-50"
+        <Link
+          href={isEdit ? `/panel/ads/${ad?.id}` : "/panel/ads"}
+          aria-label="بازگشت"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-panel-line/[0.1] bg-panel-elevated text-panel-muted transition-colors hover:text-panel-text"
         >
-          <X className="h-4 w-4" />
-        </button>
+          <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6 p-4 sm:p-6">
@@ -244,8 +250,8 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
         )}
 
         {/* Car */}
-        <section className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isEdit ? (
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor={brandIdId} className={labelClassName}>
                 برند <span className="text-[#FF6A00]">*</span>
@@ -273,20 +279,41 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
                 disabled={isPending || noCars || !brandId}
                 hasError={Boolean(fieldErrors.carId)}
                 placeholder={brandId ? "خودرو را انتخاب کنید" : "ابتدا برند را انتخاب کنید"}
-                searchPlaceholder="جستجوی نام، مدل یا سال…"
+                searchPlaceholder="جستجوی نام یا مدل…"
                 emptyText="خودرویی برای این برند پیدا نشد"
               />
               <FieldError message={fieldErrors.carId} />
             </div>
-          </div>
+          </section>
+        ) : (
+          selectedCar && (
+            <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[11px] text-panel-faint">خودروی انتخاب‌شده</p>
+                <p className="mt-0.5 truncate text-sm font-extrabold text-panel-text">
+                  {selectedCar.brandName} {selectedCar.name}
+                </p>
+                <p className="mt-0.5 text-[11px] text-panel-muted">
+                  {selectedCar.carTypeName} · مدل {toPersianDigits(selectedCar.model)}
+                </p>
+              </div>
+              <Link
+                href="/panel/ads/new"
+                className="inline-flex h-9 shrink-0 items-center rounded-lg border border-panel-line/[0.1] px-3 text-xs font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text"
+              >
+                تغییر خودرو
+              </Link>
+              <FieldError message={fieldErrors.carId} />
+            </section>
+          )
+        )}
 
-          {selectedCar && (
-            <p className="-mt-2 text-[11px] text-panel-faint">
-              انتخاب شده: {selectedCar.brandName} {selectedCar.name} · {selectedCar.carTypeName} · مدل{" "}
-              {toPersianDigits(selectedCar.model)} · سال {toPersianDigits(selectedCar.year)}
-            </p>
-          )}
+        <AdImagesField theme="panel" extras={extras} fieldErrors={fieldErrors} disabled={isPending} />
 
+        <AdSpecFields theme="panel" extras={extras} colors={colors} options={options} fieldErrors={fieldErrors} disabled={isPending} />
+
+        {/* Quantity and description */}
+        <section className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor={qautityId} className={labelClassName}>
@@ -318,7 +345,7 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
               onChange={(e) => setDescription(e.target.value)}
               maxLength={255}
               rows={3}
-              placeholder="توضیح کوتاه درباره خودرو، رنگ، وضعیت تحویل و…"
+              placeholder="توضیح کوتاه درباره خودرو، وضعیت تحویل و…"
               className={cn(inputClassName(Boolean(fieldErrors.description)), "h-auto resize-none py-3 leading-7")}
             />
             <div className="flex items-center justify-between">
@@ -484,14 +511,12 @@ export function MyAdForm({ mode, ad, cars, saleTerms, onCancel, onSuccess }: MyA
 
         {/* Actions (sticky on mobile so they stay reachable above the dock) */}
         <div className="flex flex-col-reverse gap-2 border-t border-panel-line/[0.07] pt-4 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isPending}
-            className="h-12 rounded-xl border border-panel-line/[0.12] px-5 text-sm font-bold text-panel-text-2 transition-colors hover:border-panel-line/25 hover:text-panel-text disabled:cursor-not-allowed disabled:opacity-50"
+          <Link
+            href={isEdit ? `/panel/ads/${ad?.id}` : "/panel/ads"}
+            className="flex h-12 items-center justify-center rounded-xl border border-panel-line/[0.12] px-5 text-sm font-bold text-panel-text-2 transition-colors hover:border-panel-line/25 hover:text-panel-text"
           >
             انصراف
-          </button>
+          </Link>
           <button
             type="submit"
             disabled={isPending || noCars}

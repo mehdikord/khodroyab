@@ -1,21 +1,16 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useTransition, useEffect } from "react";
-import { Plus, Search, Car, Loader2 } from "lucide-react";
+import React, { useMemo, useRef, useState, useTransition } from "react";
+import { Plus, Search, Car } from "lucide-react";
 
 import { CarsTable } from "@/components/admin/cars/CarsTable";
 import { CarFormModal } from "@/components/admin/cars/CarFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
-import { Modal } from "@/components/admin/ui/Modal";
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
-import { CarOptionsList } from "@/components/admin/cars/CarOptionsList";
 import { deleteCarAction } from "@/app/admin/(panel)/cars/actions";
-import { getCarOptionsAction } from "@/app/admin/(panel)/cars/[id]/options/actions";
 import type { CarRecord } from "@/lib/cars";
 import type { BrandRecord } from "@/lib/brands";
 import type { CarTypeRecord } from "@/lib/car-types";
-import type { ColorRecord } from "@/lib/colors";
-import type { CarOptionRecord } from "@/lib/car-options";
 import { toPersianDigits } from "@/lib/utils";
 
 type ModalState =
@@ -27,33 +22,17 @@ interface CarsManagerProps {
   initialCars: CarRecord[];
   brands: BrandRecord[];
   carTypes: CarTypeRecord[];
-  colors: ColorRecord[];
 }
 
-export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManagerProps) {
+export function CarsManager({ initialCars, brands, carTypes }: CarsManagerProps) {
   const [cars, setCars] = useState<CarRecord[]>(initialCars);
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<CarRecord | null>(null);
-  const [viewDetails, setViewDetails] = useState<CarRecord | null>(null);
-  const [detailsOptions, setDetailsOptions] = useState<CarOptionRecord[]>([]);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const [isDeleting, startDeleteTransition] = useTransition();
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!viewDetails) {
-      setDetailsOptions([]);
-      return;
-    }
-    setIsLoadingDetails(true);
-    getCarOptionsAction(viewDetails.id).then((options) => {
-      setDetailsOptions(options);
-      setIsLoadingDetails(false);
-    });
-  }, [viewDetails]);
 
   const filteredCars = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -62,8 +41,7 @@ export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManag
       (car) =>
         car.name.toLowerCase().includes(normalized) ||
         car.brandName.toLowerCase().includes(normalized) ||
-        car.model.toLowerCase().includes(normalized) ||
-        (car.colorName?.toLowerCase().includes(normalized) ?? false)
+        car.model.toLowerCase().includes(normalized)
     );
   }, [cars, query]);
 
@@ -117,7 +95,6 @@ export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManag
           car={modal.mode === "edit" ? modal.car : null}
           brands={brands}
           carTypes={carTypes}
-          colors={colors}
           onClose={() => setModal(null)}
           onSuccess={modal.mode === "create" ? handleCreateSuccess : handleUpdateSuccess}
           onError={handleError}
@@ -135,24 +112,6 @@ export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManag
           pending={isDeleting}
           danger={true}
         />
-      )}
-
-      {/* Details Modal (ReadOnly) */}
-      {viewDetails && (
-        <Modal
-          open
-          onClose={() => setViewDetails(null)}
-          title={`مشخصات خودرو ${viewDetails.name}`}
-          size="md"
-        >
-          {isLoadingDetails ? (
-            <div className="flex h-32 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-[#FF8A2A]" />
-            </div>
-          ) : (
-            <CarOptionsList options={detailsOptions} />
-          )}
-        </Modal>
       )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -188,7 +147,7 @@ export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManag
           </span>
           <input
             type="search"
-            placeholder="جستجو در نام، برند، مدل یا رنگ..."
+            placeholder="جستجو در نام، برند یا مدل..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-11 w-full rounded-xl border border-white/[0.12] bg-[#07090C] px-12 text-sm text-[#F5F5F5] outline-none transition-all placeholder:text-[#5E6672] focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"
@@ -199,7 +158,6 @@ export function CarsManager({ initialCars, brands, carTypes, colors }: CarsManag
         cars={filteredCars}
         onEdit={(car) => setModal({ mode: "edit", car })}
         onDelete={(car) => setDeleteTarget(car)}
-        onViewDetails={(car) => setViewDetails(car)}
         isDeleting={isDeleting ? deleteTarget?.id : null}
       />
     </div>

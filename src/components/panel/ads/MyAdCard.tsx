@@ -1,18 +1,16 @@
-"use client";
-
 import React from "react";
-import { CalendarDays, Clock3, EyeOff, HandCoins, Hash, Layers, Pencil, XCircle } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, Car, Clock3, EyeOff, HandCoins, Hash, Layers, Pencil, XCircle } from "lucide-react";
 
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { AdStatus } from "@/lib/ad-status";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
+import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
+import { SafeImage } from "@/components/panel/SafeImage";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 interface MyAdCardProps {
   ad: UserCarRecord;
-  onEdit: (ad: UserCarRecord) => void;
-  disabled?: boolean;
-  highlighted?: boolean;
   delay?: number;
 }
 
@@ -30,18 +28,27 @@ const STATUS_HINT: Partial<Record<AdStatus, { icon: typeof Clock3; text: string;
   },
 };
 
-/** One of the customer's own ads, with status, prices and an edit action. */
-export function MyAdCard({ ad, onEdit, disabled, highlighted, delay = 0 }: MyAdCardProps) {
+function NoImage() {
+  return (
+    <div className="flex h-full w-full items-center justify-center text-panel-faint">
+      <Car className="h-8 w-8" strokeWidth={1.5} />
+    </div>
+  );
+}
+
+/** One of the customer's own ads; the whole card opens the ad's page. */
+export function MyAdCard({ ad, delay = 0 }: MyAdCardProps) {
   const hint = STATUS_HINT[ad.status];
 
   return (
     <article
       className={cn(
-        "panel-card-in flex flex-col gap-4 rounded-3xl border bg-panel-surface p-4 shadow-card-depth transition-colors sm:p-5",
-        highlighted ? "border-[#FF6A00]/50 shadow-[0_0_30px_-8px_rgba(255,106,0,0.4)]" : "border-panel-line/[0.08]"
+        "panel-card-in relative flex flex-col gap-4 rounded-3xl border border-panel-line/[0.08] bg-panel-surface p-4 shadow-card-depth transition-colors hover:border-[#FF6A00]/35 sm:p-5"
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
+      <Link href={`/panel/ads/${ad.id}`} aria-label={`مشاهده آگهی ${ad.brandName} ${ad.carName}`} className="absolute inset-0 z-[1] rounded-3xl" />
+
       {/* Top row: status · code · date · edit */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -65,15 +72,13 @@ export function MyAdCard({ ad, onEdit, disabled, highlighted, delay = 0 }: MyAdC
             <CalendarDays className="h-3 w-3" />
             {ad.createdAtLabel}
           </span>
-          <button
-            type="button"
-            onClick={() => onEdit(ad)}
-            disabled={disabled}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-panel-line/[0.1] bg-panel-line/[0.03] px-3 text-[11px] font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text disabled:cursor-not-allowed disabled:opacity-50"
+          <Link
+            href={`/panel/ads/${ad.id}/edit`}
+            className="relative z-[2] inline-flex h-8 items-center gap-1.5 rounded-lg border border-panel-line/[0.1] bg-panel-line/[0.03] px-3 text-[11px] font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text"
           >
             <Pencil className="h-3.5 w-3.5" />
             ویرایش
-          </button>
+          </Link>
         </div>
       </div>
       <span className="-mt-2 flex items-center gap-1 text-[10px] text-panel-faint sm:hidden">
@@ -82,25 +87,43 @@ export function MyAdCard({ ad, onEdit, disabled, highlighted, delay = 0 }: MyAdC
       </span>
 
       {/* Car */}
-      <div>
-        <h3 className="text-base font-black text-panel-text">
-          {ad.brandName} {ad.carName}
-        </h3>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-panel-muted">
-          <span>
-            مدل <span className="font-semibold text-panel-text-2">{ad.carModel}</span>
-          </span>
-          <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
-          <span>
-            سال <span className="font-semibold text-panel-text-2">{toPersianDigits(ad.carYear)}</span>
-          </span>
-          <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
-          <span className="inline-flex items-center gap-1">
-            <Layers className="h-3 w-3" />
-            {toPersianDigits(ad.qautity)} دستگاه
-          </span>
-        </p>
-        {ad.description && <p className="mt-2 text-xs leading-6 text-panel-text-2">{ad.description}</p>}
+      <div className="flex gap-3">
+        <div className="h-20 w-28 shrink-0 overflow-hidden rounded-2xl bg-panel-media">
+          {ad.imageUrl ? (
+            <SafeImage src={ad.imageUrl} alt={`${ad.brandName} ${ad.carName}`} loading="lazy" className="h-full w-full object-cover" fallback={<NoImage />} />
+          ) : (
+            <NoImage />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base font-black text-panel-text">
+            {ad.brandName} {ad.carName}
+          </h3>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-panel-muted">
+            <span>
+              مدل <span className="font-semibold text-panel-text-2">{ad.carModel}</span>
+            </span>
+            <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
+            <span>
+              سال <span className="font-semibold text-panel-text-2">{toPersianDigits(ad.carYear)}</span>
+            </span>
+            <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
+            <span className="inline-flex items-center gap-1">
+              <Layers className="h-3 w-3" />
+              {toPersianDigits(ad.qautity)} دستگاه
+            </span>
+            {ad.colorName && ad.colorCode && (
+              <>
+                <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
+                <span className="inline-flex items-center gap-1">
+                  <ColorSwatch code={ad.colorCode} className="h-3 w-3" />
+                  {ad.colorName}
+                </span>
+              </>
+            )}
+          </p>
+          {ad.description && <p className="mt-2 line-clamp-2 text-xs leading-6 text-panel-text-2">{ad.description}</p>}
+        </div>
       </div>
 
       {/* Sale terms (the owner may see their own prices) */}
