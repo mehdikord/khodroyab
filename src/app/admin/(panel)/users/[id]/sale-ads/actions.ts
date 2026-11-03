@@ -68,6 +68,7 @@ function toSaleTermData(entry: UserCarSaleTermInput) {
   return {
     saleTermId: BigInt(entry.saleTermId),
     price: entry.price,
+    partnerPrice: entry.partnerPrice,
     sale: entry.sale || null,
     perecentage: entry.perecentage || null,
     description: entry.description || null,
@@ -132,10 +133,12 @@ export async function createUserCarAction(userIdRaw: string, formData: FormData)
   }
 
   const [user, car] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true, collabrate: true } }),
     prisma.car.findUnique({ where: { id: carId }, select: { id: true } }),
   ]);
   if (!user) return { ok: false, message: "کاربر یافت نشد" };
+  // Only collaborators publish ads; turn collaborator mode on for the user first.
+  if (!user.collabrate) return { ok: false, message: "این کاربر همکار نیست؛ ثبت آگهی فقط برای کاربران همکار امکان‌پذیر است." };
   if (!car) return { ok: false, message: "خودرو انتخاب‌شده وجود ندارد", fieldErrors: { carId: "خودرو انتخاب‌شده وجود ندارد" } };
 
   const termErrors = await validateSaleTermIds(parsed.data.saleTerms);

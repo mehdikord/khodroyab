@@ -2,58 +2,65 @@
 
 import React, { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Users, Edit2, Trash2, UserCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Users, Edit2, Trash2, UserCircle2, Handshake } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { UserFormModal } from "@/components/admin/users/UserFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
-import { SubscriptionBadge } from "@/components/admin/subscriptions/SubscriptionBadge";
-import { GrantSubscriptionModal } from "@/components/admin/subscriptions/GrantSubscriptionModal";
-import { deleteUserAction, toggleUserActiveAction } from "@/app/admin/(panel)/users/actions";
+import { VerificationStatusBadge } from "@/components/admin/users/VerificationStatusBadge";
+import { deleteUserAction, toggleUserActiveAction, toggleUserCollaborateAction } from "@/app/admin/(panel)/users/actions";
 import type { UserRecord } from "@/lib/users";
-import type { SubscriptionPlanRecord } from "@/lib/subscriptions";
-import { isExpiringSoon, type ActiveSubscriptionSummary } from "@/lib/subscriptions-shared";
-import { toPersianDigits } from "@/lib/utils";
+import type { UserFilter } from "@/lib/users-shared";
+import { cn, toPersianDigits } from "@/lib/utils";
 
 interface UsersManagerProps {
   initialUsers: UserRecord[];
-  /** Current subscription per user id; users without one are absent. */
-  initialSubscriptions: Record<string, ActiveSubscriptionSummary>;
-  /** Active plans offered in the "add subscription" modal. */
-  plans: SubscriptionPlanRecord[];
+  initialFilter: UserFilter;
 }
 
-export function UsersManager({ initialUsers, initialSubscriptions, plans }: UsersManagerProps) {
+
+const FILTERS: { key: UserFilter; label: string }[] = [
+  { key: "all", label: "همه" },
+  { key: "collaborators", label: "همکاران" },
+  { key: "review", label: "احراز هویت در انتظار بررسی" },
+  { key: "regular", label: "کاربران عادی" },
+];
+
+function matchesFilter(user: UserRecord, filter: UserFilter): boolean {
+  if (filter === "collaborators") return user.collabrate;
+  if (filter === "review") return user.collabrate && user.verificationStatus === "pending";
+  if (filter === "regular") return !user.collabrate;
+  return true;
+}
+
+export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps) {
   const [users, setUsers] = useState<UserRecord[]>(initialUsers);
-  const [subscriptions, setSubscriptions] = useState<Record<string, ActiveSubscriptionSummary>>(initialSubscriptions);
-  const [grantTarget, setGrantTarget] = useState<UserRecord | null>(null);
+  const [filter, setFilter] = useState<UserFilter>(initialFilter);
   const [query, setQuery] = useState("");
   const [modalUser, setModalUser] = useState<UserRecord | null | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
+  const [pendingCollaborateId, setPendingCollaborateId] = useState<string | null>(null);
   const [, startToggleTransition] = useTransition();
+
+  const counts = useMemo(
+    () => Object.fromEntries(FILTERS.map((item) => [item.key, users.filter((user) => matchesFilter(user, item.key)).length])) as Record<UserFilter, number>,
+    [users]
+  );
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const matched = normalized
-      ? users.filter(
-          (user) =>
-            user.name.toLowerCase().includes(normalized) ||
-            (user.companyName?.toLowerCase().includes(normalized) ?? false) ||
-            user.phone.includes(normalized) ||
-            (user.email && user.email.toLowerCase().includes(normalized))
-        )
-      : users;
-
-    // Subscriptions about to expire float to the top (fewest days first); the
-    // rest keep their original order.
-    const expiring = matched
-      .filter((user) => isExpiringSoon(subscriptions[user.id] ?? null))
-      .sort((a, b) => subscriptions[a.id].remainingDays - subscriptions[b.id].remainingDays);
-    const rest = matched.filter((user) => !isExpiringSoon(subscriptions[user.id] ?? null));
-    return [...expiring, ...rest];
-  }, [users, query, subscriptions]);
+    return users.filter(
+      (user) =>
+        matchesFilter(user, filter) &&
+        (!normalized ||
+          user.name.toLowerCase().includes(normalized) ||
+          (user.companyName?.toLowerCase().includes(normalized) ?? false) ||
+          user.phone.includes(normalized) ||
+          (user.email && user.email.toLowerCase().includes(normalized)))
+    );
+  }, [users, query, filter]);
 
   function showToast(kind: ToastState["kind"], message: string) {
     setToast({ kind, message });
@@ -98,6 +105,29 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
     });
   }
 
+  function handleToggleCollaborate(user: UserRecord) {
+    if (pendingCollaborateId) return;
+    setPendingCollaborateId(user.id);
+    setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, collabrate: !u.collabrate } : u)));
+
+    startToggleTransition(async () => {
+      const result = await toggleUserCollaborateAction(user.id);
+      setPendingCollaborateId(null);
+      if (result.ok) {
+        setUsers((prev) => prev.map((u) => (u.id === result.record.id ? result.record : u)));
+        showToast(
+          "success",
+          result.record.collabrate
+            ? `حالت همکاری برای «${result.record.name}» فعال شد`
+            : `حالت همکاری «${result.record.name}» غیرفعال شد`
+        );
+      } else {
+        setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
+        showToast("error", result.message);
+      }
+    });
+  }
+
   return (
     <div className="space-y-6">
       <Toast toast={toast} onDismiss={() => setToast(null)} />
@@ -115,27 +145,6 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
               showToast("success", "کاربر با موفقیت ایجاد شد");
             }
             setModalUser(undefined);
-          }}
-          onError={(msg) => showToast("error", msg)}
-        />
-      )}
-
-      {grantTarget && (
-        <GrantSubscriptionModal
-          user={grantTarget}
-          plans={plans}
-          current={subscriptions[grantTarget.id] ?? null}
-          onClose={() => setGrantTarget(null)}
-          onSuccess={(result) => {
-            const userId = grantTarget.id;
-            setSubscriptions((prev) => {
-              const next = { ...prev };
-              if (result.active) next[userId] = result.active;
-              else delete next[userId];
-              return next;
-            });
-            showToast("success", `اشتراک «${result.record.planName}» برای «${grantTarget.name}» ثبت شد`);
-            setGrantTarget(null);
           }}
           onError={(msg) => showToast("error", msg)}
         />
@@ -167,7 +176,33 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
         </button>
       </div>
 
-      <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجو..." className="h-11 w-full max-w-md rounded-xl border border-white/[0.12] bg-[#07090C] px-4 text-sm text-[#F5F5F5] outline-none" />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجو..." className="h-11 w-full max-w-md rounded-xl border border-white/[0.12] bg-[#07090C] px-4 text-sm text-[#F5F5F5] outline-none" />
+        <div className="admin-scrollbar flex gap-2 overflow-x-auto">
+          {FILTERS.map((item) => {
+            const active = filter === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setFilter(item.key)}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-bold transition-colors",
+                  active
+                    ? "border-[#FF6A00]/50 bg-[#FF6A00]/15 text-[#FF8A2A]"
+                    : "border-white/[0.1] bg-white/[0.02] text-[#8B93A1] hover:border-white/20 hover:text-[#F5F5F5]"
+                )}
+              >
+                {item.label}
+                <span className={cn("rounded-full px-1.5 py-0.5 font-mono text-[10px]", active ? "bg-[#FF6A00]/20" : "bg-white/[0.05]")}>
+                  {toPersianDigits(counts[item.key])}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="admin-scrollbar overflow-x-auto rounded-2xl border border-white/[0.07]">
         <table className="w-full text-sm text-right">
@@ -179,17 +214,22 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
               <th className="px-6 py-4">کد ملی</th>
               <th className="px-6 py-4">کد پستی</th>
               <th className="px-6 py-4">آدرس</th>
-              <th className="px-6 py-4 text-center">اشتراک</th>
+              <th className="px-6 py-4 text-center">همکار</th>
+              <th className="px-6 py-4 text-center">احراز هویت</th>
               <th className="px-6 py-4 text-center">وضعیت</th>
               <th className="px-6 py-4 text-center">عملیات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
-            {filteredUsers.map((user) => {
-              const subscription = subscriptions[user.id] ?? null;
-              const expiring = isExpiringSoon(subscription);
-              return (
-              <tr key={user.id} className={expiring ? "bg-red-500/[0.04] hover:bg-red-500/[0.07]" : "hover:bg-white/[0.02]"}>
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={10} className="px-6 py-10 text-center text-xs text-[#8B93A1]">
+                  کاربری با این مشخصات یافت نشد.
+                </td>
+              </tr>
+            )}
+            {filteredUsers.map((user) => (
+              <tr key={user.id} className="hover:bg-white/[0.02]">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/[0.1] bg-[#07090C]">
@@ -206,15 +246,6 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
                       <span className="block font-semibold text-[#F5F5F5]">{user.name}</span>
                       {user.companyName && <span className="block truncate text-[11px] text-[#8B93A1]">{user.companyName}</span>}
                     </span>
-                    {expiring && (
-                      <span
-                        className="admin-blink inline-flex text-red-500"
-                        title={`اشتراک این کاربر رو به اتمام است (${toPersianDigits(subscription!.remainingDays)} روز باقی‌مانده)`}
-                        aria-label="اشتراک رو به اتمام"
-                      >
-                        <AlertTriangle className="h-[18px] w-[18px]" />
-                      </span>
-                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 font-mono text-[#D2D7DF]">{user.phone}</td>
@@ -223,25 +254,45 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
                 <td className="px-6 py-4 text-[#D2D7DF]">{user.postalCode || "-"}</td>
                 <td className="px-6 py-4 max-w-[220px] truncate text-[#D2D7DF]" title={user.address ?? ""}>{user.address || "-"}</td>
                 <td className="px-6 py-4 text-center">
-                  <SubscriptionBadge subscription={subscription} onClick={() => setGrantTarget(user)} />
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCollaborate(user)}
+                    disabled={pendingCollaborateId === user.id}
+                    title={user.collabrate ? "برای غیرفعال کردن حالت همکاری کلیک کنید" : "برای فعال کردن حالت همکاری کلیک کنید"}
+                    aria-pressed={user.collabrate}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors disabled:cursor-wait disabled:opacity-60",
+                      user.collabrate
+                        ? "border-sky-500/30 bg-sky-500/10 text-sky-300 hover:border-sky-500/60 hover:bg-sky-500/20"
+                        : "border-white/[0.1] bg-white/[0.03] text-[#8B93A1] hover:border-white/25 hover:text-[#F5F5F5]"
+                    )}
+                  >
+                    <Handshake className="h-3.5 w-3.5" />
+                    {user.collabrate ? "همکار" : "عادی"}
+                  </button>
+                </td>
+                <td className="px-6 py-4 text-center">
+                  {user.collabrate ? (
+                    <VerificationStatusBadge authenticaed={user.authenticaed} status={user.verificationStatus} />
+                  ) : (
+                    <span className="text-xs text-[#5E6672]">-</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-center">
                   <button
                     type="button"
                     onClick={() => handleToggleActive(user)}
                     disabled={pendingToggleId === user.id}
-                    title={user.isActive ? "برای غیرفعال کردن حساب کلیک کنید" : user.isPending ? "برای تایید و فعال کردن حساب کلیک کنید" : "برای فعال کردن حساب کلیک کنید"}
+                    title={user.isActive ? "برای غیرفعال کردن حساب کلیک کنید" : "برای فعال کردن حساب کلیک کنید"}
                     aria-pressed={user.isActive}
                     className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors disabled:cursor-wait disabled:opacity-60 ${
                       user.isActive
                         ? "border-green-500/30 bg-green-500/10 text-green-400 hover:border-green-500/60 hover:bg-green-500/20"
-                        : user.isPending
-                          ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:border-amber-500/60 hover:bg-amber-500/20"
-                          : "border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500/60 hover:bg-red-500/20"
+                        : "border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500/60 hover:bg-red-500/20"
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? "bg-green-400" : user.isPending ? "bg-amber-400" : "bg-red-400"}`} />
-                    {user.isActive ? "فعال" : user.isPending ? "در انتظار تایید" : "غیرفعال"}
+                    <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? "bg-green-400" : "bg-red-400"}`} />
+                    {user.isActive ? "فعال" : "غیرفعال"}
                   </button>
                 </td>
                 <td className="px-6 py-4 text-center">
@@ -273,8 +324,7 @@ export function UsersManager({ initialUsers, initialSubscriptions, plans }: User
                   </div>
                 </td>
               </tr>
-              );
-            })}
+            ))}
           </tbody>
         </table>
       </div>

@@ -37,7 +37,10 @@ export interface UserCarSaleTermRecord {
   id: string;
   saleTermId: string;
   saleTermTitle: string;
+  /** Public price (قیمت عمومی). */
   price: string;
+  /** Collaborator price (قیمت همکار); null on ads created before it existed. */
+  partnerPrice: string | null;
   sale: string | null;
   perecentage: string | null;
   description: string | null;
@@ -163,6 +166,7 @@ export function userCarToRecord(userCar: UserCarWithRelations): UserCarRecord {
       saleTermId: term.saleTermId.toString(),
       saleTermTitle: term.saleTerm.title,
       price: term.price,
+      partnerPrice: term.partnerPrice,
       sale: term.sale,
       perecentage: term.perecentage,
       description: term.description,

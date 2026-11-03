@@ -41,6 +41,9 @@ yarn-error.log*
 # admin uploads (local filesystem storage for brand images)
 public/uploads/
 
+# private uploads (identity documents, never served statically)
+/storage/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

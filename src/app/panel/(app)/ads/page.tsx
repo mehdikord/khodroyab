@@ -2,9 +2,10 @@ import React from "react";
 import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
-import { requireUser } from "@/lib/auth/user-auth";
+import { requireCollaborator } from "@/lib/auth/user-auth";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { MyAdsManager } from "@/components/panel/ads/MyAdsManager";
+import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
 export const metadata: Metadata = {
   title: "آگهی‌های من | پنل کاربری خودرو یاب",
@@ -13,9 +14,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-/** The customer's own sale ads and their moderation status. */
+/**
+ * The collaborator's own sale ads and their moderation status. Until the
+ * identity is verified the list stays visible but creating and editing are off.
+ */
 export default async function PanelAdsPage() {
-  const user = await requireUser();
+  const user = await requireCollaborator();
   const userId = BigInt(user.id);
 
   const ads = await prisma.userCar.findMany({
@@ -24,5 +28,10 @@ export default async function PanelAdsPage() {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
 
-  return <MyAdsManager ads={ads.map(userCarToRecord)} />;
+  return (
+    <div className="space-y-5">
+      {!user.isPartner && <VerificationRequired feature="ثبت آگهی" />}
+      <MyAdsManager ads={ads.map(userCarToRecord)} canPublish={user.isPartner} />
+    </div>
+  );
 }

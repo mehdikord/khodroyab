@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
-import { userToRecord, type UserRecord } from "@/lib/users";
+import { userRecordInclude, userToRecord, type UserRecord } from "@/lib/users";
 import { getCurrentAdmin } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
@@ -86,9 +86,12 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
         address: address || null,
         image,
         isActive: true,
-        // Admin-created accounts never wait in the approval queue.
         approvedAt: new Date(),
+        // Collaborator mode is switched on separately, from the users table.
+        collabrate: false,
+        authenticaed: false,
       },
+      include: userRecordInclude,
     });
     revalidatePath("/admin/users");
     return { ok: true, record: userToRecord(created) };
@@ -179,12 +182,12 @@ export async function updateUserAction(id: string, formData: FormData): Promise<
         address: address || null,
         image,
         isActive,
-        // Activating a pending account from the edit form counts as approval.
         ...(isActive ? { approvedAt: current.approvedAt ?? new Date() } : {}),
       },
+      include: userRecordInclude,
     });
     revalidatePath("/admin/users");
-    revalidatePath("/admin/users/pending");
+    revalidatePath(`/admin/users/${userId.toString()}`);
     return { ok: true, record: userToRecord(updated) };
   } catch (error) {
     console.error("[users:update] failed", error);
@@ -210,7 +213,6 @@ export async function deleteUserAction(id: string): Promise<{ ok: true } | { ok:
     await prisma.user.delete({ where: { id: userId } });
     if (isManagedUpload(current.image)) await removeUpload(current.image, "users");
     revalidatePath("/admin/users");
-    revalidatePath("/admin/users/pending");
     return { ok: true };
   } catch (error) {
     console.error("[users:delete] failed", error);
@@ -240,14 +242,56 @@ export async function toggleUserActiveAction(id: string): Promise<{ ok: true; re
     const nextActive = !current.isActive;
     const updated = await prisma.user.update({
       where: { id: userId },
-      // Activating a pending (self-registered) account approves it as well.
       data: { isActive: nextActive, ...(nextActive && !current.approvedAt ? { approvedAt: new Date() } : {}) },
+      include: userRecordInclude,
     });
     revalidatePath("/admin/users");
-    revalidatePath("/admin/users/pending");
+    revalidatePath(`/admin/users/${userId.toString()}`);
     return { ok: true, record: userToRecord(updated) };
   } catch (error) {
     console.error("[users:toggle] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
+}
+
+/**
+ * Switch collaborator mode (کاربر همکار) on or off. Only administrators can do
+ * this; customers never become collaborators by signing up. Turning it off
+ * hides the user's ads and price table from everyone and closes both editors,
+ * but keeps the data and the verification result for when it is turned on again.
+ */
+export async function toggleUserCollaborateAction(id: string): Promise<{ ok: true; record: UserRecord } | { ok: false; message: string }> {
+  const guardResult = await guardRequest();
+  if (guardResult) return guardResult as any;
+
+  let userId: bigint;
+  try {
+    userId = BigInt(id);
+  } catch {
+    return { ok: false, message: "شناسه کاربر نامعتبر است" };
+  }
+
+  const current = await prisma.user.findUnique({ where: { id: userId }, select: { collabrate: true } });
+  if (!current) return { ok: false, message: "کاربر یافت نشد" };
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { collabrate: !current.collabrate },
+      include: userRecordInclude,
+    });
+    revalidateCollaboratorContent(userId);
+    return { ok: true, record: userToRecord(updated) };
+  } catch (error) {
+    console.error("[users:collaborate] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
+}
+
+/** Pages whose content depends on whether a user is a verified collaborator. */
+function revalidateCollaboratorContent(userId: bigint) {
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId.toString()}`);
+  revalidatePath(`/admin/users/${userId.toString()}/sale-ads`);
+  revalidatePath("/panel", "layout");
 }

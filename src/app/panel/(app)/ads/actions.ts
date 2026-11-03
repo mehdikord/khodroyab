@@ -25,6 +25,8 @@ import {
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
+const NOT_COLLABORATOR_MESSAGE = "ثبت آگهی فقط برای کاربران همکار امکان‌پذیر است.";
+const NOT_VERIFIED_MESSAGE = "حساب کاربری شما احراز هویت نشده است؛ برای ثبت آگهی ابتدا احراز هویت خود را انجام دهید.";
 
 export type MyAdActionResult =
   | { ok: true; record: UserCarRecord }
@@ -38,10 +40,13 @@ function parseBigInt(value: string): bigint | null {
   }
 }
 
+/** Only collaborators whose identity is verified may create or edit ads. */
 async function guardRequest(): Promise<{ ok: false; message: string } | { ok: true; userId: bigint }> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
+  if (!user.collabrate) return { ok: false, message: NOT_COLLABORATOR_MESSAGE };
+  if (!user.authenticaed) return { ok: false, message: NOT_VERIFIED_MESSAGE };
   const userId = parseBigInt(user.id);
   if (userId === null) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
   return { ok: true, userId };
@@ -61,6 +66,7 @@ function toSaleTermData(entry: UserCarSaleTermInput) {
   return {
     saleTermId: BigInt(entry.saleTermId),
     price: entry.price,
+    partnerPrice: entry.partnerPrice,
     sale: entry.sale || null,
     perecentage: entry.perecentage || null,
     description: entry.description || null,

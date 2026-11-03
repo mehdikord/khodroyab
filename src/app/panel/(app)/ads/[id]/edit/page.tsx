@@ -3,13 +3,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import prisma from "@/lib/prisma";
-import { requireUser } from "@/lib/auth/user-auth";
+import { requireCollaborator } from "@/lib/auth/user-auth";
 import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { colorToRecord } from "@/lib/colors";
 import { optionRecordInclude, optionToRecord } from "@/lib/options";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { MyAdForm } from "@/components/panel/ads/MyAdForm";
+import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
 export const metadata: Metadata = {
   title: "ویرایش آگهی | پنل کاربری خودرو یاب",
@@ -20,7 +21,8 @@ export const dynamic = "force-dynamic";
 
 /** Edit one of the customer's own ads; another customer's id simply does not exist. */
 export default async function EditAdPage({ params }: { params: { id: string } }) {
-  const user = await requireUser();
+  const user = await requireCollaborator();
+  if (!user.isPartner) return <VerificationRequired feature="ویرایش آگهی" />;
 
   if (!/^\d+$/.test(params.id)) notFound();
   const ad = await prisma.userCar.findFirst({

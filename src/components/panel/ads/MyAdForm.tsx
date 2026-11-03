@@ -33,6 +33,7 @@ interface TermRow {
   id?: string;
   saleTermId: string;
   price: string;
+  partnerPrice: string;
   sale: string;
   perecentage: string;
   description: string;
@@ -85,6 +86,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
       id: term.id,
       saleTermId: term.saleTermId,
       price: term.price,
+      partnerPrice: term.partnerPrice ?? "",
       sale: term.sale ?? "",
       perecentage: term.perecentage ?? "",
       description: term.description ?? "",
@@ -133,7 +135,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
     const firstFree = saleTerms.find((term) => !used.has(term.id)) ?? saleTerms[0];
     setRows((prev) => [
       ...prev,
-      { key: nextKey(), saleTermId: firstFree?.id ?? "", price: "", sale: "", perecentage: "", description: "" },
+      { key: nextKey(), saleTermId: firstFree?.id ?? "", price: "", partnerPrice: "", sale: "", perecentage: "", description: "" },
     ]);
   }
 
@@ -162,6 +164,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
           id: row.id,
           saleTermId: row.saleTermId,
           price: row.price,
+          partnerPrice: row.partnerPrice,
           sale: row.sale,
           perecentage: row.perecentage,
           description: row.description,
@@ -416,7 +419,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <div className="space-y-1.5">
                         <label className={labelClassName}>
                           شرایط فروش <span className="text-[#FF6A00]">*</span>
@@ -436,25 +439,34 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                         <FieldError message={fieldErrors[`${prefix}saleTermId`]} />
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className={labelClassName}>
-                          قیمت (تومان) <span className="text-[#FF6A00]">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          dir="ltr"
-                          value={row.price}
-                          disabled={isPending}
-                          onChange={(e) => updateRow(row.key, { price: e.target.value })}
-                          placeholder="مثال: 1250000000"
-                          className={cn(inputClassName(Boolean(fieldErrors[`${prefix}price`])), "h-11 text-start font-mono")}
-                        />
-                        {row.price && !fieldErrors[`${prefix}price`] && (
-                          <p className="text-[11px] text-panel-faint">{formatPersianNumber(row.price)} تومان</p>
-                        )}
-                        <FieldError message={fieldErrors[`${prefix}price`]} />
-                      </div>
+                      {(
+                        [
+                          { key: "price", label: "قیمت عمومی", hint: "برای همه کاربران" },
+                          { key: "partnerPrice", label: "قیمت همکار", hint: "فقط برای همکاران احراز‌شده" },
+                        ] as const
+                      ).map((field) => (
+                        <div key={field.key} className="space-y-1.5">
+                          <label className={labelClassName}>
+                            {field.label} (تومان) <span className="text-[#FF6A00]">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            dir="ltr"
+                            value={row[field.key]}
+                            disabled={isPending}
+                            onChange={(e) => updateRow(row.key, { [field.key]: e.target.value })}
+                            placeholder="مثال: 1250000000"
+                            className={cn(inputClassName(Boolean(fieldErrors[`${prefix}${field.key}`])), "h-11 text-start font-mono")}
+                          />
+                          {row[field.key] && !fieldErrors[`${prefix}${field.key}`] ? (
+                            <p className="text-[11px] text-panel-faint">{formatPersianNumber(row[field.key])} تومان</p>
+                          ) : (
+                            !fieldErrors[`${prefix}${field.key}`] && <p className="text-[11px] text-panel-faint">{field.hint}</p>
+                          )}
+                          <FieldError message={fieldErrors[`${prefix}${field.key}`]} />
+                        </div>
+                      ))}
 
                       <div className="space-y-1.5">
                         <label className={labelClassName}>مبلغ تخفیف (تومان)</label>
@@ -489,7 +501,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                         <FieldError message={fieldErrors[`${prefix}perecentage`]} />
                       </div>
 
-                      <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+                      <div className="space-y-1.5 sm:col-span-2 lg:col-span-5">
                         <label className={labelClassName}>توضیحات این شرط</label>
                         <textarea
                           value={row.description}

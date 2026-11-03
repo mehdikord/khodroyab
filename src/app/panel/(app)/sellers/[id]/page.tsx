@@ -97,12 +97,15 @@ function ContactItem({ icon: Icon, label, value, phone, className }: ContactItem
  * history) and the seller's price table (every eligible car, "---" for gaps).
  */
 export default async function SellerProfilePage({ params }: PageProps) {
-  await requireUser();
+  const user = await requireUser();
 
   const seller = await getSellerProfile(params.id);
   if (!seller) notFound();
 
-  const [ads, priceRows] = await Promise.all([listSellerApprovedAds(params.id), getUserPriceTableRows(BigInt(seller.id))]);
+  const [ads, priceRows] = await Promise.all([
+    listSellerApprovedAds(params.id, user.isPartner),
+    getUserPriceTableRows(BigInt(seller.id), user.isPartner),
+  ]);
   const pricedCount = priceRows.filter((row) => row.entry !== null).length;
 
   return (
@@ -241,7 +244,7 @@ export default async function SellerProfilePage({ params }: PageProps) {
               </div>
             ) : (
               <>
-                <PriceTableView rows={priceRows} />
+                <PriceTableView rows={priceRows} showPartner={user.isPartner} />
                 <p className="text-[11px] leading-6 text-panel-faint">
                   قیمت‌ها به دلار و توسط فروشنده برای هر سال ساخت جداگانه ثبت شده‌اند. «---» یعنی فروشنده برای آن خودرو یا قیمت، مقداری ثبت
                   نکرده است.

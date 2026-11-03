@@ -11,6 +11,8 @@ import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 interface MyAdCardProps {
   ad: UserCarRecord;
+  /** Show the edit button (verified collaborators only). */
+  canEdit: boolean;
   delay?: number;
 }
 
@@ -37,7 +39,7 @@ function NoImage() {
 }
 
 /** One of the customer's own ads; the whole card opens the ad's page. */
-export function MyAdCard({ ad, delay = 0 }: MyAdCardProps) {
+export function MyAdCard({ ad, canEdit, delay = 0 }: MyAdCardProps) {
   const hint = STATUS_HINT[ad.status];
 
   return (
@@ -72,13 +74,15 @@ export function MyAdCard({ ad, delay = 0 }: MyAdCardProps) {
             <CalendarDays className="h-3 w-3" />
             {ad.createdAtLabel}
           </span>
-          <Link
-            href={`/panel/ads/${ad.id}/edit`}
-            className="relative z-[2] inline-flex h-8 items-center gap-1.5 rounded-lg border border-panel-line/[0.1] bg-panel-line/[0.03] px-3 text-[11px] font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            ویرایش
-          </Link>
+          {canEdit && (
+            <Link
+              href={`/panel/ads/${ad.id}/edit`}
+              className="relative z-[2] inline-flex h-8 items-center gap-1.5 rounded-lg border border-panel-line/[0.1] bg-panel-line/[0.03] px-3 text-[11px] font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              ویرایش
+            </Link>
+          )}
         </div>
       </div>
       <span className="-mt-2 flex items-center gap-1 text-[10px] text-panel-faint sm:hidden">
@@ -142,13 +146,18 @@ export function MyAdCard({ ad, delay = 0 }: MyAdCardProps) {
                 className="flex items-center justify-between gap-2 rounded-xl border border-panel-line/[0.06] bg-panel-line/[0.02] px-3 py-2"
               >
                 <span className="truncate text-[11px] font-bold text-panel-text-2">{term.saleTermTitle}</span>
-                <span className="shrink-0 text-[11px] font-extrabold tabular-nums text-panel-text">
-                  {formatPersianNumber(term.price)} <span className="text-[10px] font-semibold text-panel-muted-2">تومان</span>
-                  {term.perecentage && (
-                    <span className="ms-1.5 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-panel-success">
-                      {toPersianDigits(term.perecentage)}٪
-                    </span>
-                  )}
+                <span className="shrink-0 text-end text-[11px] font-extrabold tabular-nums text-panel-text">
+                  <span className="block">
+                    {formatPersianNumber(term.price)} <span className="text-[10px] font-semibold text-panel-muted-2">تومان</span>
+                    {term.perecentage && (
+                      <span className="ms-1.5 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-panel-success">
+                        {toPersianDigits(term.perecentage)}٪
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] font-bold text-panel-muted">
+                    همکار: {term.partnerPrice ? `${formatPersianNumber(term.partnerPrice)} تومان` : "ثبت نشده"}
+                  </span>
                 </span>
               </li>
             ))}

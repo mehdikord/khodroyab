@@ -64,12 +64,12 @@ function filtersToQuery(filters: SearchFilterValues): string {
  * text search, advanced filters, sorting and pagination.
  */
 export default async function PanelSearchPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireUser();
+  const user = await requireUser();
 
   const filters = parseFilters(searchParams);
   const requestedPage = Math.max(1, Number.parseInt(single(searchParams.page), 10) || 1);
 
-  const [result, options] = await Promise.all([searchApprovedAds(filters, requestedPage), getSearchOptions()]);
+  const [result, options] = await Promise.all([searchApprovedAds(filters, requestedPage, user.isPartner), getSearchOptions()]);
 
   const hasFilters =
     Boolean(filters.q || filters.brand || filters.carType || filters.saleTerm || filters.color || filters.yearFrom || filters.yearTo);

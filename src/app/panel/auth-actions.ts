@@ -57,16 +57,6 @@ export async function loginUserAction(formData: FormData): Promise<UserLoginActi
   const result = await authenticateUser(phone, password);
 
   if (!result.ok) {
-    if (result.reason === "pending") {
-      return {
-        ok: false,
-        message: "حساب شما ثبت شده اما هنوز توسط مدیر تایید نشده است. پس از تایید می‌توانید وارد شوید.",
-      };
-    }
-    if (result.reason === "expired") {
-      // Correct credentials, no active subscription: not a failed attempt either.
-      return { ok: false, message: "اشتراک شما به پایان رسیده است، لطفاً با مدیریت تماس بگیرید." };
-    }
     if (result.reason === "inactive") {
       // Correct credentials, disabled account: say so without counting a failure.
       return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };
@@ -87,8 +77,9 @@ export type UserRegisterActionResult =
   | { ok: false; message: string; fieldErrors?: FieldErrors };
 
 /**
- * Self-registration for customers. The account is created *inactive* and
- * unapproved; an administrator activates it from "کاربران در انتظار".
+ * Self-registration for customers. The account is active and approved right
+ * away and the customer is signed in. New accounts are never collaborators;
+ * only an administrator can turn collaborator mode on.
  */
 export async function registerUserAction(formData: FormData): Promise<UserRegisterActionResult> {
   if (!isTrustedOrigin()) {
@@ -123,16 +114,22 @@ export async function registerUserAction(formData: FormData): Promise<UserRegist
       };
     }
 
-    await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         name,
         companyName: companyName || null,
         phone,
         password: await hashPassword(password),
-        isActive: false,
-        approvedAt: null,
+        isActive: true,
+        approvedAt: new Date(),
+        collabrate: false,
+        authenticaed: false,
       },
+      select: { id: true, name: true, phone: true },
     });
+
+    const token = await issueUserSessionToken({ id: created.id.toString(), name: created.name, phone: created.phone });
+    setUserSessionCookie(token);
   } catch (error) {
     console.error("[users:register] failed", error);
     return { ok: false, message: "خطایی رخ داد؛ لطفاً دوباره تلاش کنید." };
@@ -140,7 +137,6 @@ export async function registerUserAction(formData: FormData): Promise<UserRegist
 
   recordFailedAttempt(throttleKey); // counts every sign-up towards the per-IP cap
   revalidatePath("/admin/users");
-  revalidatePath("/admin/users/pending");
   revalidatePath("/admin/dashboard");
   return { ok: true };
 }

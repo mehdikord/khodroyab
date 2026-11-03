@@ -5,7 +5,13 @@ import Link from "next/link";
 import { ArrowDownWideNarrow, Building2, ChevronLeft, X } from "lucide-react";
 
 import type { PriceListCarInfo, PriceListOffer, PriceListPricesByColumn } from "@/lib/price-list";
-import { PRICE_TABLE_PRICE_FIELDS, type PriceColumn, type PriceTablePriceField } from "@/lib/price-table-shared";
+import {
+  PRICE_TABLE_ALL_PRICE_KEYS,
+  PRICE_TABLE_PRICE_FIELDS,
+  type PriceColumn,
+  type PriceTableAnyPriceField,
+  type PriceTablePriceField,
+} from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
 import { BrandLogo, ColumnHeading, UserAvatar, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
@@ -20,6 +26,8 @@ interface CarOffersViewProps {
   columns: PriceColumn[];
   /** Signed-in user, so their own row can be marked. */
   currentUserId: string;
+  /** The viewer is a verified collaborator: show collaborator prices too. */
+  showPartner: boolean;
 }
 
 const headClass = "whitespace-nowrap px-3 py-3.5 text-right text-[11px] font-extrabold uppercase tracking-wider text-panel-muted";
@@ -83,7 +91,7 @@ function CompanyIcon() {
  * Desktop: table with the seller column pinned and the price columns
  * scrolling horizontally. Below `lg`: cards with a scrollable strip.
  */
-export function CarOffersView({ car, offers, lowestByColumn, columns, currentUserId }: CarOffersViewProps) {
+export function CarOffersView({ car, offers, lowestByColumn, columns, currentUserId, showPartner }: CarOffersViewProps) {
   const [sortBy, setSortBy] = useState<PriceTablePriceField>("priceUsd");
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const sorted = useMemo(() => sortOffers(offers, sortBy, sortColumn), [offers, sortBy, sortColumn]);
@@ -94,8 +102,8 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, currentUse
     const lowest = lowestByColumn[key];
     if (!prices || !lowest) return undefined;
     return Object.fromEntries(
-      PRICE_TABLE_PRICE_FIELDS.map(({ key }) => [key, prices[key] !== null && prices[key] === lowest[key]])
-    ) as Record<PriceTablePriceField, boolean>;
+      PRICE_TABLE_ALL_PRICE_KEYS.map((key) => [key, prices[key] !== null && prices[key] === lowest[key]])
+    ) as Record<PriceTableAnyPriceField, boolean>;
   };
 
   const toggleSortColumn = (key: string) => setSortColumn((current) => (current === key ? null : key));
@@ -233,7 +241,7 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, currentUse
                         sortColumn === column.key ? "bg-[#FF6A00]/[0.035]" : columnIndex % 2 === 1 && "bg-panel-line/[0.02]"
                       )}
                     >
-                      <YearPrices prices={offer.byColumn[column.key]} best={bestFor(offer, column.key)} highlight={sortBy} />
+                      <YearPrices prices={offer.byColumn[column.key]} best={bestFor(offer, column.key)} highlight={sortBy} showPartner={showPartner} />
                     </td>
                   ))}
                 </tr>
@@ -295,7 +303,13 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, currentUse
                         <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
                           <ColumnHeading column={column} active={priced} />
                         </p>
-                        <YearPrices prices={offer.byColumn[column.key]} best={bestFor(offer, column.key)} highlight={sortBy} className="min-h-[70px]" />
+                        <YearPrices
+                          prices={offer.byColumn[column.key]}
+                          best={bestFor(offer, column.key)}
+                          highlight={sortBy}
+                          showPartner={showPartner}
+                          className="min-h-[70px]"
+                        />
                       </div>
                     );
                   })}

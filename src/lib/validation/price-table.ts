@@ -1,21 +1,21 @@
 import { z } from "zod";
 
 import {
+  PRICE_TABLE_ALL_PRICE_KEYS,
   PRICE_TABLE_MAX_TIERS,
-  PRICE_TABLE_PRICE_FIELDS,
   PRICE_TABLE_PRICE_MAX_DIGITS,
   PRICE_TABLE_YEAR_MAX,
   PRICE_TABLE_YEAR_MIN,
   digitsOnly,
   isValidTierYear,
-  type PriceTablePriceField,
+  type PriceTableAnyPriceField,
 } from "@/lib/price-table-shared";
 import { toPersianDigits } from "@/lib/utils";
 
 export { PRICE_TABLE_PRICE_MAX_DIGITS };
 
-/** One validated tier: a year, a colour and at least one of the three prices. */
-export interface PriceTableTierInput extends Record<PriceTablePriceField, string | null> {
+/** One validated tier: a year, a colour and at least one of the six prices (three public, three collaborator). */
+export interface PriceTableTierInput extends Record<PriceTableAnyPriceField, string | null> {
   year: string;
   colorId: string;
 }
@@ -37,7 +37,7 @@ export type ParsedPriceTableForm =
  * - `<carId>.<index>.<field>`     one input of the tier at `index` (year, colorId or a price)
  * - `<carId>.<index>.combo`       the tier repeats a (year, colour) pair already in the row
  */
-export function tierErrorKey(carId: string, index: number, field: "year" | "colorId" | "combo" | PriceTablePriceField): string {
+export function tierErrorKey(carId: string, index: number, field: "year" | "colorId" | "combo" | PriceTableAnyPriceField): string {
   return `${carId}.${index}.${field}`;
 }
 
@@ -47,6 +47,9 @@ const rawTierSchema = z.object({
   priceUsd: z.string().trim().max(64),
   clearancePrice: z.string().trim().max(64),
   instantPrice: z.string().trim().max(64),
+  partnerPriceUsd: z.string().trim().max(64).default(""),
+  partnerClearancePrice: z.string().trim().max(64).default(""),
+  partnerInstantPrice: z.string().trim().max(64).default(""),
 });
 
 const rawEntrySchema = z.object({
@@ -66,13 +69,14 @@ function parsePrice(raw: string): { value: string } | { error: string } {
 }
 
 function isBlankTier(tier: z.infer<typeof rawTierSchema>): boolean {
-  return PRICE_TABLE_PRICE_FIELDS.every(({ key }) => !tier[key]);
+  return PRICE_TABLE_ALL_PRICE_KEYS.every((key) => !tier[key]);
 }
 
 /**
  * Parse the JSON `entries` field of the "save my price table" form.
  *
- * - A tier whose three prices are blank is ignored (its year/colour alone mean nothing).
+ * - A tier whose six prices (public and collaborator) are blank is ignored
+ *   (its year/colour alone mean nothing). Every price is optional on its own.
  * - A row without any priced tier is "not filled in" and dropped.
  * - Every priced tier needs a valid 4-digit year, a colour and at least one
  *   price; its (year, colour) pair must be unique within the row — the same
@@ -133,6 +137,9 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
         priceUsd: null,
         clearancePrice: null,
         instantPrice: null,
+        partnerPriceUsd: null,
+        partnerClearancePrice: null,
+        partnerInstantPrice: null,
       };
 
       let yearOk = false;
@@ -161,7 +168,7 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
         rowValid = false;
       }
 
-      for (const { key } of PRICE_TABLE_PRICE_FIELDS) {
+      for (const key of PRICE_TABLE_ALL_PRICE_KEYS) {
         if (!rawTier[key]) continue;
         const price = parsePrice(rawTier[key]);
         if ("error" in price) {

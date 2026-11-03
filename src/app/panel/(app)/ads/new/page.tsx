@@ -2,8 +2,9 @@ import React from "react";
 import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
-import { requireUser } from "@/lib/auth/user-auth";
+import { requireCollaborator } from "@/lib/auth/user-auth";
 import { AdCarPicker, type AdCarChoice } from "@/components/panel/ads/AdCarPicker";
+import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
 export const metadata: Metadata = {
   title: "انتخاب خودرو | پنل کاربری خودرو یاب",
@@ -14,7 +15,8 @@ export const dynamic = "force-dynamic";
 
 /** First step of a new ad: pick the car from the catalogue. */
 export default async function NewAdCarPage() {
-  await requireUser();
+  const user = await requireCollaborator();
+  if (!user.isPartner) return <VerificationRequired feature="ثبت آگهی" />;
 
   const cars = await prisma.car.findMany({
     include: {

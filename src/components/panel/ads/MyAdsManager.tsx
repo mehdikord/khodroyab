@@ -11,6 +11,8 @@ import { cn, toPersianDigits } from "@/lib/utils";
 
 interface MyAdsManagerProps {
   ads: UserCarRecord[];
+  /** Verified collaborator: may create and edit ads (otherwise the list is read-only). */
+  canPublish: boolean;
 }
 
 type StatusFilter = "all" | AdStatus;
@@ -26,7 +28,7 @@ const FILTERS: { key: StatusFilter; label: string }[] = [
  * "My ads" module: the customer's own ads with a status filter. Creating and
  * editing happen on their own pages.
  */
-export function MyAdsManager({ ads }: MyAdsManagerProps) {
+export function MyAdsManager({ ads, canPublish }: MyAdsManagerProps) {
   const [filter, setFilter] = useState<StatusFilter>("all");
 
   const counts = useMemo(() => {
@@ -49,13 +51,15 @@ export function MyAdsManager({ ads }: MyAdsManagerProps) {
               : `${toPersianDigits(ads.length)} آگهی · ${toPersianDigits(counts.pending)} در انتظار تایید · ${toPersianDigits(counts.approved)} تایید‌شده`}
           </p>
         </div>
-        <Link
-          href="/panel/ads/new"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-5 text-sm font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110"
-        >
-          <Plus className="h-4 w-4" />
-          ثبت آگهی جدید
-        </Link>
+        {canPublish && (
+          <Link
+            href="/panel/ads/new"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-5 text-sm font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110"
+          >
+            <Plus className="h-4 w-4" />
+            ثبت آگهی جدید
+          </Link>
+        )}
       </div>
 
       {/* Status filter chips */}
@@ -103,13 +107,15 @@ export function MyAdsManager({ ads }: MyAdsManagerProps) {
             <p className="mt-2 text-xs leading-6 text-panel-muted-2">
               آگهی شما پس از بررسی و تایید مدیر، در جستجوی همه کاربران نمایش داده می‌شود.
             </p>
-            <Link
-              href="/panel/ads/new"
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-5 text-sm font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110"
-            >
-              <Plus className="h-4 w-4" />
-              ثبت آگهی جدید
-            </Link>
+            {canPublish && (
+              <Link
+                href="/panel/ads/new"
+                className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-5 text-sm font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110"
+              >
+                <Plus className="h-4 w-4" />
+                ثبت آگهی جدید
+              </Link>
+            )}
           </div>
         </div>
       ) : visibleAds.length === 0 ? (
@@ -126,7 +132,7 @@ export function MyAdsManager({ ads }: MyAdsManagerProps) {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {visibleAds.map((ad, index) => (
-            <MyAdCard key={ad.id} ad={ad} delay={Math.min(index, 6) * 45} />
+            <MyAdCard key={ad.id} ad={ad} canEdit={canPublish} delay={Math.min(index, 6) * 45} />
           ))}
         </div>
       )}

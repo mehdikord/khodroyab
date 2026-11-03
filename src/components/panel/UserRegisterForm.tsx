@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useId, useState, useTransition } from "react";
-import { AlertCircle, ArrowLeft, Building2, CheckCircle2, Clock3, Eye, EyeOff, Loader2, Lock, Smartphone, UserRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, ArrowLeft, Building2, Eye, EyeOff, Loader2, Lock, ShieldCheck, Smartphone, UserRound } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { registerUserAction } from "@/app/panel/auth-actions";
@@ -13,17 +14,13 @@ const fieldClass = (hasError: boolean) =>
     hasError ? "border-red-500/50" : "border-panel-line/[0.12] hover:border-panel-line/20"
   );
 
-interface UserRegisterFormProps {
-  /** Switch back to the login form (after success or via the footer link). */
-  onSwitchToLogin: () => void;
-}
-
 /**
  * Self-registration form: name, optional business name, mobile (09…),
  * password + confirmation.
- * The created account waits for admin approval before it can sign in.
+ * The account is active right away: on success the customer is signed in and
+ * sent to the dashboard.
  */
-export const UserRegisterForm: React.FC<UserRegisterFormProps> = ({ onSwitchToLogin }) => {
+export const UserRegisterForm: React.FC = () => {
   const nameId = useId();
   const companyId = useId();
   const phoneId = useId();
@@ -33,8 +30,8 @@ export const UserRegisterForm: React.FC<UserRegisterFormProps> = ({ onSwitchToLo
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [done, setDone] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,40 +42,13 @@ export const UserRegisterForm: React.FC<UserRegisterFormProps> = ({ onSwitchToLo
     startTransition(async () => {
       const result = await registerUserAction(formData);
       if (result.ok) {
-        setDone(true);
+        router.replace("/panel/dashboard");
+        router.refresh();
         return;
       }
       if (result.fieldErrors) setFieldErrors(result.fieldErrors);
       setFormError(result.message);
     });
-  }
-
-  if (done) {
-    return (
-      <div className="admin-animate-in space-y-5 text-center" role="status" aria-live="polite">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
-          <CheckCircle2 className="h-8 w-8" />
-        </span>
-        <div>
-          <h2 className="text-lg font-black text-panel-text">ثبت‌نام شما انجام شد</h2>
-          <p className="mt-2 text-sm leading-7 text-panel-muted">
-            حساب شما ساخته شد و در انتظار تایید مدیر است. پس از فعال‌سازی توسط مدیر می‌توانید با شماره موبایل و رمز عبور خود وارد شوید.
-          </p>
-        </div>
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs font-semibold text-amber-300">
-          <Clock3 className="h-4 w-4 shrink-0" />
-          وضعیت حساب: در انتظار تایید مدیر
-        </div>
-        <button
-          type="button"
-          onClick={onSwitchToLogin}
-          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-panel-line/[0.12] bg-panel-bg text-[15px] font-extrabold text-panel-text transition-colors hover:border-[#FF6A00]/50"
-        >
-          بازگشت به صفحه ورود
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-      </div>
-    );
   }
 
   const PasswordToggle = (
@@ -288,8 +258,8 @@ export const UserRegisterForm: React.FC<UserRegisterFormProps> = ({ onSwitchToLo
       </button>
 
       <p className="flex items-start gap-2 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-3.5 py-3 text-[11px] leading-5 text-panel-muted">
-        <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-panel-accent" />
-        حساب شما پس از ثبت‌نام غیرفعال است و بعد از تایید مدیر فعال می‌شود.
+        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-panel-accent" />
+        پس از ثبت‌نام بلافاصله وارد پنل کاربری خود می‌شوید.
       </p>
     </form>
   );

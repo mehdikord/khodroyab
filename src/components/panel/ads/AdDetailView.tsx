@@ -108,7 +108,7 @@ export function AdDetailView({ ad }: { ad: AdDetailRecord }) {
 
             {ad.description && <p className="mt-4 whitespace-pre-line break-words text-xs leading-7 text-panel-text-2">{ad.description}</p>}
 
-            {ad.isOwner && (
+            {ad.canEdit && (
               <Link
                 href={`/panel/ads/${ad.id}/edit`}
                 className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-panel-line/[0.12] bg-panel-line/[0.03] text-sm font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text"
@@ -130,9 +130,24 @@ export function AdDetailView({ ad }: { ad: AdDetailRecord }) {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-bold text-panel-text-2">{term.title}</span>
                       <span className="text-sm font-black tabular-nums text-panel-text">
+                        {ad.showPartnerPrices && <span className="me-1.5 text-[10px] font-bold text-panel-muted">عمومی</span>}
                         {formatPersianNumber(term.currentPrice)} <span className="text-[10px] font-semibold text-panel-muted-2">تومان</span>
                       </span>
                     </div>
+                    {ad.showPartnerPrices && (
+                      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#FF6A00]/20 bg-[#FF6A00]/[0.06] px-2.5 py-1.5">
+                        <span className="text-[11px] font-bold text-panel-accent">قیمت همکار</span>
+                        <span className="text-sm font-black tabular-nums text-panel-accent">
+                          {term.partnerPrice !== null ? (
+                            <>
+                              {formatPersianNumber(term.partnerPrice)} <span className="text-[10px] font-semibold">تومان</span>
+                            </>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-panel-faint">ثبت نشده</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
                     {(term.sale || term.perecentage) && (
                       <p className="mt-1.5 text-[11px] text-panel-success">
                         تخفیف:{" "}

@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { listUserPriceTableEntries, type PriceTableEntryRecord } from "@/lib/price-table";
+import { PRICE_TABLE_ALL_PRICE_KEYS, type PriceTableAnyPriceField } from "@/lib/price-table-shared";
 import { parsePriceTableForm, type PriceTableEntryInput } from "@/lib/validation/price-table";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
@@ -23,23 +24,28 @@ function parseBigInt(value: string): bigint | null {
   }
 }
 
+/** Only collaborators whose identity is verified may save a price table. */
 async function guardRequest(): Promise<{ ok: false; message: string } | { ok: true; userId: bigint }> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
+  if (!user.collabrate) return { ok: false, message: "ثبت جدول قیمت فقط برای کاربران همکار امکان‌پذیر است." };
+  if (!user.authenticaed) {
+    return { ok: false, message: "حساب کاربری شما احراز هویت نشده است؛ برای ثبت جدول قیمت ابتدا احراز هویت خود را انجام دهید." };
+  }
   const userId = parseBigInt(user.id);
   if (userId === null) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
   return { ok: true, userId };
 }
 
-type TierSignatureInput = Pick<PriceTableEntryInput["tiers"][number], "year" | "priceUsd" | "clearancePrice" | "instantPrice"> & {
+type TierSignatureInput = Pick<PriceTableEntryInput["tiers"][number], "year" | PriceTableAnyPriceField> & {
   colorId: string | bigint;
 };
 
 /** Stable comparison key of a row's tiers, to skip rows that did not change. */
 function entrySignature(tiers: TierSignatureInput[]): string {
   return JSON.stringify(
-    tiers.map((tier) => [tier.year, tier.colorId.toString(), tier.priceUsd, tier.clearancePrice, tier.instantPrice])
+    tiers.map((tier) => [tier.year, tier.colorId.toString(), ...PRICE_TABLE_ALL_PRICE_KEYS.map((key) => tier[key])])
   );
 }
 
@@ -104,7 +110,16 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
       select: {
         carId: true,
         prices: {
-          select: { year: true, colorId: true, priceUsd: true, clearancePrice: true, instantPrice: true },
+          select: {
+            year: true,
+            colorId: true,
+            priceUsd: true,
+            clearancePrice: true,
+            instantPrice: true,
+            partnerPriceUsd: true,
+            partnerClearancePrice: true,
+            partnerInstantPrice: true,
+          },
           orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
         },
       },

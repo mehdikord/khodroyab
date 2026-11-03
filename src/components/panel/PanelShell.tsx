@@ -3,27 +3,28 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, ChevronDown, ExternalLink, LogOut } from "lucide-react";
+import { ChevronDown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
-import { PANEL_NAV_ITEMS, findActivePanelItem } from "@/components/panel/panel-nav";
+import { findActivePanelItem, panelNavItemsFor } from "@/components/panel/panel-nav";
 import { logoutUserAction } from "@/app/panel/auth-actions";
 import { ThemeSwitch } from "@/components/panel/ThemeSwitch";
+import { VerificationNotice } from "@/components/panel/verification/VerificationNotice";
 import type { PanelTheme } from "@/lib/panel-theme";
-import { SUBSCRIPTION_WARNING_DAYS } from "@/lib/subscriptions-shared";
-import { toPersianDigits } from "@/lib/utils";
 
 export interface PanelShellUser {
   name: string;
   phone: string;
   image: string | null;
+  /** Collaborator mode (کاربر همکار), switched on by the admin. */
+  collabrate: boolean;
+  /** Identity verification approved by the admin. */
+  authenticaed: boolean;
 }
 
 interface PanelShellProps {
   user: PanelShellUser;
-  /** Days left on the active subscription, shown as a header badge. */
-  subscriptionDaysLeft: number;
   /** Server-resolved theme (from cookie). */
   theme: PanelTheme;
   children: React.ReactNode;
@@ -54,34 +55,13 @@ function Avatar({ user, className }: { user: PanelShellUser; className?: string 
   );
 }
 
-/** Remaining subscription days: green normally, red under the warning threshold. */
-function SubscriptionDaysBadge({ days }: { days: number }) {
-  const warning = days < SUBSCRIPTION_WARNING_DAYS;
-  return (
-    <span
-      title={`${toPersianDigits(days)} روز از اشتراک شما باقی مانده است`}
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-extrabold",
-        warning
-          ? "border-red-500/40 bg-red-500/[0.12] text-red-500"
-          : "border-emerald-500/40 bg-emerald-500/[0.12] text-emerald-500"
-      )}
-    >
-      <CalendarClock className="h-3.5 w-3.5" />
-      <span>
-        {toPersianDigits(days)} روز<span className="hidden sm:inline"> اشتراک</span>
-      </span>
-    </span>
-  );
-}
-
 /** Fixed bottom dock holding the panel's main navigation. */
-function Dock({ pathname }: { pathname: string }) {
+function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean }) {
   const active = findActivePanelItem(pathname);
   return (
     <nav aria-label="ناوبری اصلی پنل" className="panel-dock pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-3">
       <div className="panel-dock-glass pointer-events-auto mx-auto flex max-w-md items-center gap-1 rounded-[22px] p-1.5">
-        {PANEL_NAV_ITEMS.map((item) => {
+        {panelNavItemsFor(collabrate).map((item) => {
           const Icon = item.icon;
           const isActive = active?.key === item.key;
           return (
@@ -123,13 +103,17 @@ function Dock({ pathname }: { pathname: string }) {
 }
 
 /** Customer-panel chrome: sticky top bar, content area, fixed bottom dock. */
-export const PanelShell: React.FC<PanelShellProps> = ({ user, subscriptionDaysLeft, theme, children }) => {
+export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, children }) => {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const activeItem = findActivePanelItem(pathname);
-  const pageTitle = pathname.startsWith("/panel/sellers/") ? "پروفایل فروشنده" : activeItem?.label ?? "پنل کاربری";
+  const pageTitle = pathname.startsWith("/panel/sellers/")
+    ? "پروفایل فروشنده"
+    : pathname.startsWith("/panel/verification")
+      ? "احراز هویت"
+      : activeItem?.label ?? "پنل کاربری";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -168,8 +152,6 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, subscriptionDaysLe
             <p className="truncate text-[15px] font-extrabold text-panel-text sm:text-base">{pageTitle}</p>
           </div>
 
-          <SubscriptionDaysBadge days={subscriptionDaysLeft} />
-
           {/* Theme switch */}
           <ThemeSwitch initialTheme={theme} />
 
@@ -202,6 +184,24 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, subscriptionDaysLe
                   </div>
                 </div>
                 <div className="p-1.5">
+                  {user.collabrate && (
+                    <Link
+                      href="/panel/verification"
+                      role="menuitem"
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
+                    >
+                      <ShieldCheck className={cn("h-4 w-4", user.authenticaed ? "text-panel-success" : "text-panel-warning")} />
+                      <span>احراز هویت</span>
+                      <span
+                        className={cn(
+                          "ms-auto rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                          user.authenticaed ? "bg-emerald-500/10 text-panel-success" : "bg-panel-warning/10 text-panel-warning"
+                        )}
+                      >
+                        {user.authenticaed ? "تایید شده" : "انجام نشده"}
+                      </span>
+                    </Link>
+                  )}
                   <Link
                     href="/"
                     role="menuitem"
@@ -228,9 +228,12 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, subscriptionDaysLe
       </header>
 
       {/* Content */}
-      <div className="panel-content mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-7">{children}</div>
+      <div className="panel-content mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-7">
+        {user.collabrate && !user.authenticaed && !pathname.startsWith("/panel/verification") && <VerificationNotice />}
+        {children}
+      </div>
 
-      <Dock pathname={pathname} />
+      <Dock pathname={pathname} collabrate={user.collabrate} />
     </div>
   );
 };

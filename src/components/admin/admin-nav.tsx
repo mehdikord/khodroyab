@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, UserRoundPlus, Crown, HeartHandshake } from "lucide-react";
+import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface AdminSubNavItem {
@@ -44,14 +44,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "DASHBOARD",
         href: "/admin/dashboard",
         icon: LayoutDashboard,
-      },
-      {
-        // Listed before "users" so it wins the prefix match over "/admin/users".
-        key: "users_pending",
-        label: "کاربران در انتظار",
-        enLabel: "PENDING USERS",
-        href: "/admin/users/pending",
-        icon: UserRoundPlus,
       },
       {
         key: "users",

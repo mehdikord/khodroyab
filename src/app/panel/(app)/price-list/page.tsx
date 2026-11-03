@@ -35,9 +35,9 @@ function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
  * lowest raw, clearance and instant price any seller has entered.
  */
 export default async function PanelPriceListPage() {
-  await requireUser();
+  const user = await requireUser();
 
-  const [rows, sellerCount] = await Promise.all([listPriceListRows(), countPriceListSellers()]);
+  const [rows, sellerCount] = await Promise.all([listPriceListRows(user.isPartner), countPriceListSellers()]);
   const pricedCount = rows.filter((row) => row.sellerCount > 0).length;
 
   return (
@@ -84,7 +84,7 @@ export default async function PanelPriceListPage() {
         </div>
       ) : (
         <>
-          <PriceListBrowser rows={rows} />
+          <PriceListBrowser rows={rows} showPartner={user.isPartner} />
           <p className="text-[11px] leading-6 text-panel-faint">
             همه قیمت‌ها به دلار هستند. هر ستون یک سال ساخت و رنگ است و کمترین قیمت خام، ترخیصی و فوری آن را از بین جدول قیمت فروشندگان
             نشان می‌دهد؛ «—» یعنی برای آن سال و رنگ قیمتی ثبت نشده است. برای دیدن قیمت همه فروشندگان روی هر ردیف بزنید.

@@ -44,8 +44,11 @@ function toBigIntOrNull(value: string): bigint | null {
   }
 }
 
-/** Only approved, active ads are ever visible to customers. */
-const PUBLIC_AD_WHERE = { status: "approved", isActive: true } satisfies Prisma.UserCarWhereInput;
+/** Sellers whose content is public: collaborators with a verified identity. */
+const PUBLIC_SELLER_WHERE = { collabrate: true, authenticaed: true } satisfies Prisma.UserWhereInput;
+
+/** Only approved, active ads of verified collaborators are ever visible to customers. */
+const PUBLIC_AD_WHERE = { status: "approved", isActive: true, user: PUBLIC_SELLER_WHERE } satisfies Prisma.UserCarWhereInput;
 
 function buildWhere(filters: SearchFilterValues): Prisma.UserCarWhereInput {
   const and: Prisma.UserCarWhereInput[] = [];
@@ -123,6 +126,7 @@ const searchInclude = {
     select: {
       id: true,
       price: true,
+      partnerPrice: true,
       sale: true,
       perecentage: true,
       description: true,
@@ -145,8 +149,10 @@ function toPricePoint(price: string, at: Date): SearchPricePoint {
  * Build the price timeline of a term. The history table is append-only, so
  * consecutive duplicates are collapsed defensively and the live `price` column
  * is appended if (for any reason) the log does not already end with it.
+ * The timeline tracks the public price only. The collaborator price is
+ * included only when `showPartner` is set, so it never reaches other viewers.
  */
-function toSearchSaleTerm(row: SearchTermRow): SearchAdSaleTerm {
+function toSearchSaleTerm(row: SearchTermRow, showPartner: boolean): SearchAdSaleTerm {
   const points: SearchPricePoint[] = [];
   for (const entry of row.priceHistory) {
     const point = toPricePoint(entry.price, entry.createdAt);
@@ -161,13 +167,14 @@ function toSearchSaleTerm(row: SearchTermRow): SearchAdSaleTerm {
     id: row.id.toString(),
     title: row.saleTerm.title,
     currentPrice: current,
+    partnerPrice: showPartner && row.partnerPrice ? toPrice(row.partnerPrice) : null,
     previousPrice,
     delta: previousPrice === null ? null : current - previousPrice,
     history: points,
   };
 }
 
-function toSearchAdRecord(row: SearchAdRow): SearchAdRecord {
+function toSearchAdRecord(row: SearchAdRow, showPartner: boolean): SearchAdRecord {
   return {
     id: row.id.toString(),
     code: row.code,
@@ -184,15 +191,15 @@ function toSearchAdRecord(row: SearchAdRow): SearchAdRecord {
     userName: publicDisplayName(row.user),
     userIsCompany: hasCompanyName(row.user),
     userImage: row.user.image,
-    saleTerms: row.saleTerms.filter((item) => item.saleTerm.isActive).map(toSearchSaleTerm),
+    saleTerms: row.saleTerms.filter((item) => item.saleTerm.isActive).map((term) => toSearchSaleTerm(term, showPartner)),
     createdAtLabel: faDate.format(row.createdAt),
   };
 }
 
 /* ───────────────────────── Loaders ───────────────────────── */
 
-/** Run a customer search over approved ads. */
-export async function searchApprovedAds(filters: SearchFilterValues, requestedPage: number): Promise<SearchResult> {
+/** Run a customer search over approved ads. `showPartner`: the viewer is a verified collaborator. */
+export async function searchApprovedAds(filters: SearchFilterValues, requestedPage: number, showPartner: boolean): Promise<SearchResult> {
   const where = buildWhere(filters);
   const total = await prisma.userCar.count({ where });
 
@@ -210,7 +217,7 @@ export async function searchApprovedAds(filters: SearchFilterValues, requestedPa
           take: SEARCH_PAGE_SIZE,
         });
 
-  return { ads: rows.map(toSearchAdRecord), total, page, pageCount, pageSize: SEARCH_PAGE_SIZE };
+  return { ads: rows.map((row) => toSearchAdRecord(row, showPartner)), total, page, pageCount, pageSize: SEARCH_PAGE_SIZE };
 }
 
 /**
@@ -271,13 +278,20 @@ const adDetailInclude = {
   options: userCarOptionsInclude,
 } satisfies Prisma.UserCarInclude;
 
+/** Who is looking at an ad: their id and whether they are a verified collaborator. */
+export interface AdViewer {
+  id: string;
+  isPartner: boolean;
+}
+
 /**
  * One ad for its dedicated page. Other customers only reach approved, active
  * ads; the owner also reaches their own pending, rejected or deactivated ones.
+ * Collaborator prices are shown to verified collaborators and to the owner.
  */
-export async function getAdDetail(idRaw: string, viewerId: string): Promise<AdDetailRecord | null> {
+export async function getAdDetail(idRaw: string, adViewer: AdViewer): Promise<AdDetailRecord | null> {
   const id = toBigIntOrNull(idRaw);
-  const viewer = toBigIntOrNull(viewerId);
+  const viewer = toBigIntOrNull(adViewer.id);
   if (id === null || viewer === null) return null;
 
   const row = await prisma.userCar.findFirst({
@@ -288,19 +302,24 @@ export async function getAdDetail(idRaw: string, viewerId: string): Promise<AdDe
 
   const ownPhotos = row.images.map((image) => image.imageUrl);
   const liveTerms = row.saleTerms.filter((term) => term.saleTerm.isActive);
+  const isOwner = row.userId === viewer;
+  const showPartner = adViewer.isPartner || isOwner;
 
   return {
-    ...toSearchAdRecord(row),
+    ...toSearchAdRecord(row, showPartner),
     status: row.status,
     isActive: row.isActive,
-    isOwner: row.userId === viewer,
+    isOwner,
+    // Editing is publishing: only a verified collaborator may edit their own ad.
+    canEdit: isOwner && adViewer.isPartner,
+    showPartnerPrices: showPartner,
     qautity: row.qautity,
     description: row.description,
     galleryUrls: ownPhotos.length > 0 ? ownPhotos : row.car.carImages.map((image) => image.imageUrl),
     galleryIsCatalogue: ownPhotos.length === 0,
     options: adOptionsToDisplay(row.options),
     saleTerms: liveTerms.map((term) => ({
-      ...toSearchSaleTerm(term),
+      ...toSearchSaleTerm(term, showPartner),
       sale: term.sale,
       perecentage: term.perecentage,
       description: term.description,
@@ -312,13 +331,14 @@ export async function getAdDetail(idRaw: string, viewerId: string): Promise<AdDe
 
 /**
  * Public seller profile (name, avatar, bio, contact details) plus the count of
- * their approved ads. Returns null for unknown or deactivated accounts so the page can 404.
+ * their approved ads. Only verified collaborators have a public profile; returns
+ * null for unknown, deactivated or non-collaborator accounts so the page can 404.
  */
 export async function getSellerProfile(idRaw: string): Promise<SellerProfile | null> {
   const id = toBigIntOrNull(idRaw);
   if (id === null) return null;
   const user = await prisma.user.findFirst({
-    where: { id, isActive: true },
+    where: { id, isActive: true, ...PUBLIC_SELLER_WHERE },
     select: {
       id: true,
       name: true,
@@ -347,7 +367,7 @@ export async function getSellerProfile(idRaw: string): Promise<SellerProfile | n
 }
 
 /** Every approved, active ad of one seller, newest first (same projection as search). */
-export async function listSellerApprovedAds(idRaw: string): Promise<SearchAdRecord[]> {
+export async function listSellerApprovedAds(idRaw: string, showPartner: boolean): Promise<SearchAdRecord[]> {
   const id = toBigIntOrNull(idRaw);
   if (id === null) return [];
   const rows = await prisma.userCar.findMany({
@@ -355,5 +375,5 @@ export async function listSellerApprovedAds(idRaw: string): Promise<SearchAdReco
     include: searchInclude,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
-  return rows.map(toSearchAdRecord);
+  return rows.map((row) => toSearchAdRecord(row, showPartner));
 }

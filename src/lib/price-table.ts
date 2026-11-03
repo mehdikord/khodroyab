@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { hasAnyPrice, withVisiblePrices } from "@/lib/price-table-shared";
 
 /** A car the admin has allowed in price tables (the catalogue side of a row). */
 export interface PriceTableCarRecord {
@@ -13,7 +14,10 @@ export interface PriceTableCarRecord {
   model: string;
 }
 
-/** One tier of a row: the three USD prices for a (production year, colour) pair. */
+/**
+ * One tier of a row: the three USD prices for a (production year, colour)
+ * pair, each with a public and a collaborator value.
+ */
 export interface PriceTableTierRecord {
   /** Production year typed by the customer (independent of any sale ad's year). */
   year: string;
@@ -27,6 +31,10 @@ export interface PriceTableTierRecord {
   clearancePrice: string | null;
   /** Instant price, same format as `priceUsd`. */
   instantPrice: string | null;
+  /** Collaborator raw / clearance / instant prices; `null` when blank or hidden from the viewer. */
+  partnerPriceUsd: string | null;
+  partnerClearancePrice: string | null;
+  partnerInstantPrice: string | null;
 }
 
 /** What a customer has entered for one car: one or more (year, colour) price tiers. */
@@ -75,8 +83,12 @@ export async function listPriceTableCars(): Promise<PriceTableCarRecord[]> {
   return cars.map(toCarRecord);
 }
 
-/** The customer's saved entries, restricted to cars that are still eligible. */
-export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTableEntryRecord[]> {
+/**
+ * The customer's saved entries, restricted to cars that are still eligible.
+ * Pass `showPartner = false` for viewers who may not see collaborator prices:
+ * those are blanked, and tiers left without any visible price are dropped.
+ */
+export async function listUserPriceTableEntries(userId: bigint, showPartner = true): Promise<PriceTableEntryRecord[]> {
   const entries = await prisma.userPriceTableEntry.findMany({
     where: { userId, car: { priceTable: true } },
     select: {
@@ -88,6 +100,9 @@ export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTa
           priceUsd: true,
           clearancePrice: true,
           instantPrice: true,
+          partnerPriceUsd: true,
+          partnerClearancePrice: true,
+          partnerInstantPrice: true,
           color: { select: { name: true, code: true } },
         },
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -95,15 +110,19 @@ export async function listUserPriceTableEntries(userId: bigint): Promise<PriceTa
     },
     orderBy: { id: "asc" },
   });
-  return entries.map((entry) => ({
-    carId: entry.carId.toString(),
-    tiers: entry.prices.map(({ color, colorId, ...tier }) => ({
-      ...tier,
-      colorId: colorId.toString(),
-      colorName: color.name,
-      colorCode: color.code,
-    })),
-  }));
+  return entries
+    .map((entry) => ({
+      carId: entry.carId.toString(),
+      tiers: entry.prices
+        .map(({ color, colorId, ...tier }) => ({
+          ...withVisiblePrices(tier, showPartner),
+          colorId: colorId.toString(),
+          colorName: color.name,
+          colorCode: color.code,
+        }))
+        .filter(hasAnyPrice),
+    }))
+    .filter((entry) => entry.tiers.length > 0);
 }
 
 /** Merge eligible cars with a customer's entries into display rows (one per car). */
@@ -113,7 +132,7 @@ export function buildPriceTableRows(cars: PriceTableCarRecord[], entries: PriceT
 }
 
 /** Full price table of one user: all eligible cars, with "---" gaps left as `null`. */
-export async function getUserPriceTableRows(userId: bigint): Promise<PriceTableRow[]> {
-  const [cars, entries] = await Promise.all([listPriceTableCars(), listUserPriceTableEntries(userId)]);
+export async function getUserPriceTableRows(userId: bigint, showPartner: boolean): Promise<PriceTableRow[]> {
+  const [cars, entries] = await Promise.all([listPriceTableCars(), listUserPriceTableEntries(userId, showPartner)]);
   return buildPriceTableRows(cars, entries);
 }

@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
-import { userToRecord } from "@/lib/users";
-import { getActiveSubscriptionsByUser, subscriptionPlanToRecord } from "@/lib/subscriptions";
+import { userRecordInclude, userToRecord } from "@/lib/users";
 import { UsersManager } from "@/components/admin/users/UsersManager";
+import { isUserFilter } from "@/lib/users-shared";
 
 export const metadata: Metadata = {
   title: "مدیریت کاربران | پنل مدیریت خودرو یاب",
@@ -14,25 +14,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({ searchParams }: { searchParams: { filter?: string } }) {
   await requireAdmin();
 
-  const [users, plans] = await Promise.all([
-    prisma.user.findMany({
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    }),
-    prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
-      orderBy: [{ durationMonths: "asc" }, { id: "asc" }],
-    }),
-  ]);
-  const subscriptions = await getActiveSubscriptionsByUser(users.map((user) => user.id));
+  const users = await prisma.user.findMany({
+    include: userRecordInclude,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
 
-  return (
-    <UsersManager
-      initialUsers={users.map(userToRecord)}
-      initialSubscriptions={subscriptions}
-      plans={plans.map(subscriptionPlanToRecord)}
-    />
-  );
+  return <UsersManager initialUsers={users.map(userToRecord)} initialFilter={isUserFilter(searchParams.filter) ? searchParams.filter : "all"} />;
 }

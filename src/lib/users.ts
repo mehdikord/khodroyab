@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { User } from "@prisma/client";
+import type { User, UserVerificationStatus } from "@prisma/client";
 
 export interface UserRecord {
   id: string;
@@ -15,15 +15,25 @@ export interface UserRecord {
   postalCode: string | null;
   tel: string | null;
   isActive: boolean;
-  /** ISO timestamp of admin approval; null while a self-registered account waits. */
+  /** ISO timestamp of the account's approval (set on creation). */
   approvedAt: string | null;
-  /** True for self-registered accounts the admin has not approved yet. */
-  isPending: boolean;
+  /** Collaborator mode (کاربر همکار), switched on by the admin only. */
+  collabrate: boolean;
+  /** Identity verification approved by the admin. */
+  authenticaed: boolean;
+  /** State of the latest identity-verification submission; `null` when none was sent. */
+  verificationStatus: UserVerificationStatus | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export function userToRecord(user: User): UserRecord {
+/** A user row, optionally with the status of its verification submission. */
+export type UserRecordSource = User & { verification?: { status: UserVerificationStatus } | null };
+
+/** Include for queries whose rows feed `userToRecord`, so the verification state is known. */
+export const userRecordInclude = { verification: { select: { status: true } } } as const;
+
+export function userToRecord(user: UserRecordSource): UserRecord {
   return {
     id: user.id.toString(),
     name: user.name,
@@ -38,7 +48,9 @@ export function userToRecord(user: User): UserRecord {
     tel: user.tel,
     isActive: user.isActive,
     approvedAt: user.approvedAt ? user.approvedAt.toISOString() : null,
-    isPending: user.approvedAt === null,
+    collabrate: user.collabrate,
+    authenticaed: user.authenticaed,
+    verificationStatus: user.verification?.status ?? null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

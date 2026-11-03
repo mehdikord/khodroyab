@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function AdDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser();
 
-  const ad = await getAdDetail(params.id, user.id);
+  const ad = await getAdDetail(params.id, { id: user.id, isPartner: user.isPartner });
   if (!ad) notFound();
 
   return <AdDetailView ad={ad} />;

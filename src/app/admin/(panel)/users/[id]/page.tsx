@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/guards";
-import { userToRecord } from "@/lib/users";
+import { userRecordInclude, userToRecord } from "@/lib/users";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
-import { subscriptionPlanToRecord, toActiveSummary, userSubscriptionToRecord } from "@/lib/subscriptions";
+import { getUserVerification } from "@/lib/verification";
 import { UserProfile } from "@/components/admin/users/UserProfile";
 
 export const metadata: Metadata = {
@@ -30,13 +30,12 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
     return notFound();
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: userRecordInclude });
   if (!user) {
     return notFound();
   }
 
-  const now = new Date();
-  const [saleAdsCount, recentAds, subscriptionHistory, plans] = await Promise.all([
+  const [saleAdsCount, recentAds, verification] = await Promise.all([
     prisma.userCar.count({ where: { userId } }),
     prisma.userCar.findMany({
       where: { userId },
@@ -44,28 +43,15 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 5,
     }),
-    prisma.userSubscription.findMany({
-      where: { userId },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    }),
-    prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
-      orderBy: [{ durationMonths: "asc" }, { id: "asc" }],
-    }),
+    getUserVerification(userId),
   ]);
-
-  const activeSubscription = subscriptionHistory
-    .filter((row) => row.status === "active" && row.endsAt > now)
-    .sort((a, b) => b.endsAt.getTime() - a.endsAt.getTime())[0];
 
   return (
     <UserProfile
       user={userToRecord(user)}
       saleAdsCount={saleAdsCount}
       recentAds={recentAds.map(userCarToRecord)}
-      subscriptionHistory={subscriptionHistory.map((row) => userSubscriptionToRecord(row, now))}
-      activeSubscription={activeSubscription ? toActiveSummary(activeSubscription, now) : null}
-      plans={plans.map(subscriptionPlanToRecord)}
+      verification={verification}
     />
   );
 }

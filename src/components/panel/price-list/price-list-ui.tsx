@@ -3,7 +3,13 @@ import { CalendarDays, Crown } from "lucide-react";
 
 import { SafeImage } from "@/components/panel/SafeImage";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import { PRICE_TABLE_EMPTY, PRICE_TABLE_PRICE_FIELDS, type PriceColumn, type PriceTablePriceField } from "@/lib/price-table-shared";
+import {
+  PRICE_TABLE_EMPTY,
+  PRICE_TABLE_PRICE_FIELDS,
+  type PriceColumn,
+  type PriceTableAnyPriceField,
+  type PriceTablePriceField,
+} from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 function initials(name: string, count: number): string {
@@ -68,16 +74,19 @@ export function ColorLabel({ name, code, className }: { name: string | null; cod
 
 /**
  * A USD price. `best` marks the lowest price of its column (emerald + crown),
- * the default style is the accent badge; blank prices show "---".
+ * `partner` marks a collaborator price (sky badge); the default style is the
+ * accent badge. Blank prices show "---".
  */
 export function PriceTag({
   price,
   best = false,
+  partner = false,
   size = "md",
   className,
 }: {
   price: string | null | undefined;
   best?: boolean;
+  partner?: boolean;
   size?: "sm" | "md";
   className?: string;
 }) {
@@ -89,7 +98,9 @@ export function PriceTag({
         size === "sm" ? "px-1.5 py-0.5 text-[12px]" : "px-2 py-1 text-[13px]",
         best
           ? "border-emerald-500/35 bg-emerald-500/[0.1] text-panel-success"
-          : "border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] text-panel-accent",
+          : partner
+            ? "border-sky-500/30 bg-sky-500/[0.08] text-sky-500"
+            : "border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] text-panel-accent",
         className
       )}
     >
@@ -127,17 +138,21 @@ export function ColumnHeading({ column, active = false, className }: { column: P
  * Content of one price cell: the raw, clearance and instant prices stacked
  * with short labels, or a single dash when nothing was priced for that
  * (year, colour). `best` marks fields that equal the column's lowest price.
+ * With `showPartner` (verified collaborators) each price is followed by its
+ * collaborator price.
  */
 export function YearPrices({
   prices,
   best,
   highlight,
+  showPartner = false,
   className,
 }: {
-  prices: Record<PriceTablePriceField, string | null> | undefined;
-  best?: Partial<Record<PriceTablePriceField, boolean>>;
+  prices: Record<PriceTableAnyPriceField, string | null> | undefined;
+  best?: Partial<Record<PriceTableAnyPriceField, boolean>>;
   /** Field to emphasise (the active sort field). */
   highlight?: PriceTablePriceField;
+  showPartner?: boolean;
   className?: string;
 }) {
   if (!prices) {
@@ -148,15 +163,25 @@ export function YearPrices({
     );
   }
   return (
-    <dl className={cn("space-y-1", className)}>
+    <dl className={cn(showPartner ? "space-y-1.5" : "space-y-1", className)}>
       {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-        <div key={field.key} className="flex items-center justify-between gap-2">
-          <dt className={cn("text-[10px] font-bold", highlight === field.key ? "text-panel-accent" : "text-panel-muted")}>
-            {SHORT_PRICE_LABELS[field.key]}
-          </dt>
-          <dd>
-            <PriceTag price={prices[field.key]} best={Boolean(best?.[field.key])} size="sm" />
-          </dd>
+        <div key={field.key} className={cn(showPartner && "rounded-lg bg-panel-line/[0.025] p-1")}>
+          <div className="flex items-center justify-between gap-2">
+            <dt className={cn("text-[10px] font-bold", highlight === field.key ? "text-panel-accent" : "text-panel-muted")}>
+              {SHORT_PRICE_LABELS[field.key]}
+            </dt>
+            <dd>
+              <PriceTag price={prices[field.key]} best={Boolean(best?.[field.key])} size="sm" />
+            </dd>
+          </div>
+          {showPartner && (
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <dt className="text-[9px] font-bold text-sky-500/90">همکار</dt>
+              <dd>
+                <PriceTag price={prices[field.partnerKey]} best={Boolean(best?.[field.partnerKey])} partner size="sm" />
+              </dd>
+            </div>
+          )}
         </div>
       ))}
     </dl>

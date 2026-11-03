@@ -49,7 +49,7 @@ export const UserAuthCard: React.FC = () => {
       </div>
 
       <div role="tabpanel" id={`auth-panel-${mode}`} aria-labelledby={`auth-tab-${mode}`} key={mode} className="admin-animate-in">
-        {mode === "login" ? <UserLoginForm /> : <UserRegisterForm onSwitchToLogin={() => setMode("login")} />}
+        {mode === "login" ? <UserLoginForm /> : <UserRegisterForm />}
       </div>
 
       <p className="text-center text-xs text-panel-muted">

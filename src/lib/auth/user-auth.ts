@@ -6,8 +6,6 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { consumeTiming, hashPassword, verifyPassword } from "@/lib/auth/password";
 import { readUserSessionFromCookies, type SessionUser } from "@/lib/auth/user-session";
-import { findActiveSubscription } from "@/lib/subscriptions";
-import { remainingDays } from "@/lib/subscriptions-shared";
 
 /** Shape of a bcrypt hash as produced by bcryptjs. */
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
@@ -31,13 +29,25 @@ function safeEqual(a: string, b: string): boolean {
 /** Full profile of the signed-in customer, re-validated against the database. */
 export interface CurrentUser extends SessionUser {
   image: string | null;
-  /** Days left on the user's active subscription (always ≥ 1). */
-  subscriptionDaysLeft: number;
+  /** The admin turned on collaborator mode (کاربر همکار). */
+  collabrate: boolean;
+  /** The admin approved the user's identity documents. */
+  authenticaed: boolean;
+  /**
+   * Collaborator *and* verified: may publish ads and a price table, and sees
+   * collaborator prices. Everyone else only sees public prices.
+   */
+  isPartner: boolean;
+}
+
+/** Collaborator with approved identity documents (see `CurrentUser.isPartner`). */
+export function isPartnerUser(user: { collabrate: boolean; authenticaed: boolean }): boolean {
+  return user.collabrate && user.authenticaed;
 }
 
 export type AuthenticateUserResult =
   | { ok: true; user: SessionUser }
-  | { ok: false; reason: "invalid" | "inactive" | "pending" | "expired" };
+  | { ok: false; reason: "invalid" | "inactive" };
 
 /**
  * Verify customer credentials against MySQL.
@@ -50,7 +60,7 @@ export async function authenticateUser(phone: string, password: string): Promise
   const user = await prisma.user.findFirst({
     where: { phone },
     orderBy: { id: "asc" },
-    select: { id: true, name: true, phone: true, password: true, isActive: true, approvedAt: true },
+    select: { id: true, name: true, phone: true, password: true, isActive: true },
   });
 
   if (!user) {
@@ -72,20 +82,15 @@ export async function authenticateUser(phone: string, password: string): Promise
   }
 
   if (!valid) return { ok: false, reason: "invalid" };
-  if (!user.isActive) {
-    // Self-registered accounts stay inactive until an administrator approves them.
-    return { ok: false, reason: user.approvedAt === null ? "pending" : "inactive" };
-  }
-  // Panel access requires an active subscription granted by an administrator.
-  if (!(await findActiveSubscription(user.id))) return { ok: false, reason: "expired" };
+  if (!user.isActive) return { ok: false, reason: "inactive" };
 
   return { ok: true, user: { id: user.id.toString(), name: user.name, phone: user.phone } };
 }
 
 /**
  * Resolve the currently signed-in customer, validating that the account still
- * exists, is active and has an active subscription (so disabled accounts and
- * expired/cancelled subscriptions lose access immediately).
+ * exists and is active (so disabled accounts lose access immediately). The
+ * collaborator flags are read fresh on every request as well.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const session = await readUserSessionFromCookies();
@@ -100,19 +105,18 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, phone: true, image: true, isActive: true },
+    select: { id: true, name: true, phone: true, image: true, isActive: true, collabrate: true, authenticaed: true },
   });
   if (!user || !user.isActive) return null;
-
-  const subscription = await findActiveSubscription(user.id);
-  if (!subscription) return null;
 
   return {
     id: user.id.toString(),
     name: user.name,
     phone: user.phone,
     image: user.image,
-    subscriptionDaysLeft: remainingDays(subscription.endsAt),
+    collabrate: user.collabrate,
+    authenticaed: user.authenticaed,
+    isPartner: isPartnerUser(user),
   };
 }
 
@@ -121,6 +125,19 @@ export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/panel");
+  }
+  return user;
+}
+
+/**
+ * Guard for the collaborators' publishing pages (my ads, my price table).
+ * Non-collaborators do not have these sections at all and are sent to the
+ * dashboard. Callers still check `isPartner` before allowing any write.
+ */
+export async function requireCollaborator(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (!user.collabrate) {
+    redirect("/panel/dashboard");
   }
   return user;
 }

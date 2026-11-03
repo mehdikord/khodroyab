@@ -23,12 +23,15 @@ import { saveMyPriceTableAction } from "@/app/panel/(app)/price-table/actions";
 import type { ColorRecord } from "@/lib/colors";
 import type { PriceTableCarRecord, PriceTableEntryRecord } from "@/lib/price-table";
 import {
+  PRICE_TABLE_ALL_PRICE_KEYS,
   PRICE_TABLE_MAX_TIERS,
   PRICE_TABLE_PRICE_FIELDS,
+  PRICE_TYPE_LABELS,
   digitsOnly,
   isValidTierYear,
   normalizeUsdPrice,
   normalizeYear,
+  type PriceTableAnyPriceField,
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
@@ -40,10 +43,11 @@ interface MyPriceTableManagerProps {
 }
 
 /**
- * One price tier as edited: `key` is a client-only id; year and prices are
- * digit strings and `colorId` a colour id ("" = blank / not chosen).
+ * One price tier as edited: `key` is a client-only id; year and the six prices
+ * (public and collaborator) are digit strings and `colorId` a colour id
+ * ("" = blank / not chosen).
  */
-interface TierDraft extends Record<PriceTablePriceField, string> {
+interface TierDraft extends Record<PriceTableAnyPriceField, string> {
   key: string;
   year: string;
   colorId: string;
@@ -62,7 +66,12 @@ let tierSeq = 0;
 const nextTierKey = () => `tier-${++tierSeq}`;
 
 function emptyTier(year: string, colorId: string): TierDraft {
-  return { key: nextTierKey(), year, colorId, priceUsd: "", clearancePrice: "", instantPrice: "" };
+  return {
+    key: nextTierKey(),
+    year,
+    colorId,
+    ...(Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((field) => [field, ""])) as Record<PriceTableAnyPriceField, string>),
+  };
 }
 
 /** A fresh row: one blank tier for the customer to fill in. */
@@ -82,9 +91,10 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[])
               key: nextTierKey(),
               year: tier.year,
               colorId: tier.colorId,
-              priceUsd: tier.priceUsd ?? "",
-              clearancePrice: tier.clearancePrice ?? "",
-              instantPrice: tier.instantPrice ?? "",
+              ...(Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((field) => [field, tier[field] ?? ""])) as Record<
+                PriceTableAnyPriceField,
+                string
+              >),
             })),
           }
         : emptyDraft();
@@ -93,7 +103,7 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[])
 }
 
 function isTierPriced(tier: TierDraft): boolean {
-  return PRICE_TABLE_PRICE_FIELDS.some(({ key }) => tier[key].length > 0);
+  return PRICE_TABLE_ALL_PRICE_KEYS.some((key) => tier[key].length > 0);
 }
 
 function isFilled(draft: Draft): boolean {
@@ -107,7 +117,7 @@ function sameDraft(a: Draft, b: Draft): boolean {
     return (
       tier.year === other.year &&
       tier.colorId === other.colorId &&
-      PRICE_TABLE_PRICE_FIELDS.every(({ key }) => tier[key] === other[key])
+      PRICE_TABLE_ALL_PRICE_KEYS.every((key) => tier[key] === other[key])
     );
   });
 }
@@ -374,7 +384,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
       <ol className="admin-animate-in grid grid-cols-1 gap-2 sm:grid-cols-3" style={{ animationDelay: "40ms" }}>
         {[
           { icon: CalendarDays, title: "سال و رنگ را انتخاب کنید", text: "سال پیش‌فرض، سال ساخت خودرو است و هر دو قابل تغییرند." },
-          { icon: Table2, title: "قیمت‌ها را وارد کنید", text: "قیمت خام، ترخیصی و فوری به دلار؛ یکی از آن‌ها کافی است." },
+          { icon: Table2, title: "قیمت‌ها را وارد کنید", text: "خام، ترخیصی و فوری به دلار، هر کدام عمومی و همکار؛ یکی کافی است." },
           { icon: Layers, title: "ردیف‌های بیشتر اضافه کنید", text: "سال جدید، یا همان سال با رنگ دیگر؛ هر سال و رنگ فقط یک بار." },
         ].map((step, index) => {
           const Icon = step.icon;
@@ -548,7 +558,12 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
                       <span>سال ساخت</span>
                       <span>رنگ</span>
                       {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                        <span key={field.key}>{field.label} ($)</span>
+                        <span key={field.key}>
+                          {field.label} ($)
+                          <span className="mt-0.5 block text-[9px] font-bold text-panel-faint">
+                            {PRICE_TYPE_LABELS.public} / {PRICE_TYPE_LABELS.partner}
+                          </span>
+                        </span>
                       ))}
                       <span />
                     </div>
@@ -661,40 +676,58 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
 
                             {/* Prices: 3 columns on phones too */}
                             <div className="mt-2 grid grid-cols-3 gap-1.5 md:contents">
-                              {PRICE_TABLE_PRICE_FIELDS.map((field) => {
-                                const error = fieldErrors[`${car.id}.${index}.${field.key}`];
-                                const inputId = `${tier.key}-${field.key}`;
-                                return (
-                                  <div key={field.key} className="min-w-0">
-                                    <label htmlFor={inputId} className="mb-1 block truncate text-[10px] font-bold text-panel-muted md:sr-only">
-                                      {SHORT_PRICE_LABELS[field.key]}
-                                    </label>
-                                    <div className="relative">
-                                      <input
-                                        id={inputId}
-                                        type="text"
-                                        inputMode="numeric"
-                                        autoComplete="off"
-                                        value={formatPersianNumber(tier[field.key])}
-                                        onChange={(e) => updateTier(car.id, tier.key, { [field.key]: normalizeUsdPrice(e.target.value) })}
-                                        placeholder={SHORT_PRICE_LABELS[field.key]}
-                                        aria-label={`${field.label} ردیف ${toPersianDigits(index + 1)} ${car.name}`}
-                                        aria-invalid={Boolean(error)}
-                                        disabled={isPending}
-                                        className={cn(
-                                          inputBase,
-                                          borderFor(Boolean(error)),
-                                          "h-10 px-2 text-[12px] font-semibold md:pe-7 md:ps-3 md:text-[13px]"
-                                        )}
-                                      />
-                                      <span className="pointer-events-none absolute inset-y-0 end-2.5 hidden items-center text-xs font-black text-panel-faint md:flex">
-                                        $
-                                      </span>
-                                    </div>
-                                    <ErrorText message={error} />
-                                  </div>
-                                );
-                              })}
+                              {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                                <div key={field.key} className="min-w-0 space-y-1">
+                                  <p className="mb-1 block truncate text-[10px] font-bold text-panel-muted md:sr-only">{SHORT_PRICE_LABELS[field.key]}</p>
+                                  {(
+                                    [
+                                      { key: field.key, type: "public" },
+                                      { key: field.partnerKey, type: "partner" },
+                                    ] as const
+                                  ).map((input) => {
+                                    const error = fieldErrors[`${car.id}.${index}.${input.key}`];
+                                    const inputId = `${tier.key}-${input.key}`;
+                                    const typeLabel = PRICE_TYPE_LABELS[input.type];
+                                    return (
+                                      <div key={input.key}>
+                                        <div className="relative">
+                                          <span
+                                            className={cn(
+                                              "pointer-events-none absolute inset-y-0 start-2 flex items-center text-[9px] font-extrabold",
+                                              input.type === "partner" ? "text-sky-500" : "text-panel-faint"
+                                            )}
+                                            aria-hidden="true"
+                                          >
+                                            {typeLabel}
+                                          </span>
+                                          <input
+                                            id={inputId}
+                                            type="text"
+                                            inputMode="numeric"
+                                            autoComplete="off"
+                                            value={formatPersianNumber(tier[input.key])}
+                                            onChange={(e) => updateTier(car.id, tier.key, { [input.key]: normalizeUsdPrice(e.target.value) })}
+                                            placeholder={SHORT_PRICE_LABELS[field.key]}
+                                            aria-label={`${field.label} ${typeLabel} ردیف ${toPersianDigits(index + 1)} ${car.name}`}
+                                            aria-invalid={Boolean(error)}
+                                            disabled={isPending}
+                                            className={cn(
+                                              inputBase,
+                                              borderFor(Boolean(error)),
+                                              "h-9 pe-2 ps-9 text-[12px] font-semibold md:pe-6 md:text-[13px]",
+                                              input.type === "partner" && "border-dashed"
+                                            )}
+                                          />
+                                          <span className="pointer-events-none absolute inset-y-0 end-2 hidden items-center text-xs font-black text-panel-faint md:flex">
+                                            $
+                                          </span>
+                                        </div>
+                                        <ErrorText message={error} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ))}
                             </div>
 
                             {/* Remove (tablet / desktop) */}

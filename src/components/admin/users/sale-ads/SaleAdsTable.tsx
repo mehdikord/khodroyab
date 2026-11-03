@@ -94,7 +94,7 @@ export function SaleAdsTable({ ads, onEdit, onDelete, onToggleActive, busyId }: 
                       {ad.saleTerms.map((term) => (
                         <span
                           key={term.id}
-                          title={`${formatPersianNumber(term.price)} تومان${term.perecentage ? ` · ${toPersianDigits(term.perecentage)}٪ تخفیف` : ""}`}
+                          title={`عمومی: ${formatPersianNumber(term.price)} تومان · همکار: ${term.partnerPrice ? `${formatPersianNumber(term.partnerPrice)} تومان` : "ثبت نشده"}${term.perecentage ? ` · ${toPersianDigits(term.perecentage)}٪ تخفیف` : ""}`}
                           className={
                             term.isActive
                               ? "inline-flex items-center gap-1 rounded-full border border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] px-2 py-0.5 text-[11px] font-semibold text-[#FFB070]"

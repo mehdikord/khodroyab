@@ -5,15 +5,22 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { hasCompanyName, publicDisplayName } from "@/lib/display-name";
 import {
+  PRICE_TABLE_ALL_PRICE_KEYS,
   PRICE_TABLE_PRICE_FIELDS,
+  hasAnyPrice,
   mergePriceColumns,
   priceColumnKey,
+  withVisiblePrices,
   type PriceColumn,
+  type PriceTableAnyPriceField,
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 
-/** The three USD prices of a row; `null` when nobody / the seller left it blank. */
-export type PriceListPrices = Record<PriceTablePriceField, string | null>;
+/**
+ * The three USD prices of a row, public and collaborator; `null` when nobody /
+ * the seller left it blank, or (collaborator prices) the viewer may not see it.
+ */
+export type PriceListPrices = Record<PriceTableAnyPriceField, string | null>;
 
 /** Catalogue side of a price-list car (shared by the list and the detail page). */
 export interface PriceListCarInfo {
@@ -62,9 +69,9 @@ export interface PriceListCarDetail {
   columns: PriceColumn[];
 }
 
-/** Only active accounts with at least one priced year tier count towards the list. */
+/** Only active, verified collaborators with at least one priced year tier count towards the list. */
 const pricedEntryWhere = {
-  user: { isActive: true },
+  user: { isActive: true, collabrate: true, authenticaed: true },
   prices: { some: {} },
 } satisfies Prisma.UserPriceTableEntryWhereInput;
 
@@ -75,6 +82,9 @@ const tierSelect = {
   priceUsd: true,
   clearancePrice: true,
   instantPrice: true,
+  partnerPriceUsd: true,
+  partnerClearancePrice: true,
+  partnerInstantPrice: true,
 } satisfies Prisma.UserPriceTablePriceSelect;
 
 const carInfoSelect = {
@@ -104,9 +114,9 @@ export function compareDigitPrices(a: string, b: string): number {
 
 /** Lowest non-blank value of each price field across the given rows. */
 function lowestPrices(rows: PriceListPrices[]): PriceListPrices {
-  const lowest: PriceListPrices = { priceUsd: null, clearancePrice: null, instantPrice: null };
+  const lowest = Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((key) => [key, null])) as PriceListPrices;
   for (const row of rows) {
-    for (const { key } of PRICE_TABLE_PRICE_FIELDS) {
+    for (const key of PRICE_TABLE_ALL_PRICE_KEYS) {
       const value = row[key];
       if (value && (lowest[key] === null || compareDigitPrices(value, lowest[key]!) < 0)) lowest[key] = value;
     }
@@ -122,7 +132,15 @@ function tierColumn(tier: TierRow): PriceColumn {
 }
 
 function tierPrices(tier: TierRow): PriceListPrices {
-  return { priceUsd: tier.priceUsd, clearancePrice: tier.clearancePrice, instantPrice: tier.instantPrice };
+  return Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((key) => [key, tier[key]])) as PriceListPrices;
+}
+
+/**
+ * The tiers a viewer may see: collaborator prices are blanked unless
+ * `showPartner`, and tiers left without any visible price are dropped.
+ */
+function visibleTiers(tiers: TierRow[], showPartner: boolean): TierRow[] {
+  return tiers.map((tier) => withVisiblePrices(tier, showPartner)).filter(hasAnyPrice);
 }
 
 /** Lowest price per field for each (year, colour) column among the given tiers. */
@@ -138,8 +156,9 @@ function lowestPricesByColumn(tiers: TierRow[]): PriceListPricesByColumn {
 /**
  * Every car the admin allowed in price tables, with the lowest raw, clearance
  * and instant price any active seller entered for it, per (year, colour).
+ * Collaborator prices are included only when `showPartner` (verified collaborator viewer).
  */
-export async function listPriceListRows(): Promise<PriceListRow[]> {
+export async function listPriceListRows(showPartner: boolean): Promise<PriceListRow[]> {
   const cars = await prisma.car.findMany({
     where: { priceTable: true },
     select: {
@@ -153,11 +172,12 @@ export async function listPriceListRows(): Promise<PriceListRow[]> {
   });
 
   return cars.map((car) => {
-    const tiers = car.priceTableEntries.flatMap((entry) => entry.prices);
+    const entries = car.priceTableEntries.map((entry) => visibleTiers(entry.prices, showPartner)).filter((tiers) => tiers.length > 0);
+    const tiers = entries.flat();
     return {
       ...toCarInfo(car),
       byColumn: lowestPricesByColumn(tiers),
-      sellerCount: car.priceTableEntries.length,
+      sellerCount: entries.length,
       columns: mergePriceColumns(tiers.map(tierColumn)),
     };
   });
@@ -184,9 +204,10 @@ function compareOffers(a: PriceListOffer, b: PriceListOffer): number {
 /**
  * One price-list car with every active seller's prices for it, one offer per
  * seller holding all of their (year, colour) tiers. Returns null for unknown
- * ids or cars the admin has not allowed in price tables.
+ * ids or cars the admin has not allowed in price tables. Collaborator prices
+ * are included only when `showPartner`.
  */
-export async function getPriceListCarDetail(carIdRaw: string): Promise<PriceListCarDetail | null> {
+export async function getPriceListCarDetail(carIdRaw: string, showPartner: boolean): Promise<PriceListCarDetail | null> {
   if (!/^\d{1,20}$/.test(carIdRaw)) return null;
 
   const car = await prisma.car.findFirst({
@@ -205,7 +226,11 @@ export async function getPriceListCarDetail(carIdRaw: string): Promise<PriceList
   });
   if (!car) return null;
 
-  const offers: PriceListOffer[] = car.priceTableEntries
+  const entries = car.priceTableEntries
+    .map((entry) => ({ ...entry, prices: visibleTiers(entry.prices, showPartner) }))
+    .filter((entry) => entry.prices.length > 0);
+
+  const offers: PriceListOffer[] = entries
     .map((entry) => ({
       userId: entry.user.id.toString(),
       userName: publicDisplayName(entry.user),
@@ -216,7 +241,7 @@ export async function getPriceListCarDetail(carIdRaw: string): Promise<PriceList
     }))
     .sort(compareOffers);
 
-  const tiers = car.priceTableEntries.flatMap((entry) => entry.prices);
+  const tiers = entries.flatMap((entry) => entry.prices);
   return {
     car: toCarInfo(car),
     offers,

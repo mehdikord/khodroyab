@@ -20,20 +20,26 @@ const optionalNumeric = (label: string, max?: number) =>
     })
     .optional();
 
+const requiredPrice = (label: string) =>
+  z
+    .string({ error: `${label} الزامی است` })
+    .trim()
+    .min(1, { error: `${label} الزامی است` })
+    .transform((value) => normalizeDigits(value))
+    .refine((value) => /^\d+$/.test(value) && Number(value) > 0, {
+      error: `${label} باید عددی بزرگ‌تر از صفر باشد`,
+    });
+
 export const userCarSaleTermEntrySchema = z.object({
   id: z.string().trim().optional(),
   saleTermId: z
     .string({ error: "انتخاب شرایط فروش الزامی است" })
     .trim()
     .min(1, { error: "انتخاب شرایط فروش الزامی است" }),
-  price: z
-    .string({ error: "قیمت الزامی است" })
-    .trim()
-    .min(1, { error: "قیمت الزامی است" })
-    .transform((value) => normalizeDigits(value))
-    .refine((value) => /^\d+$/.test(value) && Number(value) > 0, {
-      error: "قیمت باید عددی بزرگ‌تر از صفر باشد",
-    }),
+  /** Public price (قیمت عمومی): shown to every customer. */
+  price: requiredPrice("قیمت عمومی"),
+  /** Collaborator price (قیمت همکار): shown only to verified collaborators. */
+  partnerPrice: requiredPrice("قیمت همکار"),
   sale: optionalNumeric("مبلغ تخفیف"),
   perecentage: optionalNumeric("درصد تخفیف", 100),
   description: z
@@ -145,6 +151,7 @@ export function parseUserCarForm(formData: FormData): ParsedUserCarForm {
             id: typeof e.id === "string" && e.id ? e.id : undefined,
             saleTermId: typeof e.saleTermId === "string" ? e.saleTermId : "",
             price: typeof e.price === "string" ? e.price : "",
+            partnerPrice: typeof e.partnerPrice === "string" ? e.partnerPrice : "",
             sale: typeof e.sale === "string" ? e.sale : "",
             perecentage: typeof e.perecentage === "string" ? e.perecentage : "",
             description: typeof e.description === "string" ? e.description : "",

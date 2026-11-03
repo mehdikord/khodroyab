@@ -13,6 +13,8 @@ import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScro
 
 interface PriceListBrowserProps {
   rows: PriceListRow[];
+  /** The viewer is a verified collaborator: show collaborator prices too. */
+  showPartner: boolean;
 }
 
 const headClass = "whitespace-nowrap px-3 py-3.5 text-right text-[11px] font-extrabold uppercase tracking-wider text-panel-muted";
@@ -35,7 +37,7 @@ function hasAnyPrice(row: PriceListRow): boolean {
  * Desktop: a table whose car column stays pinned while the year columns
  * scroll horizontally. Below `lg`: cards with a scrollable strip of years.
  */
-export function PriceListBrowser({ rows }: PriceListBrowserProps) {
+export function PriceListBrowser({ rows, showPartner }: PriceListBrowserProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState<string | null>(null);
@@ -283,7 +285,7 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                             key={column.key}
                             className={cn("border-s border-panel-line/[0.06] px-3 py-3", index % 2 === 1 && "bg-panel-line/[0.02]")}
                           >
-                            <YearPrices prices={row.byColumn[column.key]} />
+                            <YearPrices prices={row.byColumn[column.key]} showPartner={showPartner} />
                           </td>
                         ))
                       )}
@@ -338,7 +340,7 @@ export function PriceListBrowser({ rows }: PriceListBrowserProps) {
                             <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
                               <ColumnHeading column={column} active={Boolean(row.byColumn[column.key])} />
                             </p>
-                            <YearPrices prices={row.byColumn[column.key]} className="min-h-[70px]" />
+                            <YearPrices prices={row.byColumn[column.key]} showPartner={showPartner} className="min-h-[70px]" />
                           </div>
                         ))}
                       </div>

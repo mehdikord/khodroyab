@@ -18,7 +18,8 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const detail = await getPriceListCarDetail(params.carId);
+  // Only the car's name is used here, so collaborator prices are never needed.
+  const detail = await getPriceListCarDetail(params.carId, false);
   return {
     title: detail
       ? `لیست قیمت‌های ${detail.car.name} - ${detail.car.brandName} | پنل کاربری خودرو یاب`
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PriceListCarPage({ params }: PageProps) {
   const user = await requireUser();
 
-  const detail = await getPriceListCarDetail(params.carId);
+  const detail = await getPriceListCarDetail(params.carId, user.isPartner);
   if (!detail) notFound();
   const { car, offers, lowest, lowestByColumn, columns } = detail;
   const years = Array.from(new Set(columns.map((column) => column.year)));
@@ -88,6 +89,14 @@ export default async function PriceListCarPage({ params }: PageProps) {
                 <div className="mt-2 flex justify-center">
                   <PriceTag price={lowest[field.key]} best={Boolean(lowest[field.key])} />
                 </div>
+                {user.isPartner && (
+                  <div className="mt-2 border-t border-panel-line/[0.06] pt-2">
+                    <p className="text-[9px] font-bold text-panel-muted">همکار</p>
+                    <div className="mt-1 flex justify-center">
+                      <PriceTag price={lowest[field.partnerKey]} partner size="sm" />
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -102,17 +111,26 @@ export default async function PriceListCarPage({ params }: PageProps) {
               <UsersRound className="h-7 w-7" />
             </span>
             <p className="mt-5 text-base font-extrabold text-panel-text">هنوز فروشنده‌ای برای این خودرو قیمت ثبت نکرده است</p>
-            <Link
-              href="/panel/price-table"
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-5 text-sm font-bold text-panel-accent transition-colors hover:bg-[#FF6A00]/20"
-            >
-              ثبت قیمت در جدول من
-            </Link>
+            {user.collabrate && (
+              <Link
+                href="/panel/price-table"
+                className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-5 text-sm font-bold text-panel-accent transition-colors hover:bg-[#FF6A00]/20"
+              >
+                ثبت قیمت در جدول من
+              </Link>
+            )}
           </div>
         </div>
       ) : (
         <>
-          <CarOffersView car={car} offers={offers} lowestByColumn={lowestByColumn} columns={columns} currentUserId={user.id} />
+          <CarOffersView
+            car={car}
+            offers={offers}
+            lowestByColumn={lowestByColumn}
+            columns={columns}
+            currentUserId={user.id}
+            showPartner={user.isPartner}
+          />
           <p className="text-[11px] leading-6 text-panel-faint">
             قیمت‌ها به دلار و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال و رنگ است و
             «—» یعنی فروشنده برای آن سال و رنگ قیمتی ثبت نکرده است. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده و با زدن عنوان هر ستون،

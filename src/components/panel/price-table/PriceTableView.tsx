@@ -9,6 +9,8 @@ import { PRICE_TABLE_EMPTY, formatUsd } from "@/components/panel/price-table/pri
 
 interface PriceTableViewProps {
   rows: PriceTableRow[];
+  /** The viewer is a verified collaborator: show each price's collaborator value too. */
+  showPartner?: boolean;
   className?: string;
 }
 
@@ -25,16 +27,41 @@ function TierColor({ tier, className }: { tier: PriceTableTierRecord | null; cla
   );
 }
 
-function PriceBadge({ price, size = "md" }: { price: string | null | undefined; size?: "sm" | "md" }) {
+function PriceBadge({ price, size = "md", partner = false }: { price: string | null | undefined; size?: "sm" | "md"; partner?: boolean }) {
   if (!price) return <span className="text-panel-faint">{PRICE_TABLE_EMPTY}</span>;
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-lg border border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] font-extrabold tabular-nums text-panel-accent",
+        "inline-flex items-center whitespace-nowrap rounded-lg border font-extrabold tabular-nums",
+        partner ? "border-sky-500/30 bg-sky-500/[0.08] text-sky-500" : "border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] text-panel-accent",
         size === "sm" ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-[13px]"
       )}
     >
       {size === "sm" ? `${formatPersianNumber(price)}$` : formatUsd(price)}
+    </span>
+  );
+}
+
+/** A price cell: the public price, plus the collaborator price under it when shown. */
+function TierPrice({
+  tier,
+  field,
+  showPartner,
+  size = "md",
+}: {
+  tier: PriceTableTierRecord | null;
+  field: (typeof PRICE_TABLE_PRICE_FIELDS)[number];
+  showPartner: boolean;
+  size?: "sm" | "md";
+}) {
+  if (!showPartner) return <PriceBadge price={tier?.[field.key]} size={size} />;
+  return (
+    <span className="inline-flex flex-col items-center gap-1 md:items-start">
+      <PriceBadge price={tier?.[field.key]} size={size} />
+      <span className="inline-flex items-center gap-1">
+        <span className="text-[9px] font-bold text-sky-500/90">همکار</span>
+        <PriceBadge price={tier?.[field.partnerKey]} size="sm" partner />
+      </span>
     </span>
   );
 }
@@ -69,7 +96,7 @@ const tierKey = (tier: PriceTableTierRecord | null) => (tier ? `${tier.year}:${t
  * Desktop (`md+`): one `<tbody>` per car, the car cell spanning its lines so
  * the price columns stay aligned. Phones: one card per car.
  */
-export function PriceTableView({ rows, className }: PriceTableViewProps) {
+export function PriceTableView({ rows, showPartner = false, className }: PriceTableViewProps) {
   return (
     <div className={className}>
       {/* Desktop table */}
@@ -132,7 +159,7 @@ export function PriceTableView({ rows, className }: PriceTableViewProps) {
                     </td>
                     {PRICE_TABLE_PRICE_FIELDS.map((field) => (
                       <td key={field.key} className="px-3 py-2.5">
-                        <PriceBadge price={tier?.[field.key]} />
+                        <TierPrice tier={tier} field={field} showPartner={showPartner} />
                       </td>
                     ))}
                   </tr>
@@ -172,7 +199,7 @@ export function PriceTableView({ rows, className }: PriceTableViewProps) {
                           <div key={field.key} className="min-w-0 rounded-lg bg-panel-surface/70 px-1.5 py-1.5 text-center">
                             <p className="truncate text-[9px] font-extrabold text-panel-muted">{field.label.replace("قیمت ", "")}</p>
                             <div className="mt-1 flex justify-center">
-                              <PriceBadge price={tier[field.key]} size="sm" />
+                              <TierPrice tier={tier} field={field} showPartner={showPartner} size="sm" />
                             </div>
                           </div>
                         ))}

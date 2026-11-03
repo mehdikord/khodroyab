@@ -57,15 +57,23 @@ model User {
   postalCode   String?   @map("postal_code") @db.VarChar(255)
   tel          String?   @db.VarChar(255)
   isActive     Boolean   @default(true) @map("is_active")
-  /// When the admin approved the account. `null` = self-registered and still
-  /// waiting for approval; admin-created accounts are approved on creation.
+  /// When the account was approved. Every account (self-registered or created
+  /// by the admin) is approved on creation; kept for history.
   approvedAt   DateTime? @map("approved_at") @db.Timestamp(0)
+  /// Collaborator (کاربر همکار). Only the admin can turn it on. Collaborators may
+  /// publish ads and a price table and see collaborator prices once verified.
+  /// NOTE: `collabrate` spelling preserved per spec. See SCHEMA_REVIEW.md.
+  collabrate   Boolean   @default(false)
+  /// The admin approved the collaborator's identity documents (احراز هویت).
+  /// NOTE: `authenticaed` spelling preserved per spec. See SCHEMA_REVIEW.md.
+  authenticaed Boolean   @default(false)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(0)
 
   userCars          UserCar[]
   priceTableEntries UserPriceTableEntry[]
   subscriptions     UserSubscription[]
+  verification      UserVerification?
 
   @@map("users")
 }
@@ -284,16 +292,20 @@ model UserCarOption {
 // ─── Table 11: user_car_sale_terms ───────────────────────────────────────────
 // NOTE: `perecentage` spelling preserved per spec. See SCHEMA_REVIEW.md.
 model UserCarSaleTerm {
-  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  userCarId   BigInt   @map("user_car_id") @db.UnsignedBigInt
-  saleTermId  BigInt   @map("sale_term_id") @db.UnsignedBigInt
-  price       String   @db.VarChar(255)
-  sale        String?  @db.VarChar(255)
-  perecentage String?  @db.VarChar(255)
-  description String?  @db.Text
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userCarId    BigInt   @map("user_car_id") @db.UnsignedBigInt
+  saleTermId   BigInt   @map("sale_term_id") @db.UnsignedBigInt
+  /// Public price (قیمت عمومی), shown to every customer. Its changes are logged in the price history.
+  price        String   @db.VarChar(255)
+  /// Collaborator price (قیمت همکار), shown only to verified collaborators.
+  /// Required by the form; null only on ads created before collaborator prices existed.
+  partnerPrice String?  @map("partner_price") @db.VarChar(255)
+  sale         String?  @db.VarChar(255)
+  perecentage  String?  @db.VarChar(255)
+  description  String?  @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   userCar  UserCar  @relation(fields: [userCarId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   saleTerm SaleTerm @relation(fields: [saleTermId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -359,22 +371,26 @@ model UserPriceTableEntry {
 // the year of any sale ad. A (year, colour) pair is unique within a row, so the same year
 // may appear with different colours. Only tiers with at least one price are stored.
 model UserPriceTablePrice {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  entryId        BigInt   @map("entry_id") @db.UnsignedBigInt
+  id                    BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  entryId               BigInt   @map("entry_id") @db.UnsignedBigInt
   /// Production year, 4 ASCII digits (Gregorian or Jalali), e.g. "2025".
-  year           String   @db.VarChar(10)
+  year                  String   @db.VarChar(10)
   /// Colour of this tier, picked from the `colors` catalogue.
-  colorId        BigInt   @map("color_id") @db.UnsignedBigInt
+  colorId               BigInt   @map("color_id") @db.UnsignedBigInt
   /// Raw price (قیمت خام) in US dollars (digit-only string, same convention as sale-term prices).
-  priceUsd       String?  @map("price_usd") @db.VarChar(255)
+  priceUsd              String?  @map("price_usd") @db.VarChar(255)
   /// Clearance price (قیمت ترخیصی) in US dollars, digit-only string.
-  clearancePrice String?  @map("clearance_price") @db.VarChar(255)
+  clearancePrice        String?  @map("clearance_price") @db.VarChar(255)
   /// Instant price (قیمت فوری) in US dollars, digit-only string.
-  instantPrice   String?  @map("instant_price") @db.VarChar(255)
+  instantPrice          String?  @map("instant_price") @db.VarChar(255)
+  /// Collaborator versions of the three prices above, shown only to verified collaborators.
+  partnerPriceUsd       String?  @map("partner_price_usd") @db.VarChar(255)
+  partnerClearancePrice String?  @map("partner_clearance_price") @db.VarChar(255)
+  partnerInstantPrice   String?  @map("partner_instant_price") @db.VarChar(255)
   /// Display order inside the row (the customer's order, 0-based).
-  sortOrder      Int      @default(0) @map("sort_order") @db.UnsignedInt
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  sortOrder             Int      @default(0) @map("sort_order") @db.UnsignedInt
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   entry UserPriceTableEntry @relation(fields: [entryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   color Color               @relation(fields: [colorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -461,4 +477,57 @@ model Sponsor {
 
   @@index([isActive, sortOrder])
   @@map("sponsors")
+}
+
+/// Legal form of a collaborator: natural person (حقیقی) or legal entity (حقوقی).
+enum VerificationPersonType {
+  natural
+  legal
+}
+
+/// Review state of a collaborator's identity documents.
+enum UserVerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+// ─── Table 21: user_verifications ────────────────────────────────────────────
+// A collaborator's latest identity-verification submission (one per user).
+// A new submission after a rejection replaces the previous one and its documents.
+// The outcome is mirrored on `users.authenticaed`.
+model UserVerification {
+  id           BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  userId       BigInt                 @unique @map("user_id") @db.UnsignedBigInt
+  personType   VerificationPersonType @map("person_type")
+  status       UserVerificationStatus @default(pending)
+  /// Reason written by the admin when rejecting; shown to the user.
+  rejectReason String?                @map("reject_reason") @db.Text
+  reviewedAt   DateTime?              @map("reviewed_at") @db.Timestamp(0)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user      User                       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  documents UserVerificationDocument[]
+
+  @@index([status])
+  @@map("user_verifications")
+}
+
+// ─── Table 22: user_verification_documents ───────────────────────────────────
+// One identity document (title + image) of a verification submission. Images are
+// private: stored outside the public uploads and served only to the admin and owner.
+model UserVerificationDocument {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  verificationId BigInt   @map("verification_id") @db.UnsignedBigInt
+  title          String   @db.VarChar(255)
+  /// File name inside the private verification storage.
+  imageUrl       String   @map("image_url") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  verification UserVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([verificationId])
+  @@map("user_verification_documents")
 }

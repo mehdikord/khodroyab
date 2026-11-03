@@ -34,5 +34,5 @@ export default async function PanelProfilePage() {
     stats.total += count;
   }
 
-  return <ProfileManager initialProfile={toProfileRecord(row)} stats={stats} />;
+  return <ProfileManager initialProfile={toProfileRecord(row)} stats={stats} collabrate={user.collabrate} />;
 }

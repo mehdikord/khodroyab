@@ -16,8 +16,7 @@ export default async function PanelAppLayout({ children }: { children: React.Rea
 
   return (
     <PanelShell
-      user={{ name: user.name, phone: user.phone, image: user.image }}
-      subscriptionDaysLeft={user.subscriptionDaysLeft}
+      user={{ name: user.name, phone: user.phone, image: user.image, collabrate: user.collabrate, authenticaed: user.authenticaed }}
       theme={theme}
     >
       {children}

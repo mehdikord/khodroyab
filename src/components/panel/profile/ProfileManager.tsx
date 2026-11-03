@@ -35,6 +35,8 @@ import { cn, toPersianDigits } from "@/lib/utils";
 interface ProfileManagerProps {
   initialProfile: ProfileRecord;
   stats: ProfileAdStats;
+  /** Collaborators publish ads, so only they see the ad stats and the "my ads" link. */
+  collabrate: boolean;
 }
 
 type SheetKind = "edit" | "password" | null;
@@ -247,7 +249,7 @@ function ActionTile({
 
 /* ───────────────────────── main ───────────────────────── */
 
-export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
+export function ProfileManager({ initialProfile, stats, collabrate }: ProfileManagerProps) {
   const [profile, setProfile] = useState<ProfileRecord>(initialProfile);
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [sheetLocked, setSheetLocked] = useState(false);
@@ -380,12 +382,14 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
           </div>
 
           {/* Ad stats */}
-          <div className="mt-5 grid grid-cols-4 gap-2 sm:gap-3">
-            <StatChip label="کل آگهی‌ها" value={stats.total} tone="orange" />
-            <StatChip label={AD_STATUS_LABELS.approved} value={stats.approved} tone="emerald" />
-            <StatChip label={AD_STATUS_LABELS.pending} value={stats.pending} tone="amber" />
-            <StatChip label={AD_STATUS_LABELS.rejected} value={stats.rejected} tone="red" />
-          </div>
+          {collabrate && (
+            <div className="mt-5 grid grid-cols-4 gap-2 sm:gap-3">
+              <StatChip label="کل آگهی‌ها" value={stats.total} tone="orange" />
+              <StatChip label={AD_STATUS_LABELS.approved} value={stats.approved} tone="emerald" />
+              <StatChip label={AD_STATUS_LABELS.pending} value={stats.pending} tone="amber" />
+              <StatChip label={AD_STATUS_LABELS.rejected} value={stats.rejected} tone="red" />
+            </div>
+          )}
         </div>
       </section>
 
@@ -442,14 +446,16 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
         style={{ animationDelay: "360ms" }}
       >
         <span>{lastUpdate ? `آخرین به‌روزرسانی: ${lastUpdate}` : ""}</span>
-        <Link
-          href="/panel/ads"
-          className="inline-flex items-center gap-1.5 font-bold text-panel-accent transition-colors hover:text-panel-accent-soft"
-        >
-          <Megaphone className="h-3.5 w-3.5" />
-          مدیریت آگهی‌های من
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </Link>
+        {collabrate && (
+          <Link
+            href="/panel/ads"
+            className="inline-flex items-center gap-1.5 font-bold text-panel-accent transition-colors hover:text-panel-accent-soft"
+          >
+            <Megaphone className="h-3.5 w-3.5" />
+            مدیریت آگهی‌های من
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
 
       {/* Sheets */}

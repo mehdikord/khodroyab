@@ -47,6 +47,15 @@ interface AttentionListProps {
 export function AttentionList({ attention }: AttentionListProps) {
   const allItems: AttentionItem[] = [
     {
+      key: "verifications",
+      label: "احراز هویت در انتظار بررسی",
+      description: "کاربران همکار مدارک هویتی ارسال کرده‌اند",
+      count: attention.pendingVerifications,
+      href: "/admin/users?filter=review",
+      icon: ShieldCheck,
+      severity: "warning",
+    },
+    {
       key: "pending",
       label: "آگهی در انتظار تایید",
       description: "توسط کاربران ثبت شده و منتظر بررسی است",

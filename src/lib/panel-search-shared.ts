@@ -63,7 +63,13 @@ export interface SearchPricePoint {
 export interface SearchAdSaleTerm {
   id: string;
   title: string;
+  /** Current public price (قیمت عمومی). The history and delta below track this price. */
   currentPrice: number;
+  /**
+   * Collaborator price (قیمت همکار). Filled only for viewers allowed to see it
+   * (verified collaborators, the ad's owner); always null for everyone else.
+   */
+  partnerPrice: number | null;
   /** Price before the latest change, or null when the price never changed. */
   previousPrice: number | null;
   /** `currentPrice - previousPrice`; null when there is no previous price. */
@@ -111,8 +117,12 @@ export interface AdDetailSaleTerm extends SearchAdSaleTerm {
 export interface AdDetailRecord extends Omit<SearchAdRecord, "saleTerms"> {
   status: "pending" | "approved" | "rejected";
   isActive: boolean;
-  /** True when the viewer owns the ad (may see it unapproved, and edit it). */
+  /** True when the viewer owns the ad (may see it unapproved). */
   isOwner: boolean;
+  /** The owner is a verified collaborator and may edit the ad. */
+  canEdit: boolean;
+  /** The viewer may see collaborator prices (`partnerPrice` is filled where set). */
+  showPartnerPrices: boolean;
   qautity: string;
   description: string;
   /** Gallery: the ad's photos (primary first), else the car's catalogue photos. */

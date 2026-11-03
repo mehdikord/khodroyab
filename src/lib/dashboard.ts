@@ -104,6 +104,8 @@ export interface DashboardData {
     inactiveBrands: number;
     inactiveSaleTerms: number;
     inactiveUsers: number;
+    /** Collaborators whose identity documents wait for review. */
+    pendingVerifications: number;
   };
 
   topBrands: DashboardBrandStat[];
@@ -216,6 +218,7 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
     carsByBrand,
     recentAds,
     recentUsers,
+    pendingVerifications,
   ] = await Promise.all([
     prisma.userCar.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.userCar.count({ where: { isActive: false } }),
@@ -268,6 +271,7 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
         _count: { select: { userCars: true } },
       },
     }),
+    prisma.userVerification.count({ where: { status: "pending", user: { collabrate: true } } }),
   ]);
 
   /* ───── Ads by status ───── */
@@ -352,6 +356,7 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       inactiveBrands,
       inactiveSaleTerms,
       inactiveUsers,
+      pendingVerifications,
     },
 
     topBrands,
