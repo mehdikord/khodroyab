@@ -12,6 +12,39 @@ export function isVerificationPersonType(value: unknown): value is VerificationP
   return typeof value === "string" && (VERIFICATION_PERSON_TYPES as readonly string[]).includes(value);
 }
 
+/** Identity details entered with a submission (which ones apply depends on the person type). */
+export type VerificationIdentityField = "fullName" | "nationalCode" | "companyName" | "companyNationalId";
+
+export type VerificationIdentity = Record<VerificationIdentityField, string | null>;
+
+/** Fields of each person type, in form order, with their labels. */
+export const VERIFICATION_IDENTITY_FIELDS: Record<
+  VerificationPersonType,
+  { key: VerificationIdentityField; label: string; placeholder: string; numeric?: boolean; maxLength: number }[]
+> = {
+  natural: [
+    { key: "fullName", label: "نام و نام خانوادگی صاحب جواز کسب", placeholder: "مثلاً: علی محمدی", maxLength: 120 },
+    { key: "nationalCode", label: "کد ملی صاحب جواز کسب", placeholder: "۱۰ رقم", numeric: true, maxLength: 10 },
+  ],
+  legal: [
+    { key: "companyName", label: "نام شرکت یا مجموعه", placeholder: "مثلاً: شرکت بازرگانی خودرو یاب", maxLength: 255 },
+    { key: "companyNationalId", label: "شناسه ملی شرکت", placeholder: "۱۱ رقم", numeric: true, maxLength: 11 },
+    { key: "fullName", label: "نام و نام خانوادگی مدیر عامل", placeholder: "مثلاً: علی محمدی", maxLength: 120 },
+    { key: "nationalCode", label: "کد ملی مدیر عامل", placeholder: "۱۰ رقم", numeric: true, maxLength: 10 },
+  ],
+};
+
+/** Guidance shown above the document uploads for each person type. */
+export const VERIFICATION_DOC_HINTS: Record<VerificationPersonType, string> = {
+  natural: "تصویر کارت ملی صاحب جواز کسب و تصویر جواز کسب را حتما ارسال کنید.",
+  legal: "تصویر کارت ملی مدیر عامل را حتما ارسال کنید.",
+};
+
+export const VERIFICATION_DOC_TITLE_PLACEHOLDERS: Record<VerificationPersonType, string> = {
+  natural: "مثلاً: کارت ملی صاحب جواز، جواز کسب",
+  legal: "مثلاً: کارت ملی مدیر عامل، روزنامه رسمی",
+};
+
 export type VerificationStatus = "pending" | "approved" | "rejected";
 
 export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
@@ -39,6 +72,8 @@ export interface VerificationDocumentRecord {
 export interface VerificationRecord {
   id: string;
   personType: VerificationPersonType;
+  /** Identity details; null on submissions sent before these fields existed. */
+  identity: VerificationIdentity;
   status: VerificationStatus;
   rejectReason: string | null;
   documents: VerificationDocumentRecord[];

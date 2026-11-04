@@ -9,6 +9,7 @@ import { VerificationStatusBadge } from "@/components/admin/users/VerificationSt
 import { ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
 import { reviewVerificationAction } from "@/app/admin/(panel)/users/[id]/verification-actions";
 import {
+  VERIFICATION_IDENTITY_FIELDS,
   VERIFICATION_PERSON_TYPE_LABELS,
   VERIFICATION_REJECT_REASON_MAX,
   type VerificationRecord,
@@ -23,7 +24,7 @@ interface UserVerificationSectionProps {
 
 /**
  * Identity verification of a collaborator on the admin's user page: the person
- * type, every submitted document (opens full size) and the approve / reject
+ * type, its identity details, every submitted document (opens full size) and the approve / reject
  * decision. A rejection may carry a reason that the user sees in their panel.
  */
 export function UserVerificationSection({ userId, initialAuthenticaed, initialVerification }: UserVerificationSectionProps) {
@@ -164,6 +165,23 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
             {verification.reviewedAtLabel && <span>آخرین بررسی: {verification.reviewedAtLabel}</span>}
             <span>{toPersianDigits(verification.documents.length)} مدرک</span>
           </div>
+
+          <dl className="grid gap-2 sm:grid-cols-2">
+            {VERIFICATION_IDENTITY_FIELDS[verification.personType].map((field) => {
+              const value = verification.identity[field.key];
+              return (
+                <div key={field.key} className="rounded-xl border border-white/[0.06] bg-[#07090C]/60 px-3 py-2">
+                  <dt className="text-[11px] text-[#8B93A1]">{field.label}</dt>
+                  <dd
+                    className={cn("mt-0.5 break-words text-sm font-bold", value ? "text-[#F5F5F5]" : "text-[#5E6672]")}
+                    dir={value && field.numeric ? "ltr" : undefined}
+                  >
+                    {value ? (field.numeric ? toPersianDigits(value) : value) : "ثبت نشده"}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
 
           {verification.status === "rejected" && (
             <div className="rounded-xl border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-xs leading-6 text-red-200">

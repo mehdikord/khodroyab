@@ -9,7 +9,9 @@ import {
   Building2,
   Clock3,
   FileImage,
+  IdCard,
   ImagePlus,
+  Info,
   Loader2,
   Plus,
   Send,
@@ -23,9 +25,13 @@ import { submitVerificationAction } from "@/app/panel/(app)/verification/actions
 import {
   VERIFICATION_DOC_MAX_BYTES,
   VERIFICATION_DOC_MAX_COUNT,
+  VERIFICATION_DOC_HINTS,
   VERIFICATION_DOC_TITLE_MAX,
+  VERIFICATION_DOC_TITLE_PLACEHOLDERS,
+  VERIFICATION_IDENTITY_FIELDS,
   VERIFICATION_PERSON_TYPE_LABELS,
   VERIFICATION_STATUS_LABELS,
+  type VerificationIdentityField,
   type VerificationPersonType,
   type VerificationRecord,
 } from "@/lib/verification-shared";
@@ -44,6 +50,15 @@ interface DocDraft {
   file: File | null;
   previewUrl: string | null;
 }
+
+type IdentityDraft = Record<VerificationIdentityField, string>;
+
+const identityDraftFrom = (record: VerificationRecord | null): IdentityDraft => ({
+  fullName: record?.identity.fullName ?? "",
+  nationalCode: record?.identity.nationalCode ?? "",
+  companyName: record?.identity.companyName ?? "",
+  companyNationalId: record?.identity.companyNationalId ?? "",
+});
 
 let docSeq = 0;
 const newDoc = (): DocDraft => ({ key: `doc-${++docSeq}`, title: "", file: null, previewUrl: null });
@@ -64,6 +79,24 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-[11px] font-semibold text-panel-danger-2">{message}</p>;
 }
 
+/** Read-only identity details of a submission (nothing for submissions sent before they existed). */
+function IdentitySummary({ record }: { record: VerificationRecord }) {
+  const fields = VERIFICATION_IDENTITY_FIELDS[record.personType].filter((field) => record.identity[field.key]);
+  if (fields.length === 0) return null;
+  return (
+    <dl className="mb-4 grid gap-2 sm:grid-cols-2">
+      {fields.map((field) => (
+        <div key={field.key} className="rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-3.5 py-2.5">
+          <dt className="text-[11px] text-panel-faint">{field.label}</dt>
+          <dd className="mt-0.5 break-words text-sm font-bold text-panel-text" dir={field.numeric ? "ltr" : undefined}>
+            {field.numeric ? toPersianDigits(record.identity[field.key] ?? "") : record.identity[field.key]}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 /** Read-only list of the submitted documents (thumbnails open the full image). */
 function SubmittedDocuments({ record }: { record: VerificationRecord }) {
   return (
@@ -75,6 +108,7 @@ function SubmittedDocuments({ record }: { record: VerificationRecord }) {
           {record.submittedAtLabel}
         </span>
       </div>
+      <IdentitySummary record={record} />
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {record.documents.map((doc) => (
           <li key={doc.id}>
@@ -105,6 +139,7 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
   const router = useRouter();
   const [record, setRecord] = useState<VerificationRecord | null>(initialVerification);
   const [personType, setPersonType] = useState<VerificationPersonType | "">(initialVerification?.personType ?? "");
+  const [identity, setIdentity] = useState<IdentityDraft>(() => identityDraftFrom(initialVerification));
   const [docs, setDocs] = useState<DocDraft[]>(() => [newDoc()]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -132,6 +167,17 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
   }
 
   const canSubmit = !record || record.status === "rejected";
+
+  function updateIdentity(key: VerificationIdentityField, value: string) {
+    setIdentity((prev) => ({ ...prev, [key]: value }));
+    if (fieldErrors[key]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
 
   function updateDoc(key: string, patch: Partial<DocDraft>) {
     setDocs((prev) => prev.map((doc) => (doc.key === key ? { ...doc, ...patch } : doc)));
@@ -166,6 +212,9 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
 
     const formData = new FormData();
     formData.set("personType", personType);
+    if (personType) {
+      for (const field of VERIFICATION_IDENTITY_FIELDS[personType]) formData.set(field.key, identity[field.key]);
+    }
     for (const doc of docs) {
       formData.append("docTitle", doc.title);
       formData.append("docFile", doc.file ?? new File([], "empty"));
@@ -276,6 +325,42 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
             <FieldError message={fieldErrors.personType} />
           </section>
 
+          {personType && (
+            <section key={personType} className={cardClass}>
+              <h2 className="flex items-center gap-2 text-sm font-extrabold text-panel-text">
+                <IdCard className="h-4 w-4 text-panel-accent" />
+                {personType === "legal" ? "مشخصات شرکت و مدیر عامل" : "مشخصات صاحب جواز کسب"}
+              </h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {VERIFICATION_IDENTITY_FIELDS[personType].map((field) => {
+                  const error = fieldErrors[field.key];
+                  return (
+                    <div key={field.key}>
+                      <label htmlFor={`verification-${field.key}`} className="mb-1.5 block text-xs font-bold text-panel-text-2">
+                        {field.label} <span className="text-[#FF6A00]">*</span>
+                      </label>
+                      <input
+                        id={`verification-${field.key}`}
+                        type="text"
+                        inputMode={field.numeric ? "numeric" : undefined}
+                        dir={field.numeric ? "ltr" : undefined}
+                        autoComplete="off"
+                        value={identity[field.key]}
+                        maxLength={field.maxLength}
+                        disabled={isPending}
+                        onChange={(e) => updateIdentity(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        aria-invalid={Boolean(error)}
+                        className={cn(inputClassName(Boolean(error)), field.numeric && "text-left placeholder:text-right")}
+                      />
+                      <FieldError message={error} />
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <section className={cardClass}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -296,6 +381,12 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
                 افزودن مدرک
               </button>
             </div>
+            {personType && (
+              <div role="note" className="mb-3 flex items-start gap-2.5 rounded-2xl border border-[#FF6A00]/30 bg-[#FF6A00]/[0.07] px-3.5 py-3 text-xs font-bold leading-6 text-panel-text">
+                <Info className="mt-1 h-4 w-4 shrink-0 text-panel-accent" />
+                <span>{VERIFICATION_DOC_HINTS[personType]}</span>
+              </div>
+            )}
             <FieldError message={fieldErrors.documents} />
 
             <ul className="space-y-3">
@@ -340,7 +431,7 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
                         maxLength={VERIFICATION_DOC_TITLE_MAX}
                         disabled={isPending}
                         onChange={(e) => updateDoc(doc.key, { title: e.target.value })}
-                        placeholder="مثلاً: کارت ملی، روزنامه رسمی، جواز کسب"
+                        placeholder={personType ? VERIFICATION_DOC_TITLE_PLACEHOLDERS[personType] : "مثلاً: کارت ملی، جواز کسب"}
                         className={inputClassName(Boolean(titleError))}
                       />
                       <FieldError message={titleError} />

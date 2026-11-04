@@ -6,15 +6,20 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES } from "@/lib/validation/brands";
+import { normalizeDigits } from "@/lib/validation/admin";
+import { isValidCompanyNationalId, isValidNationalCode } from "@/lib/validation/profile";
 import { removeVerificationFiles, saveVerificationFile } from "@/lib/verification-files";
 import {
   VERIFICATION_DOC_MAX_BYTES,
   VERIFICATION_DOC_MAX_COUNT,
   VERIFICATION_DOC_TITLE_MAX,
+  VERIFICATION_IDENTITY_FIELDS,
   getUserVerification,
   isVerificationPersonType,
   verificationInclude,
   verificationToRecord,
+  type VerificationIdentity,
+  type VerificationPersonType,
   type VerificationRecord,
 } from "@/lib/verification";
 import { toPersianDigits } from "@/lib/utils";
@@ -29,8 +34,10 @@ export type SubmitVerificationResult =
 /**
  * Submit the signed-in collaborator's identity documents for review.
  *
- * Form fields: `personType` (natural | legal), then one `docTitle` and one
- * `docFile` per document, in the same order. Allowed only for collaborators
+ * Form fields: `personType` (natural | legal); the identity details of that type
+ * (natural: `fullName`, `nationalCode` of the business-license owner; legal:
+ * `companyName`, `companyNationalId`, plus `fullName`, `nationalCode` of the CEO);
+ * then one `docTitle` and one `docFile` per document, in the same order. Allowed only for collaborators
  * with no submission yet or whose last one was rejected; a resubmission
  * replaces the rejected one (and its files) and resets `authenticaed`.
  */
@@ -51,6 +58,9 @@ export async function submitVerificationAction(formData: FormData): Promise<Subm
   const fieldErrors: Record<string, string> = {};
   const personType = formData.get("personType");
   if (!isVerificationPersonType(personType)) fieldErrors.personType = "نوع کاربری (حقیقی یا حقوقی) را انتخاب کنید";
+
+  const identity: VerificationIdentity = { fullName: null, nationalCode: null, companyName: null, companyNationalId: null };
+  if (isVerificationPersonType(personType)) Object.assign(identity, readIdentity(formData, personType, fieldErrors));
 
   const titles = formData.getAll("docTitle").map((value) => (typeof value === "string" ? value.trim() : ""));
   const files = formData.getAll("docFile");
@@ -99,7 +109,8 @@ export async function submitVerificationAction(formData: FormData): Promise<Subm
       return tx.userVerification.create({
         data: {
           userId,
-          personType: personType as "natural" | "legal",
+          personType: personType as VerificationPersonType,
+          ...identity,
           status: "pending",
           documents: { create: documents.map((doc, index) => ({ title: doc.title, imageUrl: stored[index] })) },
         },
@@ -121,4 +132,37 @@ export async function submitVerificationAction(formData: FormData): Promise<Subm
     if (current?.status === "pending") return { ok: true, record: current };
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
+}
+
+/**
+ * Read and validate the identity details that belong to `personType`; fields of
+ * the other type are ignored (stored as null). Errors go into `fieldErrors`.
+ */
+function readIdentity(
+  formData: FormData,
+  personType: VerificationPersonType,
+  fieldErrors: Record<string, string>
+): Partial<VerificationIdentity> {
+  const result: Partial<VerificationIdentity> = {};
+  for (const field of VERIFICATION_IDENTITY_FIELDS[personType]) {
+    const raw = formData.get(field.key);
+    const text = typeof raw === "string" ? raw.trim().replace(/\s+/g, " ") : "";
+    const value = field.numeric ? normalizeDigits(text) : text;
+
+    if (!value) {
+      fieldErrors[field.key] = `${field.label} را وارد کنید`;
+      continue;
+    }
+    if (field.key === "nationalCode" && !isValidNationalCode(value)) {
+      fieldErrors[field.key] = `${field.label} معتبر نیست (۱۰ رقم)`;
+    } else if (field.key === "companyNationalId" && !isValidCompanyNationalId(value)) {
+      fieldErrors[field.key] = `${field.label} معتبر نیست (۱۱ رقم)`;
+    } else if (!field.numeric && value.length < 2) {
+      fieldErrors[field.key] = `${field.label} باید حداقل ۲ کاراکتر باشد`;
+    } else if (value.length > field.maxLength) {
+      fieldErrors[field.key] = `${field.label} حداکثر ${toPersianDigits(field.maxLength)} کاراکتر است`;
+    }
+    result[field.key] = value;
+  }
+  return result;
 }

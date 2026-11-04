@@ -33,6 +33,19 @@ export function isValidNationalCode(code: string): boolean {
   return remainder < 2 ? check === remainder : check === 11 - remainder;
 }
 
+/** Iranian legal-entity national ID (شناسه ملی): 11 digits, last one a weighted mod-11 control. */
+export function isValidCompanyNationalId(code: string): boolean {
+  if (!/^\d{11}$/.test(code)) return false;
+  if (/^0+$/.test(code.slice(3, 9))) return false;
+  const check = Number(code[10]);
+  const offset = Number(code[9]) + 2;
+  const weights = [29, 27, 23, 19, 17];
+  let sum = 0;
+  for (let i = 0; i < 10; i += 1) sum += (Number(code[i]) + offset) * weights[i % 5];
+  const remainder = sum % 11;
+  return (remainder === 10 ? 0 : remainder) === check;
+}
+
 /* ───────────────────────── profile ───────────────────────── */
 
 export const profileUpdateSchema = z.object({

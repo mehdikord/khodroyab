@@ -25,6 +25,12 @@ export function verificationToRecord(row: VerificationRow): VerificationRecord {
   return {
     id: row.id.toString(),
     personType: row.personType,
+    identity: {
+      fullName: row.fullName,
+      nationalCode: row.nationalCode,
+      companyName: row.companyName,
+      companyNationalId: row.companyNationalId,
+    },
     status: row.status,
     rejectReason: row.rejectReason,
     documents: row.documents.map((doc) => ({
