@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { PriceTableManager } from "@/components/admin/price-table/PriceTableManager";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * price tables (`cars.price_table`). Nothing else about a car is edited here.
  */
 export default async function AdminPriceTablePage() {
-  await requireAdmin();
+  await requireAdminAccess("price_table");
 
   const cars = await prisma.car.findMany({
     include: carRecordInclude,

@@ -2,11 +2,12 @@
 
 import React, { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Users, Edit2, Trash2, UserCircle2, Handshake } from "lucide-react";
+import { Plus, Users, Edit2, Trash2, UserCircle2, Handshake, Eye } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { UserFormModal } from "@/components/admin/users/UserFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
+import { Badge } from "@/components/admin/ui/Badge";
 import { VerificationStatusBadge } from "@/components/admin/users/VerificationStatusBadge";
 import { deleteUserAction, toggleUserActiveAction, toggleUserCollaborateAction } from "@/app/admin/(panel)/users/actions";
 import type { UserRecord } from "@/lib/users";
@@ -16,6 +17,11 @@ import { cn, toPersianDigits } from "@/lib/utils";
 interface UsersManagerProps {
   initialUsers: UserRecord[];
   initialFilter: UserFilter;
+  /**
+   * Holder of the "users" permission. Without it (ads / price-table admins)
+   * the list is read-only: they only open a profile to work for that user.
+   */
+  canManage: boolean;
 }
 
 
@@ -33,7 +39,7 @@ function matchesFilter(user: UserRecord, filter: UserFilter): boolean {
   return true;
 }
 
-export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps) {
+export function UsersManager({ initialUsers, initialFilter, canManage }: UsersManagerProps) {
   const [users, setUsers] = useState<UserRecord[]>(initialUsers);
   const [filter, setFilter] = useState<UserFilter>(initialFilter);
   const [query, setQuery] = useState("");
@@ -171,9 +177,16 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
             <p className="mt-0.5 text-xs text-[#8B93A1]">{toPersianDigits(users.length)} کاربر ثبت شده</p>
           </div>
         </div>
-        <button onClick={() => setModalUser(null)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-5 text-sm font-extrabold text-[#07090C] transition-all hover:brightness-110">
+        {canManage ? (
+          <button onClick={() => setModalUser(null)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-5 text-sm font-extrabold text-[#07090C] transition-all hover:brightness-110">
             <Plus className="h-4 w-4" /> افزودن کاربر جدید
-        </button>
+          </button>
+        ) : (
+          <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.03] px-3.5 text-[11px] font-bold text-[#9BA3AE]">
+            <Eye className="h-3.5 w-3.5 text-[#FF8A2A]" />
+            فقط مشاهده
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -254,6 +267,7 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
                 <td className="px-6 py-4 text-[#D2D7DF]">{user.postalCode || "-"}</td>
                 <td className="px-6 py-4 max-w-[220px] truncate text-[#D2D7DF]" title={user.address ?? ""}>{user.address || "-"}</td>
                 <td className="px-6 py-4 text-center">
+                  {canManage ? (
                   <button
                     type="button"
                     onClick={() => handleToggleCollaborate(user)}
@@ -270,6 +284,17 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
                     <Handshake className="h-3.5 w-3.5" />
                     {user.collabrate ? "همکار" : "عادی"}
                   </button>
+                  ) : (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-bold",
+                        user.collabrate ? "border-sky-500/30 bg-sky-500/10 text-sky-300" : "border-white/[0.1] bg-white/[0.03] text-[#8B93A1]"
+                      )}
+                    >
+                      <Handshake className="h-3.5 w-3.5" />
+                      {user.collabrate ? "همکار" : "عادی"}
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-center">
                   {user.collabrate ? (
@@ -279,6 +304,7 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
                   )}
                 </td>
                 <td className="px-6 py-4 text-center">
+                  {canManage ? (
                   <button
                     type="button"
                     onClick={() => handleToggleActive(user)}
@@ -294,6 +320,9 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
                     <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? "bg-green-400" : "bg-red-400"}`} />
                     {user.isActive ? "فعال" : "غیرفعال"}
                   </button>
+                  ) : (
+                    <Badge tone={user.isActive ? "success" : "error"}>{user.isActive ? "فعال" : "غیرفعال"}</Badge>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex items-center justify-center gap-1.5">
@@ -305,6 +334,8 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
                       <UserCircle2 className="h-4 w-4" />
                       <span className="hidden xl:inline">پروفایل</span>
                     </Link>
+                    {canManage && (
+                    <>
                     <button
                       type="button"
                       onClick={() => setModalUser(user)}
@@ -321,6 +352,8 @@ export function UsersManager({ initialUsers, initialFilter }: UsersManagerProps)
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    </>
+                    )}
                   </div>
                 </td>
               </tr>

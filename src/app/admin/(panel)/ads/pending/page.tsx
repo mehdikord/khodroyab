@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Clock3, Megaphone } from "lucide-react";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { toPersianDigits } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * page only reports how many ads are waiting and points to the full list.
  */
 export default async function AdminPendingAdsPage() {
-  await requireAdmin();
+  await requireAdminAccess("ads");
 
   const pendingCount = await prisma.userCar.count({ where: { status: "pending" } });
 

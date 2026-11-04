@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { colorToRecord } from "@/lib/colors";
@@ -42,7 +42,7 @@ interface PageProps {
 }
 
 export default async function AdminAllAdsPage({ searchParams }: PageProps) {
-  await requireAdmin();
+  await requireAdminAccess("ads");
 
   /* ───── Parse filters from the URL ───── */
   const filters: AdsFilterValues = {

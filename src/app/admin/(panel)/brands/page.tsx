@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { brandToRecord } from "@/lib/brands";
 import { BrandsManager } from "@/components/admin/brands/BrandsManager";
 
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  * orchestrator (BrandsManager) which owns all mutations.
  */
 export default async function AdminBrandsPage() {
-  await requireAdmin();
+  await requireAdminAccess("cars");
 
   const brands = await prisma.brand.findMany({
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],

@@ -19,7 +19,7 @@ import {
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import { saveMyPriceTableAction } from "@/app/panel/(app)/price-table/actions";
+import { saveMyPriceTableAction, type SavePriceTableResult } from "@/app/panel/(app)/price-table/actions";
 import type { ColorRecord } from "@/lib/colors";
 import type { PriceTableCarRecord, PriceTableEntryRecord } from "@/lib/price-table";
 import {
@@ -40,6 +40,11 @@ interface MyPriceTableManagerProps {
   cars: PriceTableCarRecord[];
   colors: ColorRecord[];
   initialEntries: PriceTableEntryRecord[];
+  /** Saves the whole table; defaults to the signed-in customer's own table. */
+  saveAction?: (formData: FormData) => Promise<SavePriceTableResult>;
+  /** Page heading; defaults to «جدول من». */
+  title?: string;
+  successMessage?: string;
 }
 
 /**
@@ -180,7 +185,14 @@ function ErrorText({ message, className }: { message: string | undefined; classN
  * different colours, but a (year, colour) pair only once per car. Changes are
  * saved together.
  */
-export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTableManagerProps) {
+export function MyPriceTableManager({
+  cars,
+  colors,
+  initialEntries,
+  saveAction = saveMyPriceTableAction,
+  title = "جدول من",
+  successMessage = "جدول قیمت شما ذخیره شد",
+}: MyPriceTableManagerProps) {
   const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries));
   const [drafts, setDrafts] = useState<Drafts>(saved);
   const [query, setQuery] = useState("");
@@ -310,12 +322,12 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
     );
 
     startTransition(async () => {
-      const result = await saveMyPriceTableAction(formData);
+      const result = await saveAction(formData);
       if (result.ok) {
         const next = toDrafts(cars, result.entries);
         setSaved(next);
         setDrafts(next);
-        showToast("success", "جدول قیمت شما ذخیره شد");
+        showToast("success", successMessage);
       } else {
         if (result.fieldErrors) {
           setFieldErrors(result.fieldErrors);
@@ -338,7 +350,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
         <div>
           <h1 className="flex items-center gap-2 text-xl font-black text-panel-text sm:text-2xl">
             <Table2 className="h-5 w-5 text-panel-accent" />
-            جدول من
+            {title}
           </h1>
           <p className="mt-1 text-xs text-panel-muted sm:text-sm">
             {cars.length === 0 ? (
@@ -796,7 +808,7 @@ export function MyPriceTableManager({ cars, colors, initialEntries }: MyPriceTab
 
       {/* Floating save bar (shown only with unsaved changes) */}
       {isDirty && (
-        <div className="panel-card-in sticky bottom-[calc(var(--panel-dock-space)+0.25rem)] z-30">
+        <div className="panel-card-in sticky bottom-[calc(var(--panel-dock-space,0px)+0.25rem)] z-30">
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#FF6A00]/30 bg-panel-surface/95 px-4 py-3 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
             <p className="text-xs font-bold text-panel-text-2">{toPersianDigits(dirtyIds.size)} خودرو تغییر کرده و ذخیره نشده است</p>
             <div className="flex items-center gap-2">

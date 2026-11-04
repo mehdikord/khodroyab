@@ -16,7 +16,7 @@ export async function authenticateAdmin(
 ): Promise<CurrentAdmin | null> {
   const admin = await prisma.admin.findUnique({
     where: { phone },
-    select: { id: true, name: true, phone: true, password: true },
+    select: { id: true, name: true, phone: true, password: true, isActive: true },
   });
 
   if (!admin) {
@@ -26,7 +26,9 @@ export async function authenticateAdmin(
   }
 
   const valid = await verifyPassword(password, admin.password);
-  if (!valid) {
+  // A deactivated account gets the same generic failure as a wrong password,
+  // and only after the hash comparison so timing does not reveal its state.
+  if (!valid || !admin.isActive) {
     return null;
   }
 

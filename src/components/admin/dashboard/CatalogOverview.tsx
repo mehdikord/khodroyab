@@ -4,14 +4,18 @@ import { Car, HandCoins, Images, Layers3, SlidersHorizontal, Tag } from "lucide-
 import type { LucideIcon } from "lucide-react";
 
 import type { DashboardData } from "@/lib/dashboard";
+import { hasPermission, type AdminAccess, type AdminPermission } from "@/lib/auth/permissions";
 import { formatPersianNumber } from "@/lib/utils";
 
 interface CatalogOverviewProps {
   catalog: DashboardData["catalog"];
+  access: AdminAccess;
 }
 
 interface CatalogItem {
   key: string;
+  /** Section that owns the link; hidden from admins without it. */
+  permission: AdminPermission;
   label: string;
   value: number;
   hint: string;
@@ -20,10 +24,11 @@ interface CatalogItem {
 }
 
 /** Compact grid of catalogue entities with a one-line health hint each. */
-export function CatalogOverview({ catalog }: CatalogOverviewProps) {
-  const items: CatalogItem[] = [
+export function CatalogOverview({ catalog, access }: CatalogOverviewProps) {
+  const allItems: CatalogItem[] = [
     {
       key: "brands",
+      permission: "cars",
       label: "برندها",
       value: catalog.brands,
       hint: `${formatPersianNumber(catalog.activeBrands)} فعال`,
@@ -32,6 +37,7 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
     },
     {
       key: "car-types",
+      permission: "cars",
       label: "انواع خودرو",
       value: catalog.carTypes,
       hint: "دسته‌بندی بدنه",
@@ -40,6 +46,7 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
     },
     {
       key: "cars",
+      permission: "cars",
       label: "خودروها",
       value: catalog.cars,
       hint: `${formatPersianNumber(catalog.carImages)} تصویر`,
@@ -48,6 +55,7 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
     },
     {
       key: "options",
+      permission: "cars",
       label: "فرم ثبت خودرو",
       value: catalog.options,
       hint: `${formatPersianNumber(catalog.optionItems)} گزینه · ${formatPersianNumber(catalog.adOptionValues)} مقدار`,
@@ -56,6 +64,7 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
     },
     {
       key: "sale-terms",
+      permission: "ads",
       label: "شرایط فروش",
       value: catalog.saleTerms,
       hint: `${formatPersianNumber(catalog.activeSaleTerms)} فعال`,
@@ -64,6 +73,7 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
     },
     {
       key: "images",
+      permission: "cars",
       label: "تصاویر خودرو",
       value: catalog.carImages,
       hint:
@@ -74,6 +84,7 @@ export function CatalogOverview({ catalog }: CatalogOverviewProps) {
       icon: Images,
     },
   ];
+  const items = allItems.filter((item) => hasPermission(access, item.permission));
 
   return (
     <div className="grid grid-cols-2 gap-3">

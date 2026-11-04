@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/guards";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getDashboardData } from "@/lib/dashboard";
 import { formatPersianNumber } from "@/lib/utils";
 import { DashboardCard } from "@/components/admin/dashboard/DashboardCard";
@@ -54,6 +55,15 @@ export default async function AdminDashboardPage() {
 
   const firstName = admin.name.trim().split(/\s+/)[0] || admin.name;
 
+  // Every widget belongs to one RBAC section; admins only see their own.
+  const can = {
+    ads: hasPermission(admin, "ads"),
+    users: hasPermission(admin, "users"),
+    cars: hasPermission(admin, "cars"),
+  };
+  const access = { isRoot: admin.isRoot, permissions: admin.permissions };
+  const hasAnySection = admin.isRoot || admin.permissions.length > 0;
+
   return (
     <div className="space-y-6">
       {/* ───── Header ───── */}
@@ -67,7 +77,9 @@ export default async function AdminDashboardPage() {
             {greetingFor(data.hour)}، {firstName} 👋
           </h1>
           <p className="mt-1 text-xs text-[#9BA3AE]">
-            {data.ads.pending > 0 ? (
+            {!can.ads ? (
+              "خلاصه وضعیت بخش‌هایی که به آن‌ها دسترسی دارید را در ادامه ببینید."
+            ) : data.ads.pending > 0 ? (
               <>
                 <span className="font-bold text-amber-300">{formatPersianNumber(data.ads.pending)} آگهی</span> منتظر بررسی
                 شماست.
@@ -78,6 +90,7 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {can.ads && (
           <Link
             href="/admin/ads?status=pending"
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 text-xs font-bold text-[#D2D7DF] transition-colors hover:border-amber-400/40 hover:text-[#F5F5F5]"
@@ -85,6 +98,8 @@ export default async function AdminDashboardPage() {
             <Clock3 className="h-4 w-4 text-amber-300" />
             بررسی آگهی‌ها
           </Link>
+          )}
+          {can.cars && (
           <Link
             href="/admin/cars"
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-4 text-xs font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110"
@@ -92,11 +107,21 @@ export default async function AdminDashboardPage() {
             <Plus className="h-4 w-4" />
             افزودن خودرو
           </Link>
+          )}
         </div>
       </div>
 
+      {!hasAnySection && (
+        <div className="rounded-3xl border border-dashed border-white/[0.12] bg-[#0D1117] px-6 py-14 text-center">
+          <p className="text-sm font-bold text-[#F5F5F5]">هنوز دسترسی به هیچ بخشی برای شما تعریف نشده است</p>
+          <p className="mt-1.5 text-xs leading-6 text-[#8B93A1]">برای دریافت نقش و سطح دسترسی با مدیر کل سامانه تماس بگیرید.</p>
+        </div>
+      )}
+
       {/* ───── KPI row ───── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {can.ads && (
+        <>
         <StatTile
           label="کل آگهی‌ها"
           value={data.ads.total}
@@ -121,6 +146,9 @@ export default async function AdminDashboardPage() {
           }
           delay={60}
         />
+        </>
+        )}
+        {can.users && (
         <StatTile
           label="کاربران"
           value={data.users.total}
@@ -132,6 +160,8 @@ export default async function AdminDashboardPage() {
           sparklineLabel="کاربران ثبت‌نام‌شده در ۱۴ روز گذشته"
           delay={120}
         />
+        )}
+        {can.cars && (
         <StatTile
           label="خودروهای کاتالوگ"
           value={data.catalog.cars}
@@ -141,9 +171,11 @@ export default async function AdminDashboardPage() {
           hint={`${formatPersianNumber(data.catalog.brands)} برند · ${formatPersianNumber(data.catalog.carTypes)} نوع بدنه`}
           delay={180}
         />
+        )}
       </div>
 
       {/* ───── Trend + status ───── */}
+      {can.ads && (
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <DashboardCard
           title="روند ثبت آگهی"
@@ -167,9 +199,12 @@ export default async function AdminDashboardPage() {
           />
         </DashboardCard>
       </div>
+      )}
 
       {/* ───── Recent ads + attention ───── */}
+      {hasAnySection && (
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        {can.ads && (
         <DashboardCard
           title="آخرین آگهی‌ها"
           subtitle="جدیدترین آگهی‌های ثبت‌شده در سامانه"
@@ -179,38 +214,46 @@ export default async function AdminDashboardPage() {
         >
           <RecentAds ads={data.recentAds} />
         </DashboardCard>
+        )}
 
         <DashboardCard
           title="نیازمند رسیدگی"
           subtitle="مواردی که بهتر است امروز بررسی شوند"
           icon={Activity}
-          className="admin-animate-in"
+          className={can.ads ? "admin-animate-in" : "admin-animate-in xl:col-span-3"}
         >
-          <AttentionList attention={data.attention} />
+          <AttentionList attention={data.attention} access={access} />
         </DashboardCard>
       </div>
+      )}
 
       {/* ───── Catalogue + brands + users ───── */}
+      {(can.cars || can.ads || can.users) && (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {(can.cars || can.ads) && (
         <DashboardCard
           title="نمای کاتالوگ"
           subtitle="موجودی بخش‌های مختلف کاتالوگ"
           icon={LayoutGrid}
           className="admin-animate-in"
         >
-          <CatalogOverview catalog={data.catalog} />
+          <CatalogOverview catalog={data.catalog} access={access} />
         </DashboardCard>
+        )}
 
+        {can.ads && (
         <DashboardCard
           title="برندهای برتر"
           subtitle="بر اساس تعداد آگهی ثبت‌شده"
           icon={Tag}
-          action={{ label: "همه برندها", href: "/admin/brands" }}
+          action={can.cars ? { label: "همه برندها", href: "/admin/brands" } : undefined}
           className="admin-animate-in"
         >
           <TopBrands brands={data.topBrands} />
         </DashboardCard>
+        )}
 
+        {can.users && (
         <DashboardCard
           title="کاربران جدید"
           subtitle={`${formatPersianNumber(data.users.active)} کاربر فعال از ${formatPersianNumber(data.users.total)}`}
@@ -220,7 +263,9 @@ export default async function AdminDashboardPage() {
         >
           <RecentUsers users={data.recentUsers} />
         </DashboardCard>
+        )}
       </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake } from "lucide-react";
+import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake, ShieldCheck, KeyRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+import { USER_DIRECTORY_ACCESS, canAccess, type AccessRequirement, type AdminAccess } from "@/lib/auth/permissions";
 
 export interface AdminSubNavItem {
   key: string;
@@ -15,6 +17,8 @@ export interface AdminNavItem {
   enLabel: string;
   href?: string;
   icon: LucideIcon;
+  /** Who sees the item; mirrors the page guard (`requireAdminAccess`). */
+  requirement: AccessRequirement;
   children?: AdminSubNavItem[];
 }
 
@@ -44,6 +48,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "DASHBOARD",
         href: "/admin/dashboard",
         icon: LayoutDashboard,
+        requirement: "any",
       },
       {
         key: "users",
@@ -51,6 +56,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "USERS",
         href: "/admin/users",
         icon: Users,
+        requirement: USER_DIRECTORY_ACCESS,
       },
       {
         key: "subscriptions",
@@ -58,6 +64,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "SUBSCRIPTIONS",
         href: "/admin/subscriptions",
         icon: Crown,
+        requirement: "root",
       },
       {
         key: "sale_terms",
@@ -65,6 +72,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "SALE TERMS",
         href: "/admin/sale-terms",
         icon: HandCoins,
+        requirement: "ads",
       },
       {
         key: "sponsors",
@@ -72,6 +80,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "SPONSORS",
         href: "/admin/sponsors",
         icon: HeartHandshake,
+        requirement: "sponsors",
       },
     ],
   },
@@ -84,6 +93,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         label: "مدیریت آگهی‌ها",
         enLabel: "ADS",
         icon: Megaphone,
+        requirement: "ads",
         children: [
           {
             // Listed first so it wins the prefix match over "/admin/ads".
@@ -112,12 +122,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "BRANDS",
         href: "/admin/brands",
         icon: Tag,
+        requirement: "cars",
       },
       {
         key: "car_management",
         label: "مدیریت خودرو ها",
         enLabel: "CARS",
         icon: Car,
+        requirement: "cars",
         children: [
           {
             key: "cars",
@@ -151,10 +163,41 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "PRICE TABLE",
         href: "/admin/price-table",
         icon: Table2,
+        requirement: "price_table",
+      },
+    ],
+  },
+  {
+    key: "system",
+    label: "مدیریت سیستم",
+    items: [
+      {
+        key: "admins",
+        label: "مدیران",
+        enLabel: "ADMINS",
+        href: "/admin/admins",
+        icon: ShieldCheck,
+        requirement: "root",
+      },
+      {
+        key: "roles",
+        label: "نقش‌ها و دسترسی‌ها",
+        enLabel: "ROLES",
+        href: "/admin/roles",
+        icon: KeyRound,
+        requirement: "root",
       },
     ],
   },
 ];
+
+/** The nav groups this admin may see; empty groups are dropped. */
+export function getVisibleNavGroups(access: AdminAccess): AdminNavGroup[] {
+  return ADMIN_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canAccess(access, item.requirement)),
+  })).filter((group) => group.items.length > 0);
+}
 
 /** Resolve the active nav item for a given pathname. */
 export function findActiveNavItem(pathname: string): ActiveNavInfo | undefined {

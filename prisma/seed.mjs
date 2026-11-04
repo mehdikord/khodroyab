@@ -47,12 +47,17 @@ async function main() {
         name: DEV_ADMIN.name,
         email: DEV_ADMIN.email,
         password: passwordHash,
+        // The development admin is always a root (full access) administrator.
+        isRoot: true,
+        isActive: true,
+        roleId: null,
       },
       create: {
         name: DEV_ADMIN.name,
         phone: DEV_ADMIN.phone,
         email: DEV_ADMIN.email,
         password: passwordHash,
+        isRoot: true,
       },
       select: { id: true, name: true, phone: true, email: true },
     });

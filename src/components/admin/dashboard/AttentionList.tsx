@@ -14,12 +14,15 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import type { DashboardData } from "@/lib/dashboard";
+import { hasPermission, type AdminAccess, type AdminPermission } from "@/lib/auth/permissions";
 import { cn, formatPersianNumber } from "@/lib/utils";
 
 type Severity = "warning" | "info";
 
 interface AttentionItem {
   key: string;
+  /** Section that owns the link; hidden from admins without it. */
+  permission: AdminPermission;
   label: string;
   description: string;
   count: number;
@@ -41,13 +44,15 @@ const SEVERITY: Record<Severity, { icon: string; count: string }> = {
 
 interface AttentionListProps {
   attention: DashboardData["attention"];
+  access: AdminAccess;
 }
 
 /** Things an administrator should act on, ordered by urgency; hides zero rows. */
-export function AttentionList({ attention }: AttentionListProps) {
+export function AttentionList({ attention, access }: AttentionListProps) {
   const allItems: AttentionItem[] = [
     {
       key: "verifications",
+      permission: "users",
       label: "احراز هویت در انتظار بررسی",
       description: "کاربران همکار مدارک هویتی ارسال کرده‌اند",
       count: attention.pendingVerifications,
@@ -57,6 +62,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "pending",
+      permission: "ads",
       label: "آگهی در انتظار تایید",
       description: "توسط کاربران ثبت شده و منتظر بررسی است",
       count: attention.pendingAds,
@@ -66,6 +72,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "no-images",
+      permission: "cars",
       label: "خودرو بدون تصویر",
       description: "در سایت بدون عکس نمایش داده می‌شود",
       count: attention.carsWithoutImages,
@@ -75,6 +82,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "brands-no-cars",
+      permission: "cars",
       label: "برند بدون خودرو",
       description: "برند تعریف شده ولی خودرویی ندارد",
       count: attention.brandsWithoutCars,
@@ -84,6 +92,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "inactive-ads",
+      permission: "ads",
       label: "آگهی غیرفعال",
       description: "از نمایش عمومی خارج شده است",
       count: attention.inactiveAds,
@@ -93,6 +102,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "inactive-brands",
+      permission: "cars",
       label: "برند غیرفعال",
       description: "در سایت نمایش داده نمی‌شود",
       count: attention.inactiveBrands,
@@ -102,6 +112,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "inactive-sale-terms",
+      permission: "ads",
       label: "شرایط فروش غیرفعال",
       description: "برای آگهی‌های جدید قابل انتخاب نیست",
       count: attention.inactiveSaleTerms,
@@ -111,6 +122,7 @@ export function AttentionList({ attention }: AttentionListProps) {
     },
     {
       key: "inactive-users",
+      permission: "users",
       label: "کاربر غیرفعال",
       description: "امکان ورود و ثبت آگهی ندارد",
       count: attention.inactiveUsers,
@@ -119,7 +131,7 @@ export function AttentionList({ attention }: AttentionListProps) {
       severity: "info",
     },
   ];
-  const items = allItems.filter((item) => item.count > 0);
+  const items = allItems.filter((item) => item.count > 0 && hasPermission(access, item.permission));
 
   if (items.length === 0) {
     return (

@@ -33,10 +33,46 @@ model Admin {
   phone     String   @unique @db.VarChar(255)
   email     String?  @db.VarChar(255)
   password  String   @db.VarChar(255)
+  /// Root (super) administrator: unrestricted access, including managing
+  /// other administrators and roles. Ignores `roleId` entirely.
+  isRoot    Boolean  @default(false) @map("is_root")
+  /// Inactive administrators cannot sign in and lose any open session.
+  isActive  Boolean  @default(true) @map("is_active")
+  /// RBAC role for non-root administrators. Null = no section access.
+  roleId    BigInt?  @map("role_id") @db.UnsignedBigInt
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
+  role AdminRole? @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@index([roleId])
   @@map("admins")
+}
+
+// ─── admin_roles: named permission sets assigned to administrators ──────────
+model AdminRole {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  admins      Admin[]
+  permissions AdminRolePermission[]
+
+  @@map("admin_roles")
+}
+
+// ─── admin_role_permissions: the panel sections a role may manage ──────────
+/// `permission` is one of the keys in `src/lib/auth/permissions.ts`.
+model AdminRolePermission {
+  roleId     BigInt @map("role_id") @db.UnsignedBigInt
+  permission String @db.VarChar(50)
+
+  role AdminRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+  @@map("admin_role_permissions")
 }
 
 // ─── Table 2: users ──────────────────────────────────────────────────────────

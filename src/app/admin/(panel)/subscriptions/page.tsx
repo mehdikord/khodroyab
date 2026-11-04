@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { subscriptionPlanToRecord } from "@/lib/subscriptions";
 import { SubscriptionPlansManager } from "@/components/admin/subscriptions/SubscriptionPlansManager";
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminSubscriptionsPage() {
-  await requireAdmin();
+  await requireAdminAccess("root");
 
   const [plans, usage] = await Promise.all([
     prisma.subscriptionPlan.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),

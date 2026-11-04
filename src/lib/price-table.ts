@@ -3,7 +3,13 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
-import { hasAnyPrice, withVisiblePrices } from "@/lib/price-table-shared";
+import {
+  PRICE_TABLE_ALL_PRICE_KEYS,
+  hasAnyPrice,
+  withVisiblePrices,
+  type PriceTableAnyPriceField,
+} from "@/lib/price-table-shared";
+import type { PriceTableEntryInput } from "@/lib/validation/price-table";
 
 /** A car the admin has allowed in price tables (the catalogue side of a row). */
 export interface PriceTableCarRecord {
@@ -135,4 +141,195 @@ export function buildPriceTableRows(cars: PriceTableCarRecord[], entries: PriceT
 export async function getUserPriceTableRows(userId: bigint, showPartner: boolean): Promise<PriceTableRow[]> {
   const [cars, entries] = await Promise.all([listPriceTableCars(), listUserPriceTableEntries(userId, showPartner)]);
   return buildPriceTableRows(cars, entries);
+}
+
+/* ───────────────────────── Recent rows (admin preview) ───────────────────────── */
+
+/** A saved row of a user's price table with its car, for short previews. */
+export interface RecentPriceTableEntryRecord {
+  car: PriceTableCarRecord;
+  tiers: PriceTableTierRecord[];
+  updatedAtLabel: string;
+}
+
+const faDate = new Intl.DateTimeFormat("fa-IR", { year: "numeric", month: "long", day: "numeric" });
+
+/**
+ * The user's most recently saved rows (eligible cars only), newest first, plus
+ * how many rows they have in total. Every price is included (admin view).
+ */
+export async function listRecentUserPriceTableEntries(
+  userId: bigint,
+  take: number
+): Promise<{ total: number; entries: RecentPriceTableEntryRecord[] }> {
+  const where = { userId, car: { priceTable: true }, prices: { some: {} } } satisfies Prisma.UserPriceTableEntryWhereInput;
+  const [total, rows] = await Promise.all([
+    prisma.userPriceTableEntry.count({ where }),
+    prisma.userPriceTableEntry.findMany({
+      where,
+      select: {
+        updatedAt: true,
+        car: { select: priceTableCarSelect },
+        prices: {
+          select: {
+            year: true,
+            colorId: true,
+            priceUsd: true,
+            clearancePrice: true,
+            instantPrice: true,
+            partnerPriceUsd: true,
+            partnerClearancePrice: true,
+            partnerInstantPrice: true,
+            color: { select: { name: true, code: true } },
+          },
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take,
+    }),
+  ]);
+  return {
+    total,
+    entries: rows.map((row) => ({
+      car: toCarRecord(row.car),
+      tiers: row.prices.map(({ color, colorId, ...tier }) => ({
+        ...tier,
+        colorId: colorId.toString(),
+        colorName: color.name,
+        colorCode: color.code,
+      })),
+      updatedAtLabel: faDate.format(row.updatedAt),
+    })),
+  };
+}
+
+/* ───────────────────────── Saving ───────────────────────── */
+
+export type SavePriceTableResult =
+  | { ok: true; entries: PriceTableEntryRecord[] }
+  | { ok: false; message: string; fieldErrors?: Record<string, string> };
+
+const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
+
+type TierSignatureInput = Pick<PriceTableEntryInput["tiers"][number], "year" | PriceTableAnyPriceField> & {
+  colorId: string | bigint;
+};
+
+/** Stable comparison key of a row's tiers, to skip rows that did not change. */
+function entrySignature(tiers: TierSignatureInput[]): string {
+  return JSON.stringify(
+    tiers.map((tier) => [tier.year, tier.colorId.toString(), ...PRICE_TABLE_ALL_PRICE_KEYS.map((key) => tier[key])])
+  );
+}
+
+/**
+ * Replace a user's price table with the validated rows. Shared by the
+ * customer's own editor and the admin's editor; callers authorise and
+ * revalidate.
+ *
+ * - Only cars the admin has flagged (`cars.price_table`) are accepted.
+ * - Eligible cars missing from the submission are removed from the table.
+ * - Entries for cars that are currently *not* eligible are left untouched, so
+ *   they reappear if the admin re-enables the car later.
+ * - Each submitted row's (year, colour) tiers replace the stored ones; rows
+ *   whose tiers are unchanged are not rewritten.
+ */
+export async function replaceUserPriceTable(userId: bigint, entries: PriceTableEntryInput[]): Promise<SavePriceTableResult> {
+  try {
+    const eligible = await prisma.car.findMany({ where: { priceTable: true }, select: { id: true } });
+    const eligibleIds = eligible.map((car) => car.id);
+    const eligibleSet = new Set(eligibleIds.map((id) => id.toString()));
+
+    const fieldErrors: Record<string, string> = {};
+    for (const entry of entries) {
+      if (!eligibleSet.has(entry.carId)) {
+        fieldErrors[`${entry.carId}.tiers`] = "این خودرو دیگر برای جدول قیمت مجاز نیست";
+      }
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      return {
+        ok: false,
+        message: "برخی از خودروهای انتخاب‌شده دیگر برای جدول قیمت مجاز نیستند؛ صفحه را به‌روزرسانی کنید",
+        fieldErrors,
+      };
+    }
+
+    const colorIds = Array.from(
+      new Set(entries.flatMap((entry) => entry.tiers.map((tier) => tier.colorId))),
+      (id) => BigInt(id)
+    );
+    const existingColors = await prisma.color.findMany({ where: { id: { in: colorIds } }, select: { id: true } });
+    const colorSet = new Set(existingColors.map((color) => color.id.toString()));
+    for (const entry of entries) {
+      entry.tiers.forEach((tier, index) => {
+        if (!colorSet.has(tier.colorId)) {
+          fieldErrors[`${entry.carId}.${index}.colorId`] = "این رنگ دیگر وجود ندارد؛ رنگ دیگری انتخاب کنید";
+        }
+      });
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      return { ok: false, message: "برخی از رنگ‌های انتخاب‌شده حذف شده‌اند؛ صفحه را به‌روزرسانی کنید", fieldErrors };
+    }
+
+    const submittedIds = entries.map((entry) => BigInt(entry.carId));
+
+    const existing = await prisma.userPriceTableEntry.findMany({
+      where: { userId, carId: { in: submittedIds } },
+      select: {
+        carId: true,
+        prices: {
+          select: {
+            year: true,
+            colorId: true,
+            priceUsd: true,
+            clearancePrice: true,
+            instantPrice: true,
+            partnerPriceUsd: true,
+            partnerClearancePrice: true,
+            partnerInstantPrice: true,
+          },
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        },
+      },
+    });
+    const existingSignature = new Map(
+      existing.map((entry) => [entry.carId.toString(), entrySignature(entry.prices)])
+    );
+    const changed = entries.filter((entry) => existingSignature.get(entry.carId) !== entrySignature(entry.tiers));
+
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.userPriceTableEntry.deleteMany({
+          where: { userId, carId: { in: eligibleIds, notIn: submittedIds } },
+        });
+
+        for (const entry of changed) {
+          const carId = BigInt(entry.carId);
+          const saved = await tx.userPriceTableEntry.upsert({
+            where: { userId_carId: { userId, carId } },
+            create: { userId, carId },
+            // Touch `updatedAt`: the row itself has no other column that changes.
+            update: { updatedAt: new Date() },
+            select: { id: true },
+          });
+          await tx.userPriceTablePrice.deleteMany({ where: { entryId: saved.id } });
+          await tx.userPriceTablePrice.createMany({
+            data: entry.tiers.map((tier, index) => ({
+              ...tier,
+              entryId: saved.id,
+              colorId: BigInt(tier.colorId),
+              sortOrder: index,
+            })),
+          });
+        }
+      },
+      { timeout: 30_000 }
+    );
+
+    return { ok: true, entries: await listUserPriceTableEntries(userId) };
+  } catch (error) {
+    console.error("[price-table:save] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
 }

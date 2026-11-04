@@ -15,15 +15,20 @@ import {
 import { cn } from "@/lib/utils";
 import { AdminLogo } from "@/components/admin/AdminLogo";
 import {
-  ADMIN_NAV_GROUPS,
   findActiveNavItem,
+  getVisibleNavGroups,
   type AdminNavItem,
 } from "@/components/admin/admin-nav";
+import type { AdminAccess } from "@/lib/auth/permissions";
 import { logoutAdminAction } from "@/app/admin/auth-actions";
 
 export interface AdminShellUser {
   name: string;
   phone: string;
+  /** Drives which nav items are shown (the server enforces the same rules). */
+  access: AdminAccess;
+  /** "مدیر کل" for root admins, otherwise the role name. */
+  roleLabel: string;
 }
 
 interface AdminShellProps {
@@ -159,7 +164,7 @@ const SidebarContent: React.FC<{
         aria-label="ناوبری پنل مدیریت"
         className="admin-scrollbar flex-1 overflow-y-auto px-3 py-5"
       >
-        {ADMIN_NAV_GROUPS.map((group) => (
+        {getVisibleNavGroups(user.access).map((group) => (
           <div key={group.key} className="mb-6 last:mb-0">
             <p className="px-3 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#5E6672]">
               {group.label}
@@ -381,7 +386,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({ user, children }) => {
                 <span className="truncate text-xs font-bold text-[#F5F5F5]">
                   {user.name}
                 </span>
-                <span className="text-[10px] text-[#9BA3AE]">مدیر سیستم</span>
+                <span className="text-[10px] text-[#9BA3AE]">{user.roleLabel}</span>
               </span>
               <ChevronDown
                 className={cn(

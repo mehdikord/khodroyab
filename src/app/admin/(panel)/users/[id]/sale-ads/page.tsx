@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Handshake } from "lucide-react";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { userToRecord } from "@/lib/users";
 import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { saleTermToRecord } from "@/lib/sale-terms";
@@ -26,7 +26,7 @@ interface PageProps {
 }
 
 export default async function AdminUserSaleAdsPage({ params }: PageProps) {
-  await requireAdmin();
+  await requireAdminAccess("ads");
 
   let userId: bigint;
   try {

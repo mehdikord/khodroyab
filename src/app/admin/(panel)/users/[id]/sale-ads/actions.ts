@@ -12,7 +12,7 @@ import {
   type UserCarRecord,
 } from "@/lib/user-cars";
 import { isAdStatus, type AdStatus } from "@/lib/ad-status";
-import { getCurrentAdmin } from "@/lib/auth/guards";
+import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { parseUserCarForm, type UserCarSaleTermInput } from "@/lib/validation/user-cars";
 import {
@@ -24,7 +24,6 @@ import {
   type StoredAdImages,
 } from "@/lib/user-car-extras";
 
-const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 const INVALID_ID_MESSAGE = "شناسه آگهی نامعتبر است";
 
@@ -51,7 +50,8 @@ function parseBigInt(value: string): bigint | null {
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
-  if (!(await getCurrentAdmin())) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
+  const denied = await adminActionDenied("ads");
+  if (denied) return { ok: false, message: denied };
   return null;
 }
 

@@ -4,19 +4,19 @@ import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
 import { userRecordInclude, userToRecord, type UserRecord } from "@/lib/users";
-import { getCurrentAdmin } from "@/lib/auth/guards";
+import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
 import { companyNameSchema, userPasswordSchema, userPhoneSchema } from "@/lib/validation/user";
 import { hashPassword } from "@/lib/auth/password";
 import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 
-const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
 async function guardRequest() {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
-  if (!(await getCurrentAdmin())) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
+  const denied = await adminActionDenied("users");
+  if (denied) return { ok: false, message: denied };
   return null;
 }
 

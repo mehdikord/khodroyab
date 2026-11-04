@@ -6,6 +6,7 @@ import { BadgeCheck, Building2, FileImage, Loader2, ShieldCheck, ShieldX, UserRo
 import { Modal } from "@/components/admin/ui/Modal";
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { VerificationStatusBadge } from "@/components/admin/users/VerificationStatusBadge";
+import { ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
 import { reviewVerificationAction } from "@/app/admin/(panel)/users/[id]/verification-actions";
 import {
   VERIFICATION_PERSON_TYPE_LABELS,
@@ -59,7 +60,43 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
   const PersonIcon = verification?.personType === "legal" ? Building2 : UserRound;
 
   return (
-    <section className="admin-animate-in rounded-3xl border border-white/[0.07] bg-[#0D1117] p-5 sm:p-6">
+    <ProfileSection
+      icon={ShieldCheck}
+      title="احراز هویت"
+      badge={<VerificationStatusBadge authenticaed={authenticaed} status={verification?.status ?? null} />}
+      description="مدارک هویتی ارسال‌شده توسط کاربر همکار"
+      actions={
+        verification && (
+          <>
+            {!authenticaed && (
+              <button
+                type="button"
+                onClick={() => review("approve")}
+                disabled={isPending}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-extrabold text-[#07090C] transition-all hover:brightness-110 disabled:opacity-60"
+              >
+                {isPending && !rejectOpen ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5" />}
+                تایید احراز هویت
+              </button>
+            )}
+            {verification.status !== "rejected" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReason("");
+                  setRejectOpen(true);
+                }}
+                disabled={isPending}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-60"
+              >
+                <ShieldX className="h-3.5 w-3.5" />
+                {authenticaed ? "لغو تایید و رد" : "رد احراز هویت"}
+              </button>
+            )}
+          </>
+        )
+      }
+    >
       <Toast toast={toast} onDismiss={() => setToast(null)} />
 
       {rejectOpen && (
@@ -111,59 +148,14 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
         </Modal>
       )}
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#FF6A00]/30 bg-[#FF6A00]/10 text-[#FF8A2A]">
-            <ShieldCheck className="h-5 w-5" />
-          </span>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-extrabold text-[#F5F5F5]">احراز هویت</h3>
-              <VerificationStatusBadge authenticaed={authenticaed} status={verification?.status ?? null} />
-            </div>
-            <p className="mt-0.5 text-xs text-[#8B93A1]">مدارک هویتی ارسال‌شده توسط کاربر همکار</p>
-          </div>
-        </div>
-
-        {verification && (
-          <div className="flex flex-wrap items-center gap-2">
-            {!authenticaed && (
-              <button
-                type="button"
-                onClick={() => review("approve")}
-                disabled={isPending}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-extrabold text-[#07090C] transition-all hover:brightness-110 disabled:opacity-60"
-              >
-                {isPending && !rejectOpen ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
-                تایید احراز هویت
-              </button>
-            )}
-            {verification.status !== "rejected" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setReason("");
-                  setRejectOpen(true);
-                }}
-                disabled={isPending}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 text-sm font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-60"
-              >
-                <ShieldX className="h-4 w-4" />
-                {authenticaed ? "لغو تایید و رد" : "رد احراز هویت"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
       {!verification ? (
-        <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[#07090C]/60 px-6 py-10 text-center">
-          <p className="text-sm font-bold text-[#D2D7DF]">این کاربر هنوز مدرکی برای احراز هویت ارسال نکرده است</p>
-          <p className="mt-1.5 text-xs leading-6 text-[#5E6672]">پس از ارسال مدارک از پنل کاربری، آن‌ها در این بخش نمایش داده می‌شوند.</p>
-        </div>
+        <SectionEmpty
+          title="این کاربر هنوز مدرکی برای احراز هویت ارسال نکرده است"
+          hint="پس از ارسال مدارک از پنل کاربری، آن‌ها در این بخش نمایش داده می‌شوند."
+        />
       ) : (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-white/[0.06] bg-[#07090C]/60 px-4 py-3 text-xs text-[#8B93A1]">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-white/[0.06] bg-[#07090C]/60 px-3 py-2 text-[11px] text-[#8B93A1]">
             <span className="inline-flex items-center gap-1.5">
               <PersonIcon className="h-4 w-4 text-[#FF8A2A]" />
               نوع کاربری: <span className="font-bold text-[#F5F5F5]">{VERIFICATION_PERSON_TYPE_LABELS[verification.personType]}</span>
@@ -174,24 +166,24 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
           </div>
 
           {verification.status === "rejected" && (
-            <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.06] px-4 py-3 text-xs leading-6 text-red-200">
+            <div className="rounded-xl border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-xs leading-6 text-red-200">
               <span className="font-bold">دلیل رد: </span>
               {verification.rejectReason || "دلیلی ثبت نشده است"}
             </div>
           )}
 
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {verification.documents.map((doc) => (
               <li key={doc.id}>
                 <a
                   href={doc.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block overflow-hidden rounded-2xl border border-white/[0.08] bg-[#07090C] transition-colors hover:border-[#FF6A00]/40"
+                  className="group block overflow-hidden rounded-xl border border-white/[0.08] bg-[#07090C] transition-colors hover:border-[#FF6A00]/40"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={doc.url} alt={doc.title} className="aspect-[4/3] w-full object-cover" loading="lazy" />
-                  <p className="flex items-center gap-1.5 truncate px-3 py-2 text-xs font-bold text-[#D2D7DF] group-hover:text-[#FF8A2A]">
+                  <img src={doc.url} alt={doc.title} className="aspect-[3/2] w-full object-cover" loading="lazy" />
+                  <p className="flex items-center gap-1.5 truncate px-2 py-1.5 text-[11px] font-bold text-[#D2D7DF] group-hover:text-[#FF8A2A]">
                     <FileImage className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{doc.title}</span>
                   </p>
@@ -201,6 +193,6 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
           </ul>
         </div>
       )}
-    </section>
+    </ProfileSection>
   );
 }

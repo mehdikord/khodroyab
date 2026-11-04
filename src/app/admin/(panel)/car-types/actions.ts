@@ -4,12 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
 import { carTypeToRecord, type CarTypeRecord } from "@/lib/car-types";
-import { getCurrentAdmin } from "@/lib/auth/guards";
+import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { parseCarTypeForm } from "@/lib/validation/car-types";
 
-const UNAUTHENTICATED_MESSAGE =
-  "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
@@ -37,9 +35,8 @@ async function guardRequest(): Promise<
   if (!isTrustedOrigin()) {
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
-  if (!(await getCurrentAdmin())) {
-    return { ok: false, message: UNAUTHENTICATED_MESSAGE };
-  }
+  const denied = await adminActionDenied("cars");
+  if (denied) return { ok: false, message: denied };
   return null;
 }
 

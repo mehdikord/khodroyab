@@ -5,11 +5,13 @@ import { Readable } from "node:stream";
 import prisma from "@/lib/prisma";
 import { EXTENSION_TO_MIME } from "@/lib/uploads";
 import { getCurrentAdmin } from "@/lib/auth/guards";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { resolveVerificationFile } from "@/lib/verification-files";
 
 /**
- * Streams one identity document. Only administrators and the document's owner
+ * Streams one identity document. Only administrators with the "users"
+ * permission and the document's owner
  * may open it; everyone else gets a 404 so document ids cannot be probed.
  */
 
@@ -33,7 +35,9 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
   });
   if (!document) return notFound();
 
-  let allowed = Boolean(await getCurrentAdmin());
+  // Identity documents are part of the "users" section (verification review).
+  const admin = await getCurrentAdmin();
+  let allowed = admin !== null && hasPermission(admin, "users");
   if (!allowed) {
     const user = await getCurrentUser();
     allowed = user !== null && user.id === document.verification.userId.toString();

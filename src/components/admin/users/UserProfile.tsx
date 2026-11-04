@@ -2,7 +2,6 @@ import React from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  ArrowUpLeft,
   BadgeCheck,
   Car,
   BadgeX,
@@ -18,7 +17,6 @@ import {
   Phone,
   PhoneCall,
   Quote,
-  Settings2,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -28,7 +26,10 @@ import type { LucideIcon } from "lucide-react";
 import type { UserRecord } from "@/lib/users";
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { VerificationRecord } from "@/lib/verification-shared";
+import type { RecentPriceTableEntryRecord } from "@/lib/price-table";
 import { UserVerificationSection } from "@/components/admin/users/UserVerificationSection";
+import { UserPriceTablePreview } from "@/components/admin/users/UserPriceTablePreview";
+import { CountPill, ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
 import { Badge } from "@/components/admin/ui/Badge";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
@@ -36,10 +37,23 @@ import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 interface UserProfileProps {
   user: UserRecord;
   saleAdsCount: number;
-  /** Latest ads (max 5) for the minimal preview list. */
+  /** Latest ads (max 3) for the minimal preview list. */
   recentAds: UserCarRecord[];
+  /** Latest price-table rows (max 3) and the total row count. */
+  priceTable: { total: number; entries: RecentPriceTableEntryRecord[] };
   /** Latest identity-verification submission (collaborators only); null when none was sent. */
   verification: VerificationRecord | null;
+  /** What the viewing admin's role allows on this page. */
+  access: UserProfileAccess;
+}
+
+export interface UserProfileAccess {
+  /** "users" permission: identity verification review. */
+  manageUser: boolean;
+  /** "ads" permission: the user's sale ads. */
+  ads: boolean;
+  /** "price_table" permission: the user's price table. */
+  priceTable: boolean;
 }
 
 /** Lowest active price across an ad's sale terms, or null when none exist. */
@@ -193,27 +207,27 @@ function DetailRow({
   value,
   mono = false,
   multiline = false,
+  className,
 }: {
   icon: LucideIcon;
   label: string;
   value: string | null;
   mono?: boolean;
   multiline?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-white/[0.06] bg-[#07090C]/60 p-4">
-      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-[#0D1117] text-[#FF8A2A]">
-        <Icon className="h-4 w-4" />
-      </span>
+    <div className={cn("flex min-w-0 items-start gap-2 rounded-xl border border-white/[0.05] bg-[#07090C]/60 px-2.5 py-2", className)}>
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF8A2A]" />
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-[#5E6672]">{label}</p>
+        <p className="text-[10px] font-semibold text-[#5E6672]">{label}</p>
         <p
           dir={value && mono ? "ltr" : undefined}
           className={cn(
-            "mt-1 text-sm font-semibold",
+            "mt-0.5 text-[13px] font-semibold",
             value ? "text-[#F5F5F5]" : "text-[#5E6672]",
             value && mono && "text-start font-mono tracking-wider",
-            multiline ? "whitespace-pre-line leading-7" : "truncate"
+            multiline ? "line-clamp-2 whitespace-pre-line leading-6" : "truncate"
           )}
           title={value ?? undefined}
         >
@@ -226,8 +240,11 @@ function DetailRow({
 
 /* ───────────────────────── main ───────────────────────── */
 
-export function UserProfile({ user, saleAdsCount, recentAds, verification }: UserProfileProps) {
+export function UserProfile({ user, saleAdsCount, recentAds, priceTable, verification, access }: UserProfileProps) {
   const membershipDays = daysSince(user.createdAt);
+  const showVerification = user.collabrate && access.manageUser;
+  const showAds = user.collabrate && access.ads;
+  const showPriceTable = user.collabrate && access.priceTable;
   const saleAdsHref = `/admin/users/${user.id}/sale-ads`;
 
   return (
@@ -390,150 +407,88 @@ export function UserProfile({ user, saleAdsCount, recentAds, verification }: Use
         </div>
       </section>
 
-      {/* ───────── Details ───────── */}
-      <section className="admin-animate-in rounded-3xl border border-white/[0.07] bg-[#0D1117] p-5 sm:p-6">
-        <div className="mb-5 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#FF6A00]/30 bg-[#FF6A00]/10 text-[#FF8A2A]">
-            <Fingerprint className="h-5 w-5" />
-          </span>
-          <div>
-            <h3 className="text-base font-extrabold text-[#F5F5F5]">اطلاعات هویتی و تماس</h3>
-            <p className="mt-0.5 text-xs text-[#8B93A1]">جزئیات ثبت‌شده در پروفایل کاربر</p>
+      {/* ───────── Details + identity verification (collaborators only), side by side ───────── */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ProfileSection icon={Fingerprint} title="اطلاعات هویتی و تماس" className={showVerification ? undefined : "xl:col-span-2"}>
+          <div className="grid grid-cols-2 gap-2">
+            <DetailRow icon={Fingerprint} label="کد ملی" value={user.nationalCode} mono />
+            <DetailRow icon={Hash} label="کد پستی" value={user.postalCode} mono />
+            <DetailRow icon={MapPin} label="آدرس" value={user.address} multiline className="col-span-2" />
+            <DetailRow icon={Quote} label="درباره کاربر" value={user.bio} multiline className="col-span-2" />
           </div>
-        </div>
+        </ProfileSection>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <DetailRow icon={Fingerprint} label="کد ملی" value={user.nationalCode} mono />
-          <DetailRow icon={Hash} label="کد پستی" value={user.postalCode} mono />
-          <div className="md:col-span-2">
-            <DetailRow icon={MapPin} label="آدرس" value={user.address} multiline />
-          </div>
-          <div className="md:col-span-2">
-            <DetailRow icon={Quote} label="درباره کاربر" value={user.bio} multiline />
-          </div>
-        </div>
-      </section>
+        {showVerification && (
+          <UserVerificationSection userId={user.id} initialAuthenticaed={user.authenticaed} initialVerification={verification} />
+        )}
+      </div>
 
-      {/* ───────── Identity verification (collaborators only) ───────── */}
-      {user.collabrate && (
-        <UserVerificationSection userId={user.id} initialAuthenticaed={user.authenticaed} initialVerification={verification} />
-      )}
-
-      {/* ───────── Sale ads (latest 5) — collaborators only publish ads ───────── */}
-      {user.collabrate && (
-        <section className="admin-animate-in rounded-3xl border border-white/[0.07] bg-[#0D1117] p-5 sm:p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#FF6A00]/30 bg-[#FF6A00]/10 text-[#FF8A2A]">
-                <Megaphone className="h-5 w-5" />
-              </span>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-extrabold text-[#F5F5F5]">آگهی‌های فروش</h3>
-                  <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-bold text-[#9BA3AE]">
-                    {toPersianDigits(saleAdsCount)} آگهی
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-[#8B93A1]">
-                  {saleAdsCount > 0 ? "آخرین آگهی‌های ثبت‌شده برای این کاربر" : "خودروهایی که این کاربر برای فروش ثبت کرده است"}
-                </p>
-              </div>
-            </div>
-            <Link
-              href={saleAdsHref}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-4 text-sm font-extrabold text-[#07090C] shadow-[0_0_24px_rgba(255,106,0,0.3)] transition-all hover:brightness-110"
-            >
-              <Settings2 className="h-4 w-4" />
-              مدیریت آگهی‌های فروش
-            </Link>
-          </div>
-
-          {recentAds.length === 0 ? (
-            <div className="relative overflow-hidden rounded-2xl border border-dashed border-white/[0.12] bg-[#07090C]/60 px-6 py-12 text-center">
-              <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
-              <div className="relative">
-                <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-[#0D1117] text-[#5E6672]">
-                  <Megaphone className="h-6 w-6" />
-                </span>
-                <p className="mt-4 text-sm font-bold text-[#D2D7DF]">هنوز آگهی‌ای برای این کاربر ثبت نشده است</p>
-                <p className="mt-1.5 text-xs leading-6 text-[#5E6672]">
-                  از دکمه «مدیریت آگهی‌های فروش» می‌توانید اولین آگهی را به نام این کاربر ثبت کنید.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.06] bg-[#07090C]/60">
-              {recentAds.map((ad) => {
-                const price = lowestPrice(ad);
-                const activeTerms = ad.saleTerms.filter((term) => term.isActive).length;
-                return (
-                  <li key={ad.id}>
-                    <Link
-                      href={saleAdsHref}
-                      className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-white/[0.03]"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#0D1117] text-[#FF8A2A]">
-                        {ad.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={ad.imageUrl} alt={`${ad.brandName} ${ad.carName}`} className="h-full w-full object-cover" loading="lazy" />
-                        ) : (
-                          <Car className="h-5 w-5" />
-                        )}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span dir="ltr" className="rounded-md border border-white/[0.08] bg-[#0D1117] px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.18em] text-[#FF8A2A]">
-                            {ad.code}
-                          </span>
-                          <p className="truncate text-sm font-bold text-[#F5F5F5]">
+      {/* ───────── Collaborator modules: compact previews, each linking to its own manager ───────── */}
+      {(showAds || showPriceTable) && (
+        <div className={cn("grid grid-cols-1 gap-4", showAds && showPriceTable && "xl:grid-cols-2")}>
+          {/* Sale ads (latest 3) */}
+          {showAds && (
+          <ProfileSection
+            icon={Megaphone}
+            title="آگهی‌های فروش"
+            badge={<CountPill>{toPersianDigits(saleAdsCount)} آگهی</CountPill>}
+            description={saleAdsCount > 0 ? "آخرین آگهی‌های ثبت‌شده" : "خودروهایی که کاربر برای فروش ثبت کرده است"}
+            action={{ href: saleAdsHref, label: "مدیریت آگهی‌ها" }}
+          >
+            {recentAds.length === 0 ? (
+              <SectionEmpty title="هنوز آگهی‌ای برای این کاربر ثبت نشده است" hint="از «مدیریت آگهی‌ها» می‌توانید اولین آگهی را به نام کاربر ثبت کنید." />
+            ) : (
+              <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-xl border border-white/[0.06] bg-[#07090C]/60">
+                {recentAds.map((ad) => {
+                  const price = lowestPrice(ad);
+                  return (
+                    <li key={ad.id}>
+                      <Link href={saleAdsHref} className="group flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.03]">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/[0.08] bg-[#0D1117] text-[#FF8A2A]">
+                          {ad.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={ad.imageUrl} alt={`${ad.brandName} ${ad.carName}`} className="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            <Car className="h-4 w-4" />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-bold text-[#F5F5F5]">
                             {ad.brandName} {ad.carName}
                           </p>
-                          <AdStatusBadge status={ad.status} size="sm" />
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold",
-                              ad.isActive ? "bg-emerald-500/10 text-emerald-300" : "bg-white/[0.05] text-[#8B93A1]"
-                            )}
-                          >
-                            {ad.isActive ? "فعال" : "غیرفعال"}
-                          </span>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[#8B93A1]">
+                            <span dir="ltr" className="font-mono text-[10px] font-bold tracking-[0.15em] text-[#FF8A2A]">
+                              {ad.code}
+                            </span>
+                            <AdStatusBadge status={ad.status} size="sm" />
+                            {!ad.isActive && <span className="text-[10px] font-bold text-[#8B93A1]">غیرفعال</span>}
+                          </div>
                         </div>
-                        <p className="mt-0.5 truncate text-[11px] text-[#8B93A1]">
-                          مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)} · تعداد {toPersianDigits(ad.qautity)}
-                          {" · "}
-                          {activeTerms > 0 ? `${toPersianDigits(activeTerms)} شرط فروش` : "بدون شرط فروش"}
-                        </p>
-                      </div>
-                      <div className="hidden shrink-0 text-end sm:block">
-                        {price ? (
-                          <>
-                            <p className="text-sm font-black text-[#F5F5F5]">{formatPersianNumber(price)}</p>
-                            <p className="text-[10px] text-[#5E6672]">تومان · کمترین قیمت</p>
-                          </>
-                        ) : (
-                          <p className="text-[11px] text-[#5E6672]">بدون قیمت</p>
-                        )}
-                      </div>
-                      <div className="hidden shrink-0 text-[11px] text-[#5E6672] md:block">{ad.createdAtLabel}</div>
-                      <ArrowUpLeft className="h-4 w-4 shrink-0 text-[#5E6672] transition-colors group-hover:text-[#FF8A2A]" />
-                    </Link>
-                  </li>
-                );
-              })}
-              {saleAdsCount > recentAds.length && (
-                <li>
-                  <Link
-                    href={saleAdsHref}
-                    className="flex items-center justify-center gap-2 px-4 py-3 text-xs font-bold text-[#FF8A2A] transition-colors hover:bg-[#FF6A00]/[0.06]"
-                  >
-                    مشاهده همه {toPersianDigits(saleAdsCount)} آگهی
-                    <ArrowUpLeft className="h-3.5 w-3.5" />
-                  </Link>
-                </li>
-              )}
-            </ul>
+                        <div className="shrink-0 text-end">
+                          {price ? (
+                            <>
+                              <p className="text-[13px] font-black text-[#F5F5F5]">{formatPersianNumber(price)}</p>
+                              <p className="text-[10px] text-[#5E6672]">تومان</p>
+                            </>
+                          ) : (
+                            <p className="text-[11px] text-[#5E6672]">بدون قیمت</p>
+                          )}
+                        </div>
+                        <span className="hidden shrink-0 text-[10px] text-[#5E6672] sm:block">{ad.createdAtLabel}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </ProfileSection>
           )}
-        </section>
+
+          {/* Price table (latest 3 rows) */}
+          {showPriceTable && (
+            <UserPriceTablePreview userId={user.id} total={priceTable.total} entries={priceTable.entries} />
+          )}
+        </div>
       )}
     </div>
   );

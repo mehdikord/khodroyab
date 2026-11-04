@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import prisma from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdminAccess } from "@/lib/auth/guards";
 import { carImageToRecord } from "@/lib/car-images";
 import { CarImagesManager } from "@/components/admin/cars/CarImagesManager";
 
@@ -19,7 +19,7 @@ interface PageProps {
 }
 
 export default async function CarImagesPage({ params }: PageProps) {
-  await requireAdmin();
+  await requireAdminAccess("cars");
 
   let carId: bigint;
   try {

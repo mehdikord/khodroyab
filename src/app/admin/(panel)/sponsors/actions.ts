@@ -3,14 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/auth/guards";
+import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { sponsorToRecord, type SponsorRecord } from "@/lib/sponsors";
 import { slugify } from "@/lib/validation/brands";
 import { parseSponsorForm } from "@/lib/validation/sponsors";
 import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 
-const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 const NOT_FOUND_MESSAGE = "حامی مورد نظر یافت نشد";
 
@@ -24,7 +23,8 @@ export type SponsorReorderResult = { ok: true; records: SponsorRecord[] } | { ok
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
-  if (!(await getCurrentAdmin())) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
+  const denied = await adminActionDenied("sponsors");
+  if (denied) return { ok: false, message: denied };
   return null;
 }
 
