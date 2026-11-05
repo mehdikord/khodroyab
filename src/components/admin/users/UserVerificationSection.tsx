@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { BadgeCheck, Building2, FileImage, Loader2, ShieldCheck, ShieldX, UserRound } from "lucide-react";
+import { BadgeCheck, Building2, FileImage, FilePen, Loader2, ShieldCheck, ShieldX, UserRound } from "lucide-react";
 
 import { Modal } from "@/components/admin/ui/Modal";
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
+import { AdminVerificationForm } from "@/components/admin/users/AdminVerificationForm";
 import { VerificationStatusBadge } from "@/components/admin/users/VerificationStatusBadge";
 import { ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
 import { reviewVerificationAction } from "@/app/admin/(panel)/users/[id]/verification-actions";
@@ -31,6 +32,7 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
   const [verification, setVerification] = useState<VerificationRecord | null>(initialVerification);
   const [authenticaed, setAuthenticaed] = useState(initialAuthenticaed);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -67,7 +69,18 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
       badge={<VerificationStatusBadge authenticaed={authenticaed} status={verification?.status ?? null} />}
       description="مدارک هویتی ارسال‌شده توسط کاربر همکار"
       actions={
-        verification && (
+        <>
+          <button
+            type="button"
+            onClick={() => setFormOpen(true)}
+            disabled={isPending}
+            title="ثبت اطلاعات و مدارک احراز هویت به جای کاربر"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#FF6A00]/35 bg-[#FF6A00]/10 px-3 text-xs font-bold text-[#FF8A2A] transition-colors hover:bg-[#FF6A00]/20 disabled:opacity-60"
+          >
+            <FilePen className="h-3.5 w-3.5" />
+            {verification ? "ثبت مجدد مدارک" : "ثبت مدارک به جای کاربر"}
+          </button>
+          {verification && (
           <>
             {!authenticaed && (
               <button
@@ -95,10 +108,25 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
               </button>
             )}
           </>
-        )
+          )}
+        </>
       }
     >
       <Toast toast={toast} onDismiss={() => setToast(null)} />
+
+      {formOpen && (
+        <AdminVerificationForm
+          userId={userId}
+          current={verification}
+          onClose={() => setFormOpen(false)}
+          onSaved={(next, nextAuthenticaed, approved) => {
+            setVerification(next);
+            setAuthenticaed(nextAuthenticaed);
+            setFormOpen(false);
+            showToast("success", approved ? "مدارک ثبت و احراز هویت کاربر تایید شد" : "مدارک کاربر ثبت شد و در انتظار بررسی است");
+          }}
+        />
+      )}
 
       {rejectOpen && (
         <Modal
@@ -152,7 +180,7 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
       {!verification ? (
         <SectionEmpty
           title="این کاربر هنوز مدرکی برای احراز هویت ارسال نکرده است"
-          hint="پس از ارسال مدارک از پنل کاربری، آن‌ها در این بخش نمایش داده می‌شوند."
+          hint="پس از ارسال مدارک از پنل کاربری، آن‌ها در این بخش نمایش داده می‌شوند؛ یا خودتان با «ثبت مدارک به جای کاربر» آن‌ها را ثبت کنید."
         />
       ) : (
         <div className="space-y-3">

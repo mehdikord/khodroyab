@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { VERIFICATION_REJECT_REASON_MAX, verificationInclude, verificationToRecord, type VerificationRecord } from "@/lib/verification";
+import { parseVerificationForm, storeVerificationSubmission } from "@/lib/verification-submission";
 import { toPersianDigits } from "@/lib/utils";
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
@@ -70,4 +71,49 @@ export async function reviewVerificationAction(
     console.error("[verification:review] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
+}
+
+export type AdminSubmitVerificationResult =
+  | { ok: true; verification: VerificationRecord; authenticaed: boolean }
+  | { ok: false; message: string; fieldErrors?: Record<string, string> };
+
+/**
+ * An administrator fills in a collaborator's identity form and documents on
+ * their behalf (same fields as the panel form, see `parseVerificationForm`).
+ * The new submission replaces any existing one and its files. With `approve`
+ * set to "1" it is stored as approved right away; otherwise it waits for review.
+ */
+export async function adminSubmitVerificationAction(userIdRaw: string, formData: FormData): Promise<AdminSubmitVerificationResult> {
+  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  const denied = await adminActionDenied("users");
+  if (denied) return { ok: false, message: denied };
+
+  let userId: bigint;
+  try {
+    userId = BigInt(userIdRaw);
+  } catch {
+    return { ok: false, message: "شناسه کاربر نامعتبر است" };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { collabrate: true } });
+  if (!user) return { ok: false, message: "کاربر یافت نشد" };
+  if (!user.collabrate) return { ok: false, message: "احراز هویت فقط برای کاربران همکار فعال است." };
+
+  const parsed = parseVerificationForm(formData);
+  if (!parsed.ok) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
+
+  const approve = formData.get("approve") === "1";
+  const stored = await storeVerificationSubmission(userId, parsed.submission, { approve });
+  if (!stored.ok) {
+    return {
+      ok: false,
+      message: stored.reason === "upload" ? "خطا در ذخیره تصاویر مدارک؛ لطفاً دوباره تلاش کنید." : GENERIC_FAILURE_MESSAGE,
+    };
+  }
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId.toString()}`);
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/panel", "layout");
+  return { ok: true, verification: stored.record, authenticaed: approve };
 }
