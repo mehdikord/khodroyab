@@ -45,6 +45,8 @@ interface UserProfileProps {
   verification: VerificationRecord | null;
   /** What the viewing admin's role allows on this page. */
   access: UserProfileAccess;
+  /** The user's current public 8-digit code (shown to customers instead of their identity). */
+  currentCode: string;
 }
 
 export interface UserProfileAccess {
@@ -240,7 +242,7 @@ function DetailRow({
 
 /* ───────────────────────── main ───────────────────────── */
 
-export function UserProfile({ user, saleAdsCount, recentAds, priceTable, verification, access }: UserProfileProps) {
+export function UserProfile({ user, saleAdsCount, recentAds, priceTable, verification, access, currentCode }: UserProfileProps) {
   const membershipDays = daysSince(user.createdAt);
   const showVerification = user.collabrate && access.manageUser;
   const showAds = user.collabrate && access.ads;
@@ -411,6 +413,7 @@ export function UserProfile({ user, saleAdsCount, recentAds, priceTable, verific
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ProfileSection icon={Fingerprint} title="اطلاعات هویتی و تماس" className={showVerification ? undefined : "xl:col-span-2"}>
           <div className="grid grid-cols-2 gap-2">
+            <DetailRow icon={Hash} label="کد کاربر (فعلی)" value={currentCode} mono className="col-span-2" />
             <DetailRow icon={Fingerprint} label="کد ملی" value={user.nationalCode} mono />
             <DetailRow icon={Hash} label="کد پستی" value={user.postalCode} mono />
             <DetailRow icon={MapPin} label="آدرس" value={user.address} multiline className="col-span-2" />

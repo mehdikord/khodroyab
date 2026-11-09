@@ -19,7 +19,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   // Only the car's name is used here, so collaborator prices are never needed.
-  const detail = await getPriceListCarDetail(params.carId, false);
+  const detail = await getPriceListCarDetail(params.carId, false, null);
   return {
     title: detail
       ? `لیست قیمت‌های ${detail.car.name} - ${detail.car.brandName} | پنل کاربری خودرو یاب`
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PriceListCarPage({ params }: PageProps) {
   const user = await requireUser();
 
-  const detail = await getPriceListCarDetail(params.carId, user.isPartner);
+  const detail = await getPriceListCarDetail(params.carId, user.isPartner, user.id);
   if (!detail) notFound();
   const { car, offers, lowest, lowestByColumn, columns } = detail;
   const years = Array.from(new Set(columns.map((column) => column.year)));
@@ -128,7 +128,6 @@ export default async function PriceListCarPage({ params }: PageProps) {
             offers={offers}
             lowestByColumn={lowestByColumn}
             columns={columns}
-            currentUserId={user.id}
             showPartner={user.isPartner}
           />
           <p className="text-[11px] leading-6 text-panel-faint">

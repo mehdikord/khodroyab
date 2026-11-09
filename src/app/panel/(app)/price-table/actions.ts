@@ -47,7 +47,6 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
   if (result.ok) {
     revalidatePath("/panel/price-table");
     revalidatePath("/panel/price-list", "layout");
-    revalidatePath(`/panel/sellers/${userId.toString()}`);
     revalidatePath(`/admin/users/${userId.toString()}`);
   }
   return result;

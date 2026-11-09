@@ -137,12 +137,6 @@ export function buildPriceTableRows(cars: PriceTableCarRecord[], entries: PriceT
   return cars.map((car) => ({ car, entry: byCar.get(car.id) ?? null }));
 }
 
-/** Full price table of one user: all eligible cars, with "---" gaps left as `null`. */
-export async function getUserPriceTableRows(userId: bigint, showPartner: boolean): Promise<PriceTableRow[]> {
-  const [cars, entries] = await Promise.all([listPriceTableCars(), listUserPriceTableEntries(userId, showPartner)]);
-  return buildPriceTableRows(cars, entries);
-}
-
 /* ───────────────────────── Recent rows (admin preview) ───────────────────────── */
 
 /** A saved row of a user's price table with its car, for short previews. */

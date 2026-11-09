@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Users, Edit2, Trash2, UserCircle2, Handshake, Eye } from "lucide-react";
+import { Plus, Users, Edit2, Trash2, UserCircle2, Handshake, Eye, History } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { UserFormModal } from "@/components/admin/users/UserFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { Badge } from "@/components/admin/ui/Badge";
 import { VerificationStatusBadge } from "@/components/admin/users/VerificationStatusBadge";
-import { deleteUserAction, toggleUserActiveAction, toggleUserCollaborateAction } from "@/app/admin/(panel)/users/actions";
+import { deleteUserAction, findUsersByCodeAction, toggleUserActiveAction, toggleUserCollaborateAction } from "@/app/admin/(panel)/users/actions";
+import { normalizeDigits } from "@/lib/validation/admin";
 import type { UserRecord } from "@/lib/users";
 import type { UserFilter } from "@/lib/users-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
@@ -22,6 +23,14 @@ interface UsersManagerProps {
    * the list is read-only: they only open a profile to work for that user.
    */
   canManage: boolean;
+  /** Current public 8-digit code of each user, keyed by user id. */
+  currentCodes: Record<string, string>;
+}
+
+/** The query as ASCII digits when it holds only digits (Persian/Arabic allowed), else "". */
+function digitQuery(query: string): string {
+  const trimmed = query.trim();
+  return /^[\d\u06F0-\u06F9\u0660-\u0669\s-]+$/.test(trimmed) ? normalizeDigits(trimmed) : "";
 }
 
 
@@ -39,7 +48,7 @@ function matchesFilter(user: UserRecord, filter: UserFilter): boolean {
   return true;
 }
 
-export function UsersManager({ initialUsers, initialFilter, canManage }: UsersManagerProps) {
+export function UsersManager({ initialUsers, initialFilter, canManage, currentCodes }: UsersManagerProps) {
   const [users, setUsers] = useState<UserRecord[]>(initialUsers);
   const [filter, setFilter] = useState<UserFilter>(initialFilter);
   const [query, setQuery] = useState("");
@@ -49,11 +58,34 @@ export function UsersManager({ initialUsers, initialFilter, canManage }: UsersMa
   const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
   const [pendingCollaborateId, setPendingCollaborateId] = useState<string | null>(null);
   const [, startToggleTransition] = useTransition();
+  /** Users found by an exact 8-digit code, including expired codes (looked up on the server). */
+  const [codeLookup, setCodeLookup] = useState<{ code: string; userIds: string[] } | null>(null);
+
+  const digits = digitQuery(query);
+  useEffect(() => {
+    if (!/^\d{8}$/.test(digits)) {
+      setCodeLookup(null);
+      return;
+    }
+    let cancelled = false;
+    findUsersByCodeAction(digits).then((result) => {
+      if (!cancelled) setCodeLookup({ code: digits, userIds: result.ok ? result.userIds : [] });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [digits]);
 
   const counts = useMemo(
     () => Object.fromEntries(FILTERS.map((item) => [item.key, users.filter((user) => matchesFilter(user, item.key)).length])) as Record<UserFilter, number>,
     [users]
   );
+
+  /** Ids matched only through an old (expired) code, so the row can say so. */
+  const historyMatchIds = useMemo(() => {
+    if (!codeLookup || codeLookup.code !== digits) return new Set<string>();
+    return new Set(codeLookup.userIds.filter((id) => currentCodes[id] !== codeLookup.code));
+  }, [codeLookup, digits, currentCodes]);
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -64,9 +96,12 @@ export function UsersManager({ initialUsers, initialFilter, canManage }: UsersMa
           user.name.toLowerCase().includes(normalized) ||
           (user.companyName?.toLowerCase().includes(normalized) ?? false) ||
           user.phone.includes(normalized) ||
+          (digits !== "" && user.phone.includes(digits)) ||
+          (digits !== "" && (currentCodes[user.id]?.includes(digits) ?? false)) ||
+          historyMatchIds.has(user.id) ||
           (user.email && user.email.toLowerCase().includes(normalized)))
     );
-  }, [users, query, filter]);
+  }, [users, query, filter, digits, currentCodes, historyMatchIds]);
 
   function showToast(kind: ToastState["kind"], message: string) {
     setToast({ kind, message });
@@ -190,7 +225,7 @@ export function UsersManager({ initialUsers, initialFilter, canManage }: UsersMa
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجو..." className="h-11 w-full max-w-md rounded-xl border border-white/[0.12] bg-[#07090C] px-4 text-sm text-[#F5F5F5] outline-none" />
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجو: نام، موبایل، ایمیل یا کد کاربر…" className="h-11 w-full max-w-md rounded-xl border border-white/[0.12] bg-[#07090C] px-4 text-sm text-[#F5F5F5] outline-none" />
         <div className="admin-scrollbar flex gap-2 overflow-x-auto">
           {FILTERS.map((item) => {
             const active = filter === item.key;
@@ -222,6 +257,7 @@ export function UsersManager({ initialUsers, initialFilter, canManage }: UsersMa
           <thead className="bg-white/[0.03] text-xs font-bold uppercase text-[#8B93A1]">
             <tr>
               <th className="px-6 py-4">کاربر</th>
+              <th className="px-6 py-4">کد کاربر</th>
               <th className="px-6 py-4">تلفن</th>
               <th className="px-6 py-4">ایمیل</th>
               <th className="px-6 py-4">کد ملی</th>
@@ -236,7 +272,7 @@ export function UsersManager({ initialUsers, initialFilter, canManage }: UsersMa
           <tbody className="divide-y divide-white/[0.05]">
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-6 py-10 text-center text-xs text-[#8B93A1]">
+                <td colSpan={11} className="px-6 py-10 text-center text-xs text-[#8B93A1]">
                   کاربری با این مشخصات یافت نشد.
                 </td>
               </tr>
@@ -260,6 +296,21 @@ export function UsersManager({ initialUsers, initialFilter, canManage }: UsersMa
                       {user.companyName && <span className="block truncate text-[11px] text-[#8B93A1]">{user.companyName}</span>}
                     </span>
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  {currentCodes[user.id] ? (
+                    <span dir="ltr" className="inline-block whitespace-nowrap rounded-lg border border-[#FF6A00]/30 bg-[#FF6A00]/10 px-2 py-1 font-mono text-xs font-bold tracking-[0.14em] text-[#FF8A2A]">
+                      {currentCodes[user.id]}
+                    </span>
+                  ) : (
+                    <span className="text-[#5E6672]">-</span>
+                  )}
+                  {historyMatchIds.has(user.id) && (
+                    <span className="mt-1.5 flex items-center gap-1 whitespace-nowrap text-[10px] font-bold text-amber-300" title="کد جستجو شده قبلاً متعلق به این کاربر بوده و اکنون منقضی شده است">
+                      <History className="h-3 w-3" />
+                      کد قبلی: <span dir="ltr" className="font-mono">{codeLookup?.code}</span>
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 font-mono text-[#D2D7DF]">{user.phone}</td>
                 <td className="px-6 py-4 text-[#D2D7DF]">{user.email || "-"}</td>

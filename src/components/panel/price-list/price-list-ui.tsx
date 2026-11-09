@@ -43,24 +43,6 @@ export function BrandLogo({ name, image, className }: { name: string; image: str
 }
 
 /** Round user avatar with initials fallback. */
-export function UserAvatar({ name, image, className }: { name: string; image: string | null; className?: string }) {
-  const fallback = (
-    <span className="flex h-full w-full items-center justify-center bg-[#FF6A00]/[0.12] text-[11px] font-black text-panel-accent">
-      {initials(name, 2)}
-    </span>
-  );
-  return (
-    <span
-      className={cn(
-        "flex h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[#FF6A00]/35 bg-panel-surface-2",
-        className
-      )}
-    >
-      {image ? <SafeImage src={image} alt="" className="h-full w-full object-cover" fallback={fallback} /> : fallback}
-    </span>
-  );
-}
-
 /** Colour name with its swatch, or the empty placeholder. */
 export function ColorLabel({ name, code, className }: { name: string | null; code: string | null; className?: string }) {
   if (!name || !code) return <span className={cn("text-panel-faint", className)}>{PRICE_TABLE_EMPTY}</span>;

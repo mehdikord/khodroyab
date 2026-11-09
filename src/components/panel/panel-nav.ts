@@ -31,7 +31,5 @@ export function panelNavItemsFor(collabrate: boolean): PanelNavItem[] {
 
 /** Resolve the active nav item for a pathname. */
 export function findActivePanelItem(pathname: string): PanelNavItem | undefined {
-  // Seller profiles are reached from the search, so the dock keeps "search" lit.
-  if (pathname.startsWith("/panel/sellers/")) return PANEL_NAV_ITEMS.find((item) => item.key === "search");
   return PANEL_NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 }

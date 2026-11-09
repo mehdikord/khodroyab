@@ -33,8 +33,6 @@ function revalidatePriceTablePages() {
   revalidatePath("/admin/price-table");
   revalidatePath("/admin/cars");
   revalidatePath("/panel/price-table");
-  // Seller profiles render the price table of every user.
-  revalidatePath("/panel/sellers/[id]", "page");
 }
 
 /** Flip a single car's eligibility for customer price tables. */

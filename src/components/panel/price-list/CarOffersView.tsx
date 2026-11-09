@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowDownWideNarrow, Building2, ChevronLeft, X } from "lucide-react";
+import { ArrowDownWideNarrow, X } from "lucide-react";
 
 import type { PriceListCarInfo, PriceListOffer, PriceListPricesByColumn } from "@/lib/price-list";
 import {
@@ -13,7 +12,8 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColumnHeading, UserAvatar, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 
 interface CarOffersViewProps {
@@ -24,8 +24,6 @@ interface CarOffersViewProps {
   lowestByColumn: PriceListPricesByColumn;
   /** (year, colour) columns, oldest year first. */
   columns: PriceColumn[];
-  /** Signed-in user, so their own row can be marked. */
-  currentUserId: string;
   /** The viewer is a verified collaborator: show collaborator prices too. */
   showPartner: boolean;
 }
@@ -61,24 +59,8 @@ function sortOffers(offers: PriceListOffer[], primary: PriceTablePriceField, col
       if (y === null) return -1;
       return compareDigits(x, y);
     }
-    return a.userName.localeCompare(b.userName, "fa");
+    return a.sellerCode.localeCompare(b.sellerCode);
   });
-}
-
-function sellerHref(offer: PriceListOffer): string {
-  return `/panel/sellers/${offer.userId}`;
-}
-
-function YouBadge() {
-  return (
-    <span className="rounded-md border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-1.5 py-0.5 text-[9px] font-black text-panel-accent">
-      شما
-    </span>
-  );
-}
-
-function CompanyIcon() {
-  return <Building2 className="h-3.5 w-3.5 shrink-0 text-panel-accent" aria-label="مجموعه" />;
 }
 
 /**
@@ -91,7 +73,7 @@ function CompanyIcon() {
  * Desktop: table with the seller column pinned and the price columns
  * scrolling horizontally. Below `lg`: cards with a scrollable strip.
  */
-export function CarOffersView({ car, offers, lowestByColumn, columns, currentUserId, showPartner }: CarOffersViewProps) {
+export function CarOffersView({ car, offers, lowestByColumn, columns, showPartner }: CarOffersViewProps) {
   const [sortBy, setSortBy] = useState<PriceTablePriceField>("priceUsd");
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const sorted = useMemo(() => sortOffers(offers, sortBy, sortColumn), [offers, sortBy, sortColumn]);
@@ -164,7 +146,7 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, currentUse
           <thead>
             <tr className="border-b border-panel-line/[0.1] bg-panel-surface-2">
               <th scope="col" className={cn(headClass, "sticky right-0 z-20 min-w-[220px] bg-panel-surface-2 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)]")}>
-                نام کاربر
+                کد فروشنده
               </th>
               <th scope="col" className={headClass}>نام خودرو</th>
               <th scope="col" className={headClass}>برند</th>
@@ -201,29 +183,19 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, currentUse
           </thead>
           <tbody className="divide-y divide-panel-line/[0.06]">
             {sorted.map((offer, index) => {
-              const mine = offer.userId === currentUserId;
+              const mine = offer.isMine;
               return (
-                <tr key={offer.userId} className={cn("group transition-colors", mine ? "bg-[#FF6A00]/[0.05]" : "hover:bg-panel-line/[0.03]")}>
+                <tr key={offer.sellerCode || index} className={cn("group transition-colors", mine ? "bg-[#FF6A00]/[0.05]" : "hover:bg-panel-line/[0.03]")}>
                   <td
                     className={cn(
                       "sticky right-0 z-10 py-3 pe-3 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)] transition-colors",
                       mine ? "bg-panel-surface-2" : "bg-panel-surface group-hover:bg-panel-surface-2"
                     )}
                   >
-                    <Link href={sellerHref(offer)} className="group/seller flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5">
                       <span className="w-5 shrink-0 text-center font-mono text-[11px] text-panel-faint">{toPersianDigits(index + 1)}</span>
-                      <UserAvatar name={offer.userName} image={offer.userImage} className="transition-transform group-hover/seller:scale-105" />
-                      <span className="min-w-0">
-                        <span className="flex items-center gap-1.5">
-                          {offer.isCompany && <CompanyIcon />}
-                          <span className="truncate text-[13px] font-extrabold text-panel-text transition-colors group-hover/seller:text-panel-accent">
-                            {offer.userName}
-                          </span>
-                          {mine && <YouBadge />}
-                        </span>
-                        <span className="text-[10px] text-panel-faint">مشاهده پروفایل</span>
-                      </span>
-                    </Link>
+                      <SellerCodeBadge code={offer.sellerCode} size="sm" mine={mine} />
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-[13px] font-bold text-panel-text-2">{car.name}</td>
                   <td className="px-3 py-3">
@@ -254,31 +226,19 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, currentUse
       {/* Mobile / tablet cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
         {sorted.map((offer, index) => {
-          const mine = offer.userId === currentUserId;
+          const mine = offer.isMine;
           return (
             <article
-              key={offer.userId}
+              key={offer.sellerCode || index}
               className={cn(
                 "panel-card-in overflow-hidden rounded-3xl border bg-panel-surface",
                 mine ? "border-[#FF6A00]/40" : "border-panel-line/[0.1]"
               )}
               style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
             >
-              <Link
-                href={sellerHref(offer)}
-                className="group flex items-center gap-3 border-b border-panel-line/[0.08] px-4 py-3 transition-colors hover:bg-[#FF6A00]/[0.05]"
-              >
-                <UserAvatar name={offer.userName} image={offer.userImage} className="h-11 w-11" />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5">
-                    {offer.isCompany && <CompanyIcon />}
-                    <span className="truncate text-sm font-black text-panel-text">{offer.userName}</span>
-                    {mine && <YouBadge />}
-                  </span>
-                  <span className="text-[10px] text-panel-faint">مشاهده پروفایل فروشنده</span>
-                </span>
-                <ChevronLeft className="h-5 w-5 text-panel-faint transition-all group-hover:-translate-x-1 group-hover:text-panel-accent" />
-              </Link>
+              <div className="border-b border-panel-line/[0.08] px-4 py-3">
+                <SellerCodeBadge code={offer.sellerCode} mine={mine} />
+              </div>
 
               <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3 text-[11px]">
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-panel-line/[0.06] py-1 pe-2 ps-1 font-semibold text-panel-text-2">

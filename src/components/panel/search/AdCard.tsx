@@ -1,30 +1,22 @@
 import React from "react";
 import Link from "next/link";
-import { Building2, CalendarDays, Car, ChevronLeft, HandCoins, UserRound } from "lucide-react";
+import { CalendarDays, Car, HandCoins } from "lucide-react";
 
 import type { SearchAdRecord } from "@/lib/panel-search-shared";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { cn, toPersianDigits } from "@/lib/utils";
 import { CopyCodeButton } from "@/components/panel/search/CopyCodeButton";
 import { SafeImage } from "@/components/panel/SafeImage";
+import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { PriceDeltaBadge } from "@/components/panel/search/PriceDeltaBadge";
 
 interface AdCardProps {
   ad: SearchAdRecord;
   /** Entrance animation delay in ms. */
   delay?: number;
-  /** Hide the seller row (used on the seller's own profile page). */
-  hideSeller?: boolean;
 }
 
 const MAX_TERMS = 3;
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "؟";
-  if (parts.length === 1) return parts[0].slice(0, 1);
-  return parts[0].slice(0, 1) + parts[1].slice(0, 1);
-}
 
 function NoImage() {
   return (
@@ -40,12 +32,12 @@ function NoImage() {
 }
 
 /**
- * Public-safe ad card for the customer search: car identity, seller name,
- * cover photo, sale-term titles with their price-change badges and the
- * (copyable) ad code. The whole card opens the ad's page. Never shows the
- * seller's phone.
+ * Public-safe ad card for the customer search: car identity, the seller's
+ * (copyable) public code, cover photo, sale-term titles with their
+ * price-change badges and the (copyable) ad code. The whole card opens the
+ * ad's page. Never shows the seller's name, photo or contact details.
  */
-export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
+export function AdCard({ ad, delay = 0 }: AdCardProps) {
   const visibleTerms = ad.saleTerms.slice(0, MAX_TERMS);
   const hiddenTerms = ad.saleTerms.length - visibleTerms.length;
 
@@ -130,37 +122,8 @@ export function AdCard({ ad, delay = 0, hideSeller = false }: AdCardProps) {
           </p>
         </div>
 
-        {/* Seller → public profile */}
-        {!hideSeller && (
-          <Link
-            href={`/panel/sellers/${ad.userId}`}
-            className="group/seller relative z-[2] -mx-1 flex items-center gap-3 rounded-2xl px-1 py-1 transition-colors hover:bg-panel-line/[0.04]"
-            aria-label={`مشاهده پروفایل فروشنده ${ad.userName}`}
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#FF6A00]/30 bg-[#FF6A00]/[0.1] text-sm font-black text-panel-accent shadow-[0_8px_20px_-10px_rgba(255,106,0,0.7)] transition-transform group-hover/seller:scale-105">
-              {ad.userImage ? (
-                <SafeImage
-                  src={ad.userImage}
-                  fallback={initials(ad.userName)}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                initials(ad.userName)
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1 text-[10px] text-panel-faint">
-                {ad.userIsCompany ? <Building2 className="h-3 w-3" /> : <UserRound className="h-3 w-3" />}
-                {ad.userIsCompany ? "مجموعه فروشنده" : "فروشنده"}
-              </p>
-              <p className="truncate text-sm font-extrabold text-panel-text transition-colors group-hover/seller:text-panel-accent-soft">
-                {ad.userName}
-              </p>
-            </div>
-            <ChevronLeft className="h-4 w-4 shrink-0 text-panel-faint-2 transition-all group-hover/seller:-translate-x-0.5 group-hover/seller:text-panel-accent" />
-          </Link>
-        )}
+        {/* Seller: public code only */}
+        <SellerCodeBadge code={ad.sellerCode} />
 
         {/* Sale terms */}
         <div className="mt-auto">

@@ -173,7 +173,7 @@ export function SearchFilters({ filters, options, total }: SearchFiltersProps) {
             type="search"
             value={query}
             onChange={(event) => handleQueryChange(event.target.value)}
-            placeholder="جستجو بر اساس نام خودرو، مدل، برند، کد آگهی یا نام فروشنده…"
+            placeholder="جستجو بر اساس نام خودرو، مدل، برند، کد آگهی یا کد فروشنده…"
             aria-label="جستجو"
             enterKeyHint="search"
             className="h-12 w-full rounded-2xl border border-panel-line/[0.1] bg-panel-surface pe-10 ps-11 text-sm text-panel-text outline-none transition-all placeholder:text-panel-faint hover:border-panel-line/20 focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"

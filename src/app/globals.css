@@ -421,9 +421,53 @@
   display: none;
 }
 
+/* Floating consultation button: entrance + a soft repeating "ping" ring. */
+@keyframes panelConsultIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.panel-consult-fab {
+  animation: panelConsultIn 0.55s 0.25s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes panelConsultRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 106, 0, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 14px rgba(255, 106, 0, 0);
+  }
+}
+.panel-consult-ring {
+  animation: panelConsultRing 2.4s cubic-bezier(0.22, 1, 0.36, 1) 1s infinite;
+}
+@keyframes panelConsultPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.panel-consult-pop {
+  transform-origin: bottom left;
+  animation: panelConsultPop 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .panel-dock,
-  .panel-card-in {
+  .panel-card-in,
+  .panel-consult-fab,
+  .panel-consult-ring,
+  .panel-consult-pop {
     animation: none;
   }
 }

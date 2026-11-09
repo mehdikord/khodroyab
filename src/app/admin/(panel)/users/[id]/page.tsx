@@ -10,6 +10,7 @@ import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { getUserVerification } from "@/lib/verification";
 import { listRecentUserPriceTableEntries } from "@/lib/price-table";
 import { UserProfile } from "@/components/admin/users/UserProfile";
+import { getActiveUserCode } from "@/lib/user-codes";
 
 export const metadata: Metadata = {
   title: "پروفایل کاربر | پنل مدیریت خودرو یاب",
@@ -43,7 +44,7 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
   }
 
   // Only load what this admin's sections may see (identity documents stay with "users").
-  const [saleAdsCount, recentAds, verification, priceTable] = await Promise.all([
+  const [saleAdsCount, recentAds, verification, priceTable, code] = await Promise.all([
     prisma.userCar.count({ where: { userId } }),
     access.ads
       ? prisma.userCar.findMany({
@@ -55,6 +56,7 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
       : Promise.resolve([]),
     access.manageUser ? getUserVerification(userId) : Promise.resolve(null),
     access.priceTable ? listRecentUserPriceTableEntries(userId, 3) : Promise.resolve({ total: 0, entries: [] }),
+    getActiveUserCode(userId),
   ]);
 
   return (
@@ -65,6 +67,7 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
       priceTable={priceTable}
       verification={verification}
       access={access}
+      currentCode={code.code}
     />
   );
 }

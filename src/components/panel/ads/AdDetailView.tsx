@@ -1,12 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { Activity, ArrowRight, Building2, CalendarDays, ChevronLeft, Clock3, EyeOff, HandCoins, ListChecks, Pencil, UserRound, XCircle } from "lucide-react";
+import { Activity, ArrowRight, CalendarDays, Clock3, EyeOff, HandCoins, ListChecks, Pencil, XCircle } from "lucide-react";
 
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { AdGallery } from "@/components/panel/ads/AdGallery";
 import { AdPriceHistory } from "@/components/panel/ads/AdPriceHistory";
-import { SafeImage } from "@/components/panel/SafeImage";
+import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { CopyCodeButton } from "@/components/panel/search/CopyCodeButton";
 import type { AdDetailRecord } from "@/lib/panel-search-shared";
 import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
@@ -33,12 +33,17 @@ function Spec({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-/** Everything about one ad: photos, specs, features, sale terms, price history and seller. */
-export function AdDetailView({ ad }: { ad: AdDetailRecord }) {
+interface AdDetailViewProps {
+  ad: AdDetailRecord;
+}
+
+/** Everything about one ad: photos, specs, features, sale terms, price history and the seller's code. */
+export function AdDetailView({ ad }: AdDetailViewProps) {
   const title = `${ad.brandName} ${ad.carName}`;
 
   return (
     <div className="space-y-5">
+
       <Link
         href={ad.isOwner ? "/panel/ads" : "/panel/search"}
         className="admin-animate-in inline-flex items-center gap-1.5 text-xs font-bold text-panel-muted hover:text-panel-text"
@@ -163,27 +168,10 @@ export function AdDetailView({ ad }: { ad: AdDetailRecord }) {
             )}
           </section>
 
-          <Link
-            href={`/panel/sellers/${ad.userId}`}
-            aria-label={`مشاهده پروفایل فروشنده ${ad.userName}`}
-            className={`${cardClass} group flex items-center gap-3 transition-colors hover:border-[#FF6A00]/35`}
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#FF6A00]/30 bg-[#FF6A00]/[0.1] text-base font-black text-panel-accent">
-              {ad.userImage ? (
-                <SafeImage src={ad.userImage} fallback={ad.userName.slice(0, 1)} className="h-full w-full object-cover" loading="lazy" />
-              ) : (
-                ad.userName.slice(0, 1)
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1 text-[10px] text-panel-faint">
-                {ad.userIsCompany ? <Building2 className="h-3 w-3" /> : <UserRound className="h-3 w-3" />}
-                {ad.userIsCompany ? "مجموعه فروشنده" : "فروشنده"}
-              </span>
-              <span className="block truncate text-sm font-extrabold text-panel-text">{ad.userName}</span>
-            </span>
-            <ChevronLeft className="h-4 w-4 shrink-0 text-panel-faint-2 transition-all group-hover:-translate-x-0.5 group-hover:text-panel-accent" />
-          </Link>
+          <section className={cardClass}>
+            <SellerCodeBadge code={ad.sellerCode} size="lg" mine={ad.isOwner} />
+            <p className="mt-2.5 text-[11px] leading-5 text-panel-faint">برای کپی، روی کد فروشنده بزنید.</p>
+          </section>
         </div>
 
         <div className="min-w-0 space-y-5 lg:col-start-1 lg:row-start-2">

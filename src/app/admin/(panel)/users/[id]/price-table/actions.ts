@@ -44,7 +44,6 @@ export async function saveUserPriceTableAction(userIdRaw: string, formData: Form
     revalidatePath(`/admin/users/${userId.toString()}/price-table`);
     revalidatePath("/panel/price-table");
     revalidatePath("/panel/price-list", "layout");
-    revalidatePath(`/panel/sellers/${userId.toString()}`);
   }
   return result;
 }

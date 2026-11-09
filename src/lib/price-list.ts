@@ -3,7 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
-import { hasCompanyName, publicDisplayName } from "@/lib/display-name";
+import { getActiveUserCodes } from "@/lib/user-codes";
 import {
   PRICE_TABLE_ALL_PRICE_KEYS,
   PRICE_TABLE_PRICE_FIELDS,
@@ -46,12 +46,13 @@ export interface PriceListRow extends PriceListCarInfo {
 
 /** One seller's prices for a car (all of their tiers), as shown on the car's price page. */
 export interface PriceListOffer {
-  userId: string;
-  /** Public name: the seller's business name when set, else their own name. */
-  userName: string;
-  /** True when `userName` is a business name. */
-  isCompany: boolean;
-  userImage: string | null;
+  /**
+   * The seller's current public code (rotates automatically). The seller's
+   * name, photo and account id never reach other customers.
+   */
+  sellerCode: string;
+  /** The offer belongs to the viewer. */
+  isMine: boolean;
   /** The seller's prices per (year, colour) column (only the ones they priced). */
   byColumn: PriceListPricesByColumn;
   updatedAt: string;
@@ -198,16 +199,21 @@ function compareOffers(a: PriceListOffer, b: PriceListOffer): number {
     if (y === null) return -1;
     return compareDigitPrices(x, y);
   }
-  return a.userName.localeCompare(b.userName, "fa");
+  return a.sellerCode.localeCompare(b.sellerCode);
 }
 
 /**
  * One price-list car with every active seller's prices for it, one offer per
  * seller holding all of their (year, colour) tiers. Returns null for unknown
  * ids or cars the admin has not allowed in price tables. Collaborator prices
- * are included only when `showPartner`.
+ * are included only when `showPartner`. `viewerId` marks the viewer's own
+ * offer; pass `null` (e.g. for page metadata) to skip loading seller codes.
  */
-export async function getPriceListCarDetail(carIdRaw: string, showPartner: boolean): Promise<PriceListCarDetail | null> {
+export async function getPriceListCarDetail(
+  carIdRaw: string,
+  showPartner: boolean,
+  viewerId: string | null
+): Promise<PriceListCarDetail | null> {
   if (!/^\d{1,20}$/.test(carIdRaw)) return null;
 
   const car = await prisma.car.findFirst({
@@ -218,7 +224,7 @@ export async function getPriceListCarDetail(carIdRaw: string, showPartner: boole
         where: pricedEntryWhere,
         select: {
           updatedAt: true,
-          user: { select: { id: true, name: true, companyName: true, image: true } },
+          userId: true,
           prices: { select: tierSelect, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
         },
       },
@@ -230,12 +236,11 @@ export async function getPriceListCarDetail(carIdRaw: string, showPartner: boole
     .map((entry) => ({ ...entry, prices: visibleTiers(entry.prices, showPartner) }))
     .filter((entry) => entry.prices.length > 0);
 
+  const codes = viewerId === null ? new Map() : await getActiveUserCodes(entries.map((entry) => entry.userId));
   const offers: PriceListOffer[] = entries
     .map((entry) => ({
-      userId: entry.user.id.toString(),
-      userName: publicDisplayName(entry.user),
-      isCompany: hasCompanyName(entry.user),
-      userImage: entry.user.image,
+      sellerCode: codes.get(entry.userId.toString())?.code ?? "",
+      isMine: entry.userId.toString() === viewerId,
       byColumn: Object.fromEntries(entry.prices.map((tier) => [tierColumn(tier).key, tierPrices(tier)] as const)),
       updatedAt: entry.updatedAt.toISOString(),
     }))

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake, ShieldCheck, KeyRound } from "lucide-react";
+import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake, ShieldCheck, KeyRound, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { USER_DIRECTORY_ACCESS, canAccess, type AccessRequirement, type AdminAccess } from "@/lib/auth/permissions";
@@ -185,6 +185,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         enLabel: "ROLES",
         href: "/admin/roles",
         icon: KeyRound,
+        requirement: "root",
+      },
+      {
+        key: "settings",
+        label: "تنظیمات سیستم",
+        enLabel: "SETTINGS",
+        href: "/admin/settings",
+        icon: Settings,
         requirement: "root",
       },
     ],

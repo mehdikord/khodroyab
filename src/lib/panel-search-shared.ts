@@ -80,7 +80,7 @@ export interface SearchAdSaleTerm {
 
 /**
  * Public-safe projection of an approved sale ad for the customer panel.
- * Excludes the seller's phone number. Prices are exposed only through the
+ * The seller is identified only by their rotating code. Prices are exposed only through the
  * per-term price history (delta badge + chart).
  */
 export interface SearchAdRecord {
@@ -96,12 +96,12 @@ export interface SearchAdRecord {
   colorCode: string | null;
   /** Cover: the ad's primary photo, else the car's first catalogue photo. */
   imageUrl: string | null;
-  userId: string;
-  /** Public seller name: business name when set, else the person's name. */
-  userName: string;
-  /** True when `userName` is the seller's business name. */
-  userIsCompany: boolean;
-  userImage: string | null;
+  /**
+   * The seller's current public 8-digit code (rotates automatically). Shown
+   * instead of any identity: name, phone, photo and account id never reach
+   * other customers.
+   */
+  sellerCode: string;
   saleTerms: SearchAdSaleTerm[];
   createdAtLabel: string;
 }
@@ -139,23 +139,4 @@ export interface SearchResult {
   page: number;
   pageCount: number;
   pageSize: number;
-}
-
-/** Public view of a seller, as other customers see it. */
-export interface SellerProfile {
-  id: string;
-  /** Public name: business name (نام مجموعه) when set, else the person's name. */
-  name: string;
-  /** True when `name` is the seller's business name. */
-  isCompany: boolean;
-  image: string | null;
-  bio: string | null;
-  /** Mobile number (login phone). */
-  phone: string;
-  /** Landline number, if the seller entered one. */
-  tel: string | null;
-  address: string | null;
-  /** Pre-formatted Persian "member since" date. */
-  memberSinceLabel: string;
-  approvedAdCount: number;
 }

@@ -10,6 +10,9 @@ import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation
 import { companyNameSchema, userPasswordSchema, userPhoneSchema } from "@/lib/validation/user";
 import { hashPassword } from "@/lib/auth/password";
 import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
+import { USER_DIRECTORY_ACCESS } from "@/lib/auth/permissions";
+import { findUserIdsByAnyCode } from "@/lib/user-codes";
+import { normalizeDigits } from "@/lib/validation/admin";
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
@@ -294,4 +297,21 @@ function revalidateCollaboratorContent(userId: bigint) {
   revalidatePath(`/admin/users/${userId.toString()}`);
   revalidatePath(`/admin/users/${userId.toString()}/sale-ads`);
   revalidatePath("/panel", "layout");
+}
+
+/**
+ * Users that ever had this 8-digit public code, active or expired (the admin
+ * may search by an old code someone reported). Read-only, so every admin who
+ * can browse the user list may call it.
+ */
+export async function findUsersByCodeAction(code: string): Promise<{ ok: true; userIds: string[] } | { ok: false; message: string }> {
+  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  const denied = await adminActionDenied(USER_DIRECTORY_ACCESS);
+  if (denied) return { ok: false, message: denied };
+  try {
+    return { ok: true, userIds: await findUserIdsByAnyCode(normalizeDigits(code)) };
+  } catch (error) {
+    console.error("[users:find-by-code] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
 }

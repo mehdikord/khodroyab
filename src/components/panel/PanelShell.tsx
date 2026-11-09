@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ChevronDown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
@@ -11,6 +11,7 @@ import { findActivePanelItem, panelNavItemsFor } from "@/components/panel/panel-
 import { logoutUserAction } from "@/app/panel/auth-actions";
 import { ThemeSwitch } from "@/components/panel/ThemeSwitch";
 import { VerificationNotice } from "@/components/panel/verification/VerificationNotice";
+import { ConsultationFab } from "@/components/panel/ConsultationFab";
 import type { PanelTheme } from "@/lib/panel-theme";
 
 export interface PanelShellUser {
@@ -27,6 +28,10 @@ interface PanelShellProps {
   user: PanelShellUser;
   /** Server-resolved theme (from cookie). */
   theme: PanelTheme;
+  /** Free-consultation phone number (system settings); empty hides the floating button. */
+  consultationPhone?: string;
+  /** Warning text from the system settings, shown at the top of every panel page; empty hides it. */
+  notice?: string;
   children: React.ReactNode;
 }
 
@@ -103,17 +108,13 @@ function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean 
 }
 
 /** Customer-panel chrome: sticky top bar, content area, fixed bottom dock. */
-export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, children }) => {
+export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultationPhone, notice, children }) => {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const activeItem = findActivePanelItem(pathname);
-  const pageTitle = pathname.startsWith("/panel/sellers/")
-    ? "پروفایل فروشنده"
-    : pathname.startsWith("/panel/verification")
-      ? "احراز هویت"
-      : activeItem?.label ?? "پنل کاربری";
+  const pageTitle = pathname.startsWith("/panel/verification") ? "احراز هویت" : activeItem?.label ?? "پنل کاربری";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -228,10 +229,29 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, children })
       </header>
 
       {/* Content */}
-      <div className="panel-content mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-7">
+      <div
+        className="panel-content mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-7"
+        // Leave room under the last row for the floating consultation button.
+        style={consultationPhone ? { paddingBottom: "calc(var(--panel-dock-space) + 4.5rem)" } : undefined}
+      >
+        {notice && (
+          <div
+            role="note"
+            className="admin-animate-in mb-5 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3.5"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/[0.12] text-panel-warning">
+              <AlertTriangle className="h-[18px] w-[18px]" />
+            </span>
+            <p className="min-w-0 flex-1 whitespace-pre-line break-words pt-1 text-xs font-semibold leading-7 text-panel-warning sm:text-[13px]">
+              {notice}
+            </p>
+          </div>
+        )}
         {user.collabrate && !user.authenticaed && !pathname.startsWith("/panel/verification") && <VerificationNotice />}
         {children}
       </div>
+
+      {consultationPhone && <ConsultationFab phone={consultationPhone} />}
 
       <Dock pathname={pathname} collabrate={user.collabrate} />
     </div>

@@ -7,6 +7,7 @@ import { USER_DIRECTORY_ACCESS, hasPermission } from "@/lib/auth/permissions";
 import { userRecordInclude, userToRecord } from "@/lib/users";
 import { UsersManager } from "@/components/admin/users/UsersManager";
 import { isUserFilter } from "@/lib/users-shared";
+import { getActiveUserCodes } from "@/lib/user-codes";
 
 export const metadata: Metadata = {
   title: "مدیریت کاربران | پنل مدیریت خودرو یاب",
@@ -24,9 +25,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
 
+  const codes = await getActiveUserCodes(users.map((user) => user.id));
+
   return (
     <UsersManager
       initialUsers={users.map(userToRecord)}
+      currentCodes={Object.fromEntries(Array.from(codes, ([id, value]) => [id, value.code]))}
       initialFilter={isUserFilter(searchParams.filter) ? searchParams.filter : "all"}
       canManage={hasPermission(admin, "users")}
     />

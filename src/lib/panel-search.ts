@@ -3,7 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
-import { hasCompanyName, publicDisplayName } from "@/lib/display-name";
+import { activeCodeUserWhere, getActiveUserCodes } from "@/lib/user-codes";
 import { normalizeDigits } from "@/lib/validation/admin";
 import { adOptionsToDisplay, userCarImagesOrder, userCarOptionsInclude } from "@/lib/user-cars";
 
@@ -17,7 +17,6 @@ import {
   type SearchOptions,
   type SearchResult,
   type SearchSort,
-  type SellerProfile,
 } from "@/lib/panel-search-shared";
 
 export * from "@/lib/panel-search-shared";
@@ -61,12 +60,12 @@ function buildWhere(filters: SearchFilterValues): Prisma.UserCarWhereInput {
       { car: { brand: { name: { contains: filters.q } } } },
       { car: { carType: { name: { contains: filters.q } } } },
       { color: { name: { contains: filters.q } } },
-      { user: { name: { contains: filters.q } } },
-      { user: { companyName: { contains: filters.q } } },
     ];
     if (digits) {
       or.push({ code: { contains: digits } });
       or.push({ year: { contains: digits } });
+      // A seller's current (not expired) public code finds all of their ads.
+      if (/^\d{8}$/.test(digits)) or.push({ user: activeCodeUserWhere(digits) });
     }
     and.push({ OR: or });
   }
@@ -111,7 +110,6 @@ function buildOrderBy(sort: SearchSort): Prisma.UserCarOrderByWithRelationInput[
 }
 
 const searchInclude = {
-  user: { select: { id: true, name: true, companyName: true, image: true } },
   car: {
     include: {
       brand: { select: { name: true, image: true } },
@@ -174,7 +172,13 @@ function toSearchSaleTerm(row: SearchTermRow, showPartner: boolean): SearchAdSal
   };
 }
 
-function toSearchAdRecord(row: SearchAdRow, showPartner: boolean): SearchAdRecord {
+/** Current public code of each ad's seller, keyed by user id. */
+async function sellerCodesFor(rows: { userId: bigint }[]): Promise<Map<string, string>> {
+  const codes = await getActiveUserCodes(rows.map((row) => row.userId));
+  return new Map(Array.from(codes, ([userId, value]) => [userId, value.code]));
+}
+
+function toSearchAdRecord(row: SearchAdRow, showPartner: boolean, sellerCodes: Map<string, string>): SearchAdRecord {
   return {
     id: row.id.toString(),
     code: row.code,
@@ -187,10 +191,7 @@ function toSearchAdRecord(row: SearchAdRow, showPartner: boolean): SearchAdRecor
     brandName: row.car.brand.name,
     brandImage: row.car.brand.image,
     imageUrl: row.images[0]?.imageUrl ?? row.car.carImages[0]?.imageUrl ?? null,
-    userId: row.user.id.toString(),
-    userName: publicDisplayName(row.user),
-    userIsCompany: hasCompanyName(row.user),
-    userImage: row.user.image,
+    sellerCode: sellerCodes.get(row.userId.toString()) ?? "",
     saleTerms: row.saleTerms.filter((item) => item.saleTerm.isActive).map((term) => toSearchSaleTerm(term, showPartner)),
     createdAtLabel: faDate.format(row.createdAt),
   };
@@ -217,7 +218,8 @@ export async function searchApprovedAds(filters: SearchFilterValues, requestedPa
           take: SEARCH_PAGE_SIZE,
         });
 
-  return { ads: rows.map((row) => toSearchAdRecord(row, showPartner)), total, page, pageCount, pageSize: SEARCH_PAGE_SIZE };
+  const sellerCodes = await sellerCodesFor(rows);
+  return { ads: rows.map((row) => toSearchAdRecord(row, showPartner, sellerCodes)), total, page, pageCount, pageSize: SEARCH_PAGE_SIZE };
 }
 
 /**
@@ -304,9 +306,10 @@ export async function getAdDetail(idRaw: string, adViewer: AdViewer): Promise<Ad
   const liveTerms = row.saleTerms.filter((term) => term.saleTerm.isActive);
   const isOwner = row.userId === viewer;
   const showPartner = adViewer.isPartner || isOwner;
+  const sellerCodes = await sellerCodesFor([row]);
 
   return {
-    ...toSearchAdRecord(row, showPartner),
+    ...toSearchAdRecord(row, showPartner, sellerCodes),
     status: row.status,
     isActive: row.isActive,
     isOwner,
@@ -325,55 +328,4 @@ export async function getAdDetail(idRaw: string, adViewer: AdViewer): Promise<Ad
       description: term.description,
     })),
   };
-}
-
-/* ───────────────────────── Sellers ───────────────────────── */
-
-/**
- * Public seller profile (name, avatar, bio, contact details) plus the count of
- * their approved ads. Only verified collaborators have a public profile; returns
- * null for unknown, deactivated or non-collaborator accounts so the page can 404.
- */
-export async function getSellerProfile(idRaw: string): Promise<SellerProfile | null> {
-  const id = toBigIntOrNull(idRaw);
-  if (id === null) return null;
-  const user = await prisma.user.findFirst({
-    where: { id, isActive: true, ...PUBLIC_SELLER_WHERE },
-    select: {
-      id: true,
-      name: true,
-      companyName: true,
-      image: true,
-      bio: true,
-      phone: true,
-      tel: true,
-      address: true,
-      createdAt: true,
-      _count: { select: { userCars: { where: PUBLIC_AD_WHERE } } } },
-  });
-  if (!user) return null;
-  return {
-    id: user.id.toString(),
-    name: publicDisplayName(user),
-    isCompany: hasCompanyName(user),
-    image: user.image,
-    bio: user.bio,
-    phone: user.phone,
-    tel: user.tel?.trim() || null,
-    address: user.address?.trim() || null,
-    memberSinceLabel: faDate.format(user.createdAt),
-    approvedAdCount: user._count.userCars,
-  };
-}
-
-/** Every approved, active ad of one seller, newest first (same projection as search). */
-export async function listSellerApprovedAds(idRaw: string, showPartner: boolean): Promise<SearchAdRecord[]> {
-  const id = toBigIntOrNull(idRaw);
-  if (id === null) return [];
-  const rows = await prisma.userCar.findMany({
-    where: { ...PUBLIC_AD_WHERE, userId: id },
-    include: searchInclude,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-  });
-  return rows.map((row) => toSearchAdRecord(row, showPartner));
 }

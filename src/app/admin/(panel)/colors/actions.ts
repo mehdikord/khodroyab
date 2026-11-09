@@ -52,7 +52,6 @@ function revalidateColorPages() {
   revalidatePath("/admin/ads");
   revalidatePath("/panel/ads");
   revalidatePath("/panel/price-table");
-  revalidatePath("/panel/sellers/[id]", "page");
 }
 
 export async function createColorAction(

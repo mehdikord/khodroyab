@@ -5,6 +5,10 @@ import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/user-auth";
 import { emptyAdStats, profileSelect, toProfileRecord } from "@/lib/profile-server";
 import { ProfileManager } from "@/components/panel/profile/ProfileManager";
+import { getSystemSettings } from "@/lib/system-settings";
+import { getActiveUserCode } from "@/lib/user-codes";
+
+const faTime = new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" });
 
 export const metadata: Metadata = {
   title: "پروفایل | پنل کاربری خودرو یاب",
@@ -18,9 +22,11 @@ export default async function PanelProfilePage() {
   const user = await requireUser();
   const userId = BigInt(user.id);
 
-  const [row, grouped] = await Promise.all([
+  const [row, grouped, code, settings] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: profileSelect }),
     prisma.userCar.groupBy({ by: ["status"], where: { userId }, _count: { _all: true } }),
+    getActiveUserCode(userId),
+    getSystemSettings(),
   ]);
   if (!row) {
     // Guarded by requireUser(); only reachable if the row vanished mid-request.
@@ -34,5 +40,16 @@ export default async function PanelProfilePage() {
     stats.total += count;
   }
 
-  return <ProfileManager initialProfile={toProfileRecord(row)} stats={stats} collabrate={user.collabrate} />;
+  return (
+    <ProfileManager
+      initialProfile={toProfileRecord(row)}
+      stats={stats}
+      collabrate={user.collabrate}
+      userCode={{
+        code: code.code,
+        validUntilLabel: faTime.format(code.expiresAt),
+        rotationMinutes: settings.userCodeRotationMinutes,
+      }}
+    />
+  );
 }

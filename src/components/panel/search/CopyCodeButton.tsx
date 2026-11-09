@@ -7,11 +7,13 @@ import { cn, toPersianDigits } from "@/lib/utils";
 
 interface CopyCodeButtonProps {
   code: string;
+  /** What the code is, for the accessible name and tooltip. */
+  label?: string;
   className?: string;
 }
 
-/** Ad code badge that copies the code to the clipboard on tap. */
-export function CopyCodeButton({ code, className }: CopyCodeButtonProps) {
+/** Code badge (ad code by default) that copies the code to the clipboard on tap. */
+export function CopyCodeButton({ code, label = "کد آگهی", className }: CopyCodeButtonProps) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -35,8 +37,8 @@ export function CopyCodeButton({ code, className }: CopyCodeButtonProps) {
     <button
       type="button"
       onClick={handleCopy}
-      aria-label={copied ? "کد آگهی کپی شد" : `کپی کد آگهی ${toPersianDigits(code)}`}
-      title="کپی کد آگهی"
+      aria-label={copied ? `${label} کپی شد` : `کپی ${label} ${toPersianDigits(code)}`}
+      title={`کپی ${label}`}
       className={cn(
         "group/code inline-flex items-center gap-2 rounded-xl border px-2.5 py-1.5 font-mono text-sm font-extrabold tracking-[0.18em] transition-all",
         copied

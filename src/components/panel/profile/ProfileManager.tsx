@@ -25,6 +25,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { SafeImage } from "@/components/panel/SafeImage";
+import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { ProfileSheet } from "@/components/panel/profile/ProfileSheet";
 import { ProfileEditForm } from "@/components/panel/profile/ProfileEditForm";
 import { PasswordChangeForm } from "@/components/panel/profile/PasswordChangeForm";
@@ -37,6 +38,8 @@ interface ProfileManagerProps {
   stats: ProfileAdStats;
   /** Collaborators publish ads, so only they see the ad stats and the "my ads" link. */
   collabrate: boolean;
+  /** The user's current public code (shown to others instead of their identity). */
+  userCode: { code: string; validUntilLabel: string; rotationMinutes: number };
 }
 
 type SheetKind = "edit" | "password" | null;
@@ -249,7 +252,7 @@ function ActionTile({
 
 /* ───────────────────────── main ───────────────────────── */
 
-export function ProfileManager({ initialProfile, stats, collabrate }: ProfileManagerProps) {
+export function ProfileManager({ initialProfile, stats, collabrate, userCode }: ProfileManagerProps) {
   const [profile, setProfile] = useState<ProfileRecord>(initialProfile);
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [sheetLocked, setSheetLocked] = useState(false);
@@ -391,6 +394,19 @@ export function ProfileManager({ initialProfile, stats, collabrate }: ProfileMan
             </div>
           )}
         </div>
+      </section>
+
+      {/* Public code */}
+      <section
+        className="panel-card-in rounded-3xl border border-panel-line/[0.08] bg-panel-surface p-4 sm:p-5"
+        style={{ animationDelay: "40ms" }}
+      >
+        <SellerCodeBadge code={userCode.code} label="کد کاربری شما" size="lg" />
+        <p className="mt-3 text-[11px] leading-6 text-panel-muted-2">
+          در آگهی‌ها و لیست قیمت، به جای نام و اطلاعات تماس شما فقط این کد به دیگران نمایش داده می‌شود. کد هر{" "}
+          {toPersianDigits(userCode.rotationMinutes)} دقیقه به‌صورت خودکار عوض می‌شود؛ کد فعلی تا ساعت{" "}
+          <span className="font-bold text-panel-text-2">{userCode.validUntilLabel}</span> معتبر است.
+        </p>
       </section>
 
       {/* Actions */}
