@@ -1,10 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { CalendarDays, Car, HandCoins } from "lucide-react";
+import { CalendarDays, Car, Gauge, HandCoins } from "lucide-react";
 
 import type { SearchAdRecord } from "@/lib/panel-search-shared";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import { cn, toPersianDigits } from "@/lib/utils";
+import { cn, formatMileage, toPersianDigits } from "@/lib/utils";
+import { CURRENCY_LABELS } from "@/lib/currency";
 import { CopyCodeButton } from "@/components/panel/search/CopyCodeButton";
 import { SafeImage } from "@/components/panel/SafeImage";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
@@ -110,6 +111,11 @@ export function AdCard({ ad, delay = 0 }: AdCardProps) {
             <span>
               سال ساخت <span className="font-semibold text-panel-text-2">{toPersianDigits(ad.carYear)}</span>
             </span>
+            <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
+            <span className="inline-flex items-center gap-1">
+              <Gauge className="h-3 w-3" />
+              <span className="font-semibold text-panel-text-2">{formatMileage(ad.mileage)}</span>
+            </span>
             {ad.colorName && ad.colorCode && (
               <>
                 <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
@@ -130,6 +136,9 @@ export function AdCard({ ad, delay = 0 }: AdCardProps) {
           <p className="mb-1.5 flex items-center gap-1 text-[10px] text-panel-faint">
             <HandCoins className="h-3 w-3" />
             شرایط فروش
+            <span className="ms-auto rounded-md border border-panel-line/[0.1] px-1.5 py-px text-[9px] font-bold text-panel-muted">
+              قیمت به {CURRENCY_LABELS[ad.currency]}
+            </span>
           </p>
           {visibleTerms.length === 0 ? (
             <p className="text-[11px] text-panel-faint">شرایطی ثبت نشده است</p>

@@ -16,6 +16,8 @@ import type { SaleTermRecord } from "@/lib/sale-terms";
 import type { ColorRecord } from "@/lib/colors";
 import type { OptionRecord } from "@/lib/options";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { CURRENCY_LABELS, DEFAULT_AD_CURRENCY, type PriceCurrency } from "@/lib/currency";
+import { CurrencyToggle } from "@/components/ads/CurrencyToggle";
 
 interface MyAdFormProps {
   mode: "create" | "edit";
@@ -80,6 +82,8 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
   const extras = useAdExtras(ad);
   const [qautity, setQautity] = useState(ad?.qautity ?? "1");
   const [description, setDescription] = useState(ad?.description ?? "");
+  const [currency, setCurrency] = useState<PriceCurrency>(ad?.currency ?? DEFAULT_AD_CURRENCY);
+  const currencyName = CURRENCY_LABELS[currency];
   const [rows, setRows] = useState<TermRow[]>(() =>
     (ad?.saleTerms ?? []).map((term) => ({
       key: nextKey(),
@@ -156,6 +160,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
     formData.set("carId", carId);
     formData.set("qautity", qautity);
     formData.set("description", description);
+    formData.set("currency", currency);
     extras.appendTo(formData);
     formData.set(
       "saleTerms",
@@ -381,6 +386,17 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
             </button>
           </div>
 
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-4 py-3">
+            <div>
+              <p className="text-xs font-extrabold text-panel-text">
+                واحد قیمت‌ها <span className="text-[#FF6A00]">*</span>
+              </p>
+              <p className="mt-0.5 text-[11px] text-panel-faint">همه قیمت‌ها و تخفیف‌های این آگهی با این واحد ثبت و نمایش داده می‌شوند.</p>
+            </div>
+            <CurrencyToggle value={currency} onChange={setCurrency} disabled={isPending} />
+          </div>
+          <FieldError message={fieldErrors.currency} />
+
           {saleTerms.length === 0 && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs font-semibold text-panel-warning">
               در حال حاضر شرایط فروش فعالی تعریف نشده است.
@@ -447,7 +463,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                       ).map((field) => (
                         <div key={field.key} className="space-y-1.5">
                           <label className={labelClassName}>
-                            {field.label} (تومان) <span className="text-[#FF6A00]">*</span>
+                            {field.label} ({currencyName}) <span className="text-[#FF6A00]">*</span>
                           </label>
                           <input
                             type="text"
@@ -460,7 +476,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                             className={cn(inputClassName(Boolean(fieldErrors[`${prefix}${field.key}`])), "h-11 text-start font-mono")}
                           />
                           {row[field.key] && !fieldErrors[`${prefix}${field.key}`] ? (
-                            <p className="text-[11px] text-panel-faint">{formatPersianNumber(row[field.key])} تومان</p>
+                            <p className="text-[11px] text-panel-faint">{formatPersianNumber(row[field.key])} {currencyName}</p>
                           ) : (
                             !fieldErrors[`${prefix}${field.key}`] && <p className="text-[11px] text-panel-faint">{field.hint}</p>
                           )}
@@ -469,7 +485,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                       ))}
 
                       <div className="space-y-1.5">
-                        <label className={labelClassName}>مبلغ تخفیف (تومان)</label>
+                        <label className={labelClassName}>مبلغ تخفیف ({currencyName})</label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -481,7 +497,7 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                           className={cn(inputClassName(Boolean(fieldErrors[`${prefix}sale`])), "h-11 text-start font-mono")}
                         />
                         {row.sale && !fieldErrors[`${prefix}sale`] && (
-                          <p className="text-[11px] text-panel-faint">{formatPersianNumber(row.sale)} تومان</p>
+                          <p className="text-[11px] text-panel-faint">{formatPersianNumber(row.sale)} {currencyName}</p>
                         )}
                         <FieldError message={fieldErrors[`${prefix}sale`]} />
                       </div>

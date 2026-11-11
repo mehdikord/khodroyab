@@ -1,13 +1,31 @@
 "use client";
 
 import React, { useId, useRef, useState, useTransition } from "react";
-import { AlertCircle, AlertTriangle, Headset, Loader2, RefreshCcw, Save, Settings } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ExternalLink,
+  Headset,
+  Info,
+  Instagram,
+  Loader2,
+  MapPin,
+  MessageCircle,
+  Phone,
+  PhoneCall,
+  RefreshCcw,
+  Save,
+  Send,
+  Settings,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
 import { saveSystemSettingsAction } from "@/app/admin/(panel)/settings/actions";
 import {
+  MAX_ABOUT_TEXT_LENGTH,
   MAX_AD_PAGE_NOTICE_LENGTH,
+  MAX_CONTACT_ADDRESS_LENGTH,
   MAX_USER_CODE_ROTATION_MINUTES,
   MIN_USER_CODE_ROTATION_MINUTES,
   type SystemSettings,
@@ -52,11 +70,96 @@ function SettingCard({
   );
 }
 
-/** Root-only system settings: user-code rotation, consultation phone and the ad-page notice. */
+type ContactField =
+  | "contactPhone"
+  | "contactPostalCode"
+  | "contactAddress"
+  | "contactTelegram"
+  | "contactWhatsapp"
+  | "contactInstagram"
+  | "contactLocation";
+
+type ContactValues = Record<ContactField, string>;
+
+function pickContact(settings: SystemSettings): ContactValues {
+  return {
+    contactPhone: settings.contactPhone,
+    contactPostalCode: settings.contactPostalCode,
+    contactAddress: settings.contactAddress,
+    contactTelegram: settings.contactTelegram,
+    contactWhatsapp: settings.contactWhatsapp,
+    contactInstagram: settings.contactInstagram,
+    contactLocation: settings.contactLocation,
+  };
+}
+
+/** One single-line input of the contact-page card. */
+function ContactInput({
+  name,
+  label,
+  icon: Icon,
+  value,
+  error,
+  hint,
+  placeholder,
+  ltr,
+  inputMode,
+  maxLength,
+  disabled,
+  onChange,
+}: {
+  name: ContactField;
+  label: string;
+  icon: LucideIcon;
+  value: string;
+  error?: string;
+  hint?: string;
+  placeholder?: string;
+  ltr?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
+  disabled: boolean;
+  onChange: (name: ContactField, value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="min-w-0">
+      <label htmlFor={id} className="mb-2 flex items-center gap-1.5 text-xs font-bold text-[#D2D7DF]">
+        <Icon className="h-3.5 w-3.5 text-[#FF8A2A]" />
+        {label}
+      </label>
+      <input
+        id={id}
+        name={name}
+        type="text"
+        dir={ltr ? "ltr" : undefined}
+        inputMode={inputMode}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength ?? 300}
+        autoComplete="off"
+        spellCheck={false}
+        disabled={disabled}
+        aria-invalid={Boolean(error)}
+        className={cn(inputClassName(Boolean(error)), "h-12", ltr && "font-mono text-left placeholder:text-left")}
+      />
+      {error ? (
+        <p className="mt-2 text-xs text-red-400">{error}</p>
+      ) : (
+        hint && <p className="mt-2 text-[11px] leading-5 text-[#5E6672]">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+/** Root-only system settings: user-code rotation, consultation phone, the panel notice, the About page text and the Contact page details. */
 export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps) {
   const [minutes, setMinutes] = useState(String(initialSettings.userCodeRotationMinutes));
   const [phone, setPhone] = useState(initialSettings.consultationPhone);
   const [notice, setNotice] = useState(initialSettings.adPageNotice);
+  const [about, setAbout] = useState(initialSettings.aboutText);
+  const [contact, setContact] = useState<ContactValues>(() => pickContact(initialSettings));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -66,6 +169,13 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
   const minutesId = useId();
   const phoneId = useId();
   const noticeId = useId();
+  const aboutId = useId();
+  const addressId = useId();
+
+  function setContactField(name: ContactField, value: string) {
+    setContact((prev) => ({ ...prev, [name]: value }));
+    clearError(name);
+  }
 
   function showToast(kind: ToastState["kind"], message: string) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -93,6 +203,8 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
         setMinutes(String(result.settings.userCodeRotationMinutes));
         setPhone(result.settings.consultationPhone);
         setNotice(result.settings.adPageNotice);
+        setAbout(result.settings.aboutText);
+        setContact(pickContact(result.settings));
         showToast("success", "تنظیمات سیستم ذخیره شد.");
       } else {
         setFieldErrors(result.fieldErrors ?? {});
@@ -164,7 +276,7 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
         <SettingCard
           icon={Headset}
           title="شماره تماس مشاوره خرید خودرو"
-          description="این شماره در دکمه شناور «مشاوره رایگان خرید خودرو» در همه صفحات پنل کاربران نمایش داده می‌شود. اگر خالی باشد، دکمه نمایش داده نمی‌شود."
+          description="این شماره در دکمه شناور «تماس با مشاوران» در همه صفحات پنل کاربران نمایش داده می‌شود. اگر خالی باشد، دکمه نمایش داده نمی‌شود."
         >
           <label htmlFor={phoneId} className="mb-2 block text-xs font-bold text-[#D2D7DF]">
             شماره تماس
@@ -222,12 +334,181 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
           {noticeTrimmed && (
             <div className="mt-4">
               <p className="mb-2 text-[11px] font-bold text-[#8B93A1]">پیش‌نمایش</p>
-              <div className="flex items-start gap-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-xs leading-7 text-amber-200">
-                <AlertTriangle className="mt-1.5 h-4 w-4 shrink-0 text-amber-400" />
+              <div className="flex items-start gap-2.5 rounded-2xl border border-red-500/35 bg-red-500/[0.08] px-4 py-3 text-xs leading-7 text-red-200">
+                <AlertTriangle className="mt-1.5 h-4 w-4 shrink-0 text-red-400" />
                 <p className="whitespace-pre-line break-words">{noticeTrimmed}</p>
               </div>
             </div>
           )}
+        </SettingCard>
+
+        <SettingCard
+          icon={Info}
+          title="متن صفحه «درباره خودرویاب»"
+          description="این متن در صفحه «درباره خودرویاب» پنل کاربران نمایش داده می‌شود. برای جدا کردن پاراگراف‌ها یک خط خالی بگذارید."
+        >
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label htmlFor={aboutId} className="block text-xs font-bold text-[#D2D7DF]">
+              متن درباره ما
+            </label>
+            <a
+              href="/panel/about"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF8A2A] hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              مشاهده صفحه
+            </a>
+          </div>
+          <textarea
+            id={aboutId}
+            name="aboutText"
+            rows={12}
+            value={about}
+            onChange={(e) => {
+              setAbout(e.target.value);
+              clearError("aboutText");
+            }}
+            maxLength={MAX_ABOUT_TEXT_LENGTH}
+            placeholder={"خودرویاب مرجع تخصصی خرید و فروش خودروهای وارداتی است…\n\nپاراگراف دوم…"}
+            disabled={isPending}
+            aria-invalid={Boolean(fieldErrors.aboutText)}
+            className={cn(inputClassName(Boolean(fieldErrors.aboutText)), "resize-y py-3 leading-7")}
+          />
+          <div className="mt-2 flex items-center justify-between gap-3">
+            {fieldErrors.aboutText ? (
+              <p className="text-xs text-red-400">{fieldErrors.aboutText}</p>
+            ) : (
+              <p className="text-[11px] text-[#5E6672]">اگر خالی باشد، صفحه پیام «به‌زودی» نشان می‌دهد.</p>
+            )}
+            <span className="shrink-0 font-mono text-[11px] text-[#5E6672]">
+              {toPersianDigits(about.length)} / {toPersianDigits(MAX_ABOUT_TEXT_LENGTH)}
+            </span>
+          </div>
+        </SettingCard>
+
+        <SettingCard
+          icon={PhoneCall}
+          title="اطلاعات صفحه «تماس با ما»"
+          description="این اطلاعات در بالای صفحه «تماس با ما» پنل کاربران نمایش داده می‌شود. هر فیلدی که خالی بماند، در صفحه نمایش داده نمی‌شود."
+        >
+          <div className="mb-4 flex justify-end">
+            <a
+              href="/panel/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF8A2A] hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              مشاهده صفحه
+            </a>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ContactInput
+              name="contactPhone"
+              label="شماره تماس دفتر"
+              icon={Phone}
+              value={contact.contactPhone}
+              error={fieldErrors.contactPhone}
+              placeholder="021 1234 5678"
+              ltr
+              inputMode="tel"
+              maxLength={20}
+              disabled={isPending}
+              onChange={setContactField}
+            />
+            <ContactInput
+              name="contactPostalCode"
+              label="کد پستی"
+              icon={MapPin}
+              value={contact.contactPostalCode}
+              error={fieldErrors.contactPostalCode}
+              hint="۱۰ رقم، بدون خط تیره."
+              placeholder="1234567890"
+              ltr
+              inputMode="numeric"
+              maxLength={14}
+              disabled={isPending}
+              onChange={setContactField}
+            />
+          </div>
+
+          <div className="mt-4">
+            <label htmlFor={addressId} className="mb-2 flex items-center gap-1.5 text-xs font-bold text-[#D2D7DF]">
+              <MapPin className="h-3.5 w-3.5 text-[#FF8A2A]" />
+              آدرس دفتر
+            </label>
+            <textarea
+              id={addressId}
+              name="contactAddress"
+              rows={3}
+              value={contact.contactAddress}
+              onChange={(e) => setContactField("contactAddress", e.target.value)}
+              maxLength={MAX_CONTACT_ADDRESS_LENGTH}
+              placeholder="مثلاً: تهران، خیابان ولیعصر، بالاتر از میدان ونک، پلاک ۱۲، طبقه ۳، واحد ۷"
+              disabled={isPending}
+              aria-invalid={Boolean(fieldErrors.contactAddress)}
+              className={cn(inputClassName(Boolean(fieldErrors.contactAddress)), "resize-y py-3 leading-7")}
+            />
+            {fieldErrors.contactAddress && <p className="mt-2 text-xs text-red-400">{fieldErrors.contactAddress}</p>}
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <ContactInput
+              name="contactTelegram"
+              label="تلگرام"
+              icon={Send}
+              value={contact.contactTelegram}
+              error={fieldErrors.contactTelegram}
+              hint="آیدی (مثل ‎@khodroyab) یا لینک کامل"
+              placeholder="@khodroyab"
+              ltr
+              disabled={isPending}
+              onChange={setContactField}
+            />
+            <ContactInput
+              name="contactWhatsapp"
+              label="واتس‌اپ"
+              icon={MessageCircle}
+              value={contact.contactWhatsapp}
+              error={fieldErrors.contactWhatsapp}
+              hint="شماره موبایل یا لینک wa.me"
+              placeholder="0912 123 4567"
+              ltr
+              disabled={isPending}
+              onChange={setContactField}
+            />
+            <ContactInput
+              name="contactInstagram"
+              label="اینستاگرام"
+              icon={Instagram}
+              value={contact.contactInstagram}
+              error={fieldErrors.contactInstagram}
+              hint="آیدی یا لینک صفحه"
+              placeholder="@khodroyab"
+              ltr
+              disabled={isPending}
+              onChange={setContactField}
+            />
+          </div>
+
+          <div className="mt-4">
+            <ContactInput
+              name="contactLocation"
+              label="موقعیت دفتر روی نقشه (عرض، طول جغرافیایی)"
+              icon={MapPin}
+              value={contact.contactLocation}
+              error={fieldErrors.contactLocation}
+              hint="در گوگل مپ روی محل دفتر کلیک راست کنید و مختصات را کپی کنید؛ لینک گوگل مپ هم قابل قبول است."
+              placeholder="35.6997, 51.3380"
+              ltr
+              maxLength={500}
+              disabled={isPending}
+              onChange={setContactField}
+            />
+          </div>
         </SettingCard>
 
         <div className="flex justify-end">

@@ -15,6 +15,7 @@ import {
   type PriceTableAnyPriceField,
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
+import { PRICE_CURRENCIES, type PriceCurrency } from "@/lib/currency";
 
 /**
  * The three USD prices of a row, public and collaborator; `null` when nobody /
@@ -46,6 +47,8 @@ export interface PriceListRow extends PriceListCarInfo {
 
 /** One seller's prices for a car (all of their tiers), as shown on the car's price page. */
 export interface PriceListOffer {
+  /** Currency of every price of this seller's row. */
+  currency: PriceCurrency;
   /**
    * The seller's current public code (rotates automatically). The seller's
    * name, photo and account id never reach other customers.
@@ -62,8 +65,8 @@ export interface PriceListCarDetail {
   car: PriceListCarInfo;
   /** One entry per seller. */
   offers: PriceListOffer[];
-  /** Lowest price per field across all sellers and tiers. */
-  lowest: PriceListPrices;
+  /** Lowest price per field across all sellers and tiers, per currency (only currencies that appear). */
+  lowest: Partial<Record<PriceCurrency, PriceListPrices>>;
   /** Lowest price per field for each column, across sellers. */
   lowestByColumn: PriceListPricesByColumn;
   /** Every (year, colour) column among the offers, in column order. */
@@ -125,11 +128,19 @@ function lowestPrices(rows: PriceListPrices[]): PriceListPrices {
   return lowest;
 }
 
-type TierRow = Prisma.UserPriceTablePriceGetPayload<{ select: typeof tierSelect }>;
+/** A stored tier together with the currency of its row. */
+type TierRow = Prisma.UserPriceTablePriceGetPayload<{ select: typeof tierSelect }> & { currency: PriceCurrency };
 
 function tierColumn(tier: TierRow): PriceColumn {
   const colorId = tier.colorId.toString();
-  return { key: priceColumnKey(tier.year, colorId), year: tier.year, colorId, colorName: tier.color.name, colorCode: tier.color.code };
+  return {
+    key: priceColumnKey(tier.year, colorId, tier.currency),
+    year: tier.year,
+    colorId,
+    currency: tier.currency,
+    colorName: tier.color.name,
+    colorCode: tier.color.code,
+  };
 }
 
 function tierPrices(tier: TierRow): PriceListPrices {
@@ -140,8 +151,12 @@ function tierPrices(tier: TierRow): PriceListPrices {
  * The tiers a viewer may see: collaborator prices are blanked unless
  * `showPartner`, and tiers left without any visible price are dropped.
  */
-function visibleTiers(tiers: TierRow[], showPartner: boolean): TierRow[] {
-  return tiers.map((tier) => withVisiblePrices(tier, showPartner)).filter(hasAnyPrice);
+function visibleTiers(
+  tiers: Prisma.UserPriceTablePriceGetPayload<{ select: typeof tierSelect }>[],
+  currency: PriceCurrency,
+  showPartner: boolean
+): TierRow[] {
+  return tiers.map((tier) => ({ ...withVisiblePrices(tier, showPartner), currency })).filter(hasAnyPrice);
 }
 
 /** Lowest price per field for each (year, colour) column among the given tiers. */
@@ -166,14 +181,16 @@ export async function listPriceListRows(showPartner: boolean): Promise<PriceList
       ...carInfoSelect,
       priceTableEntries: {
         where: pricedEntryWhere,
-        select: { prices: { select: tierSelect } },
+        select: { currency: true, prices: { select: tierSelect } },
       },
     },
     orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { id: "asc" }],
   });
 
   return cars.map((car) => {
-    const entries = car.priceTableEntries.map((entry) => visibleTiers(entry.prices, showPartner)).filter((tiers) => tiers.length > 0);
+    const entries = car.priceTableEntries
+      .map((entry) => visibleTiers(entry.prices, entry.currency, showPartner))
+      .filter((tiers) => tiers.length > 0);
     const tiers = entries.flat();
     return {
       ...toCarInfo(car),
@@ -189,8 +206,12 @@ function sellerLowest(offer: PriceListOffer, key: PriceTablePriceField): string 
   return lowestPrices(Object.values(offer.byColumn))[key];
 }
 
-/** Sort sellers by their lowest raw, then clearance, then instant price (blanks last). */
+/**
+ * Sort sellers by currency (dollar rows first, prices of different currencies
+ * are never compared), then by their lowest raw, clearance and instant price (blanks last).
+ */
 function compareOffers(a: PriceListOffer, b: PriceListOffer): number {
+  if (a.currency !== b.currency) return a.currency === "usd" ? -1 : 1;
   for (const { key } of PRICE_TABLE_PRICE_FIELDS) {
     const x = sellerLowest(a, key);
     const y = sellerLowest(b, key);
@@ -225,6 +246,7 @@ export async function getPriceListCarDetail(
         select: {
           updatedAt: true,
           userId: true,
+          currency: true,
           prices: { select: tierSelect, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
         },
       },
@@ -233,12 +255,13 @@ export async function getPriceListCarDetail(
   if (!car) return null;
 
   const entries = car.priceTableEntries
-    .map((entry) => ({ ...entry, prices: visibleTiers(entry.prices, showPartner) }))
+    .map((entry) => ({ ...entry, prices: visibleTiers(entry.prices, entry.currency, showPartner) }))
     .filter((entry) => entry.prices.length > 0);
 
   const codes = viewerId === null ? new Map() : await getActiveUserCodes(entries.map((entry) => entry.userId));
   const offers: PriceListOffer[] = entries
     .map((entry) => ({
+      currency: entry.currency,
       sellerCode: codes.get(entry.userId.toString())?.code ?? "",
       isMine: entry.userId.toString() === viewerId,
       byColumn: Object.fromEntries(entry.prices.map((tier) => [tierColumn(tier).key, tierPrices(tier)] as const)),
@@ -250,7 +273,12 @@ export async function getPriceListCarDetail(
   return {
     car: toCarInfo(car),
     offers,
-    lowest: lowestPrices(tiers.map(tierPrices)),
+    lowest: Object.fromEntries(
+      PRICE_CURRENCIES.filter((currency) => tiers.some((tier) => tier.currency === currency)).map((currency) => [
+        currency,
+        lowestPrices(tiers.filter((tier) => tier.currency === currency).map(tierPrices)),
+      ])
+    ),
     lowestByColumn: lowestPricesByColumn(tiers),
     columns: mergePriceColumns(tiers.map(tierColumn)),
   };

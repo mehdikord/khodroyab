@@ -1,12 +1,14 @@
 /** Client-safe constants/helpers for the price table (no server-only or zod imports). */
 
+import type { PriceCurrency } from "@/lib/currency";
+
 export const PRICE_TABLE_PRICE_MAX_DIGITS = 12;
 
 /** Placeholder shown wherever a customer has not filled in a cell. */
 export const PRICE_TABLE_EMPTY = "---";
 
 /**
- * The three USD prices of a price-table row, in display order. Each one has a
+ * The three prices (dollar or rial, per row) of a price-table row, in display order. Each one has a
  * public value (`key`, shown to everyone) and a collaborator value
  * (`partnerKey`, shown only to verified collaborators).
  */
@@ -91,24 +93,34 @@ export function compareTierYearsDesc(a: string, b: string): number {
 
 /* ───────────────────────── Price columns (year × colour) ───────────────────────── */
 
-/** One price column of the market price lists: a (production year, colour) pair. */
+/**
+ * One price column of the market price lists: a (production year, colour,
+ * currency) triple. Sellers choose the currency of their row, so prices in
+ * different currencies get separate columns and are never compared.
+ */
 export interface PriceColumn {
-  /** `"<year>:<colorId>"` — key of the column in the per-column price maps. */
+  /** `"<year>:<colorId>:<currency>"` — key of the column in the per-column price maps. */
   key: string;
   year: string;
   colorId: string;
+  currency: PriceCurrency;
   colorName: string;
   /** Hex colour code, e.g. "#ffffff". */
   colorCode: string;
 }
 
-export function priceColumnKey(year: string, colorId: string): string {
-  return `${year}:${colorId}`;
+export function priceColumnKey(year: string, colorId: string, currency: PriceCurrency): string {
+  return `${year}:${colorId}:${currency}`;
 }
 
-/** Column order: oldest year first, then colour name. */
+/** Column order: oldest year first, then colour name, then currency (dollar before rial). */
 export function comparePriceColumns(a: PriceColumn, b: PriceColumn): number {
-  return Number(a.year) - Number(b.year) || a.colorName.localeCompare(b.colorName, "fa") || a.colorId.localeCompare(b.colorId);
+  return (
+    Number(a.year) - Number(b.year) ||
+    a.colorName.localeCompare(b.colorName, "fa") ||
+    a.colorId.localeCompare(b.colorId) ||
+    (a.currency === b.currency ? 0 : a.currency === "usd" ? -1 : 1)
+  );
 }
 
 /** De-duplicated, ordered union of the given columns. */

@@ -3,10 +3,12 @@
 import React, { useId, useMemo, useRef, useState } from "react";
 
 import type { SearchPricePoint } from "@/lib/panel-search-shared";
+import { currencyLabel, type PriceCurrency } from "@/lib/currency";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 interface PriceHistoryChartProps {
   points: SearchPricePoint[];
+  currency: PriceCurrency;
   className?: string;
 }
 
@@ -28,7 +30,7 @@ function formatCompact(value: number): string {
  * scrubber with a tooltip. Points are spaced evenly by change index so sparse
  * timelines stay readable.
  */
-export function PriceHistoryChart({ points, className }: PriceHistoryChartProps) {
+export function PriceHistoryChart({ points, currency, className }: PriceHistoryChartProps) {
   const gradientId = useId();
   const glowId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -224,7 +226,7 @@ export function PriceHistoryChart({ points, className }: PriceHistoryChartProps)
           {activePoint.dateLabel} · {activePoint.timeLabel}
         </p>
         <p dir="rtl" className="mt-0.5 text-sm font-black tabular-nums text-panel-text">
-          {formatPersianNumber(activePoint.price)} <span className="text-[10px] font-semibold text-panel-muted-2">تومان</span>
+          {formatPersianNumber(activePoint.price)} <span className="text-[10px] font-semibold text-panel-muted-2">{currencyLabel(currency)}</span>
         </p>
         {activeDelta !== null && activeDelta !== 0 && (
           <p className={cn("mt-0.5 text-[11px] font-extrabold tabular-nums", up && "text-panel-success-2", down && "text-panel-danger-2")}>

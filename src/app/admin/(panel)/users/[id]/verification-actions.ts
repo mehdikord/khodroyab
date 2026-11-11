@@ -12,14 +12,23 @@ import { toPersianDigits } from "@/lib/utils";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
 export type ReviewVerificationResult =
-  | { ok: true; verification: VerificationRecord; authenticaed: boolean }
+  | { ok: true; verification: VerificationRecord | null; authenticaed: boolean }
   | { ok: false; message: string; fieldErrors?: Record<string, string> };
+
+function revalidateVerificationPages(userId: bigint) {
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId.toString()}`);
+  revalidatePath("/admin/dashboard");
+  // The user's panel (warning, publishing pages) and the public listings change with the result.
+  revalidatePath("/panel", "layout");
+}
 
 /**
  * Approve or reject a collaborator's identity documents. The decision is kept
  * on the submission and mirrored on `users.authenticaed`. A rejection may carry
  * a reason, which the user sees on their verification page. A decision can be
- * changed later (e.g. revoking an approval).
+ * changed later (e.g. revoking an approval). Documents are optional: without a
+ * submission the admin can still approve the identity (or revoke that approval).
  */
 export async function reviewVerificationAction(
   userIdRaw: string,
@@ -47,10 +56,26 @@ export async function reviewVerificationAction(
     };
   }
 
-  const existing = await prisma.userVerification.findUnique({ where: { userId }, select: { id: true } });
-  if (!existing) return { ok: false, message: "این کاربر هنوز مدرکی برای احراز هویت ارسال نکرده است" };
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { collabrate: true } });
+  if (!user) return { ok: false, message: "کاربر یافت نشد" };
 
+  const existing = await prisma.userVerification.findUnique({ where: { userId }, select: { id: true } });
   const approved = decision === "approve";
+
+  if (!existing) {
+    // No documents were submitted: the admin may still approve (or revoke) the
+    // identity directly. Only the flag on the user changes.
+    if (approved && !user.collabrate) return { ok: false, message: "احراز هویت فقط برای کاربران همکار فعال است." };
+    try {
+      await prisma.user.update({ where: { id: userId }, data: { authenticaed: approved } });
+    } catch (error) {
+      console.error("[verification:review] failed", error);
+      return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+    }
+    revalidateVerificationPages(userId);
+    return { ok: true, verification: null, authenticaed: approved };
+  }
+
   try {
     const updated = await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: userId }, data: { authenticaed: approved } });
@@ -61,11 +86,7 @@ export async function reviewVerificationAction(
       });
     });
 
-    revalidatePath("/admin/users");
-    revalidatePath(`/admin/users/${userId.toString()}`);
-    revalidatePath("/admin/dashboard");
-    // The user's panel (warning, publishing pages) and the public listings change with the result.
-    revalidatePath("/panel", "layout");
+    revalidateVerificationPages(userId);
     return { ok: true, verification: verificationToRecord(updated), authenticaed: approved };
   } catch (error) {
     console.error("[verification:review] failed", error);

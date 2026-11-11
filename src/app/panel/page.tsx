@@ -53,7 +53,7 @@ export default async function PanelLoginPage() {
             <span className="bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] bg-clip-text text-transparent"> خودرو یاب</span>
           </h1>
           <p className="mt-2 max-w-xs text-sm leading-7 text-panel-muted">
-            با شماره موبایل و رمز عبور وارد شوید، یا اگر حساب ندارید ثبت‌نام کنید.
+            با شماره موبایل و کد تایید پیامکی وارد شوید؛ اگر حساب ندارید، همین‌جا ساخته می‌شود.
           </p>
         </div>
 

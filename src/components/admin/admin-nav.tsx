@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake, ShieldCheck, KeyRound, Settings } from "lucide-react";
+import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake, MapPinned, ShieldCheck, KeyRound, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { USER_DIRECTORY_ACCESS, canAccess, type AccessRequirement, type AdminAccess } from "@/lib/auth/permissions";
@@ -81,6 +81,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/sponsors",
         icon: HeartHandshake,
         requirement: "sponsors",
+      },
+      {
+        key: "branches",
+        label: "مدیریت شعبه‌ها",
+        enLabel: "BRANCHES",
+        href: "/admin/branches",
+        icon: MapPinned,
+        requirement: "branches",
       },
     ],
   },

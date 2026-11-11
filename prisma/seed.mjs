@@ -4,6 +4,8 @@
  * Usage:
  *   npm run db:seed
  *
+ * Also seeds provinces and cities (see `seed-locations.mjs`).
+ *
  * Development credentials:
  *   phone:    09117926950
  *   password: 123456
@@ -13,6 +15,8 @@
  */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+
+import { seedLocations } from "./seed-locations.mjs";
 
 const DEV_ADMIN = {
   name: "Admin",
@@ -33,10 +37,12 @@ function assertDevelopmentEnvironment() {
 }
 
 async function main() {
-  assertDevelopmentEnvironment();
-
   const prisma = new PrismaClient();
   try {
+    // Reference data (provinces / cities) is safe everywhere; seed it first.
+    await seedLocations(prisma);
+
+    assertDevelopmentEnvironment();
     const passwordHash = await bcrypt.hash(DEV_ADMIN.password, BCRYPT_ROUNDS);
 
     // Idempotent: repeated runs never create duplicates thanks to the

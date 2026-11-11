@@ -277,7 +277,7 @@ export function PriceListBrowser({ rows, showPartner }: PriceListBrowserProps) {
                       <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.model)}</td>
                       {priceColumns.length === 0 ? (
                         <td className="px-3 py-3.5">
-                          <YearPrices prices={undefined} className="min-h-0 justify-start" />
+                          <YearPrices prices={undefined} currency="usd" className="min-h-0 justify-start" />
                         </td>
                       ) : (
                         priceColumns.map((column, index) => (
@@ -285,7 +285,7 @@ export function PriceListBrowser({ rows, showPartner }: PriceListBrowserProps) {
                             key={column.key}
                             className={cn("border-s border-panel-line/[0.06] px-3 py-3", index % 2 === 1 && "bg-panel-line/[0.02]")}
                           >
-                            <YearPrices prices={row.byColumn[column.key]} showPartner={showPartner} />
+                            <YearPrices prices={row.byColumn[column.key]} currency={column.currency} showPartner={showPartner} />
                           </td>
                         ))
                       )}
@@ -340,7 +340,7 @@ export function PriceListBrowser({ rows, showPartner }: PriceListBrowserProps) {
                             <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
                               <ColumnHeading column={column} active={Boolean(row.byColumn[column.key])} />
                             </p>
-                            <YearPrices prices={row.byColumn[column.key]} showPartner={showPartner} className="min-h-[70px]" />
+                            <YearPrices prices={row.byColumn[column.key]} currency={column.currency} showPartner={showPartner} className="min-h-[70px]" />
                           </div>
                         ))}
                       </div>

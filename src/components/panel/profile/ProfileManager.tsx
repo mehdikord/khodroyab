@@ -12,7 +12,6 @@ import {
   Check,
   FileText,
   Fingerprint,
-  KeyRound,
   Mailbox,
   MapPin,
   Megaphone,
@@ -28,7 +27,6 @@ import { SafeImage } from "@/components/panel/SafeImage";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { ProfileSheet } from "@/components/panel/profile/ProfileSheet";
 import { ProfileEditForm } from "@/components/panel/profile/ProfileEditForm";
-import { PasswordChangeForm } from "@/components/panel/profile/PasswordChangeForm";
 import { displayNationalCode, profileCompletion, type ProfileAdStats, type ProfileRecord } from "@/lib/profile";
 import { AD_STATUS_LABELS } from "@/lib/ad-status";
 import { cn, toPersianDigits } from "@/lib/utils";
@@ -42,7 +40,7 @@ interface ProfileManagerProps {
   userCode: { code: string; validUntilLabel: string; rotationMinutes: number };
 }
 
-type SheetKind = "edit" | "password" | null;
+type SheetKind = "edit" | null;
 
 /* ───────────────────────── helpers ───────────────────────── */
 
@@ -279,11 +277,6 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode }: 
     showToast("success", "پروفایل شما با موفقیت به‌روزرسانی شد");
   }
 
-  function handlePasswordChanged() {
-    closeSheet();
-    showToast("success", "رمز عبور با موفقیت تغییر کرد");
-  }
-
   return (
     <div className="space-y-5">
       <Toast toast={toast} onDismiss={() => setToast(null)} />
@@ -410,7 +403,7 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode }: 
       </section>
 
       {/* Actions */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         <ActionTile
           icon={UserRoundPen}
           title="ویرایش پروفایل"
@@ -418,13 +411,6 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode }: 
           onClick={() => setSheet("edit")}
           primary
           delay={60}
-        />
-        <ActionTile
-          icon={KeyRound}
-          title="تغییر رمز عبور"
-          subtitle="با وارد کردن رمز فعلی، رمز جدید بسازید"
-          onClick={() => setSheet("password")}
-          delay={110}
         />
       </div>
 
@@ -489,17 +475,6 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode }: 
           onSuccess={handleProfileSaved}
           onPendingChange={setSheetLocked}
         />
-      </ProfileSheet>
-
-      <ProfileSheet
-        open={sheet === "password"}
-        title="تغییر رمز عبور"
-        description="رمز فعلی، رمز جدید و تکرار آن را وارد کنید."
-        icon={<KeyRound className="h-5 w-5" />}
-        onClose={closeSheet}
-        locked={sheetLocked}
-      >
-        <PasswordChangeForm onCancel={closeSheet} onSuccess={handlePasswordChanged} onPendingChange={setSheetLocked} />
       </ProfileSheet>
     </div>
   );

@@ -47,10 +47,16 @@ function sortValue(offer: PriceListOffer, key: PriceTablePriceField, column: str
   return lowest;
 }
 
-/** Sort by the chosen price first (blanks last), then by the remaining prices. */
+/**
+ * Sort by the chosen price first (blanks last), then by the remaining prices.
+ * Across all columns, sellers are grouped by currency first (dollar rows
+ * first) so prices in different currencies are never compared; a single
+ * column only ever holds one currency.
+ */
 function sortOffers(offers: PriceListOffer[], primary: PriceTablePriceField, column: string | null): PriceListOffer[] {
   const order = [primary, ...PRICE_TABLE_PRICE_FIELDS.map((f) => f.key).filter((key) => key !== primary)];
   return [...offers].sort((a, b) => {
+    if (!column && a.currency !== b.currency) return a.currency === "usd" ? -1 : 1;
     for (const key of order) {
       const x = sortValue(a, key, column);
       const y = sortValue(b, key, column);
@@ -213,7 +219,7 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, showPartne
                         sortColumn === column.key ? "bg-[#FF6A00]/[0.035]" : columnIndex % 2 === 1 && "bg-panel-line/[0.02]"
                       )}
                     >
-                      <YearPrices prices={offer.byColumn[column.key]} best={bestFor(offer, column.key)} highlight={sortBy} showPartner={showPartner} />
+                      <YearPrices prices={offer.byColumn[column.key]} currency={column.currency} best={bestFor(offer, column.key)} highlight={sortBy} showPartner={showPartner} />
                     </td>
                   ))}
                 </tr>
@@ -265,6 +271,7 @@ export function CarOffersView({ car, offers, lowestByColumn, columns, showPartne
                         </p>
                         <YearPrices
                           prices={offer.byColumn[column.key]}
+                          currency={column.currency}
                           best={bestFor(offer, column.key)}
                           highlight={sortBy}
                           showPartner={showPartner}

@@ -11,7 +11,7 @@
  *  - Each permission is one switch that grants full management of a section.
  */
 
-export const ADMIN_PERMISSIONS = ["users", "sponsors", "cars", "ads", "price_table"] as const;
+export const ADMIN_PERMISSIONS = ["users", "sponsors", "branches", "cars", "ads", "price_table"] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
 
@@ -29,6 +29,10 @@ export const ADMIN_PERMISSION_META: Record<AdminPermission, AdminPermissionMeta>
   sponsors: {
     label: "حامیان",
     description: "مدیریت کامل حامیان: افزودن، ویرایش، ترتیب نمایش و حذف",
+  },
+  branches: {
+    label: "شعبه‌ها",
+    description: "مدیریت کامل شعبه‌ها: افزودن، ویرایش، موقعیت روی نقشه، ترتیب نمایش و حذف",
   },
   cars: {
     label: "مدیریت خودروها",

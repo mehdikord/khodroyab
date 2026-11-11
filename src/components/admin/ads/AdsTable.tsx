@@ -9,7 +9,8 @@ import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { lowestPrice } from "@/components/admin/users/sale-ads/SaleAdsTable";
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { AdStatus } from "@/lib/ad-status";
-import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { formatMileage, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { currencyLabel } from "@/lib/currency";
 
 interface AdsTableProps {
   ads: UserCarRecord[];
@@ -100,7 +101,7 @@ export function AdsTable({ ads, busyId, onEdit, onDelete, onToggleActive, onChan
                         {ad.brandName} {ad.carName}
                       </p>
                       <p className="mt-0.5 text-[11px] text-[#8B93A1]">
-                        {ad.carTypeName} · مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)}
+                        {ad.carTypeName} · مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)} · {formatMileage(ad.mileage)}
                         {ad.colorName && ` · ${ad.colorName}`}
                       </p>
                     </div>
@@ -113,7 +114,7 @@ export function AdsTable({ ads, busyId, onEdit, onDelete, onToggleActive, onChan
                   {price ? (
                     <p className="whitespace-nowrap font-bold text-[#F5F5F5]">
                       {formatPersianNumber(price)}
-                      <span className="ms-1 text-[11px] font-semibold text-[#8B93A1]">تومان</span>
+                      <span className="ms-1 text-[11px] font-semibold text-[#8B93A1]">{currencyLabel(ad.currency)}</span>
                     </p>
                   ) : (
                     <span className="text-xs text-[#5E6672]">—</span>

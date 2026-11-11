@@ -3,11 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
-import { getCurrentUser, isBcryptHash } from "@/lib/auth/user-auth";
-import { consumeTiming, hashPassword, verifyPassword } from "@/lib/auth/password";
+import { getCurrentUser } from "@/lib/auth/user-auth";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/lib/validation/brands";
-import { parsePasswordChangeForm, parseProfileUpdateForm } from "@/lib/validation/profile";
+import { parseProfileUpdateForm } from "@/lib/validation/profile";
 import { isManagedUpload, removeUpload, saveUpload } from "@/lib/uploads";
 import type { ProfileRecord } from "@/lib/profile";
 import { profileSelect, toProfileRecord } from "@/lib/profile-server";
@@ -18,8 +17,6 @@ const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوبار�
 export type ProfileActionResult =
   | { ok: true; profile: ProfileRecord }
   | { ok: false; message: string; fieldErrors?: Record<string, string> };
-
-export type PasswordActionResult = { ok: true } | { ok: false; message: string; fieldErrors?: Record<string, string> };
 
 async function guardRequest(): Promise<{ ok: false; message: string } | { ok: true; userId: bigint }> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
@@ -108,48 +105,6 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileAc
     return { ok: true, profile: toProfileRecord(updated) };
   } catch (error) {
     console.error("Profile update failed:", error);
-    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
-  }
-}
-
-/* ───────────────────────── password ───────────────────────── */
-
-/**
- * Change the signed-in customer's password. Requires the current password so
- * a stolen session cannot be used to lock the owner out.
- */
-export async function changePasswordAction(formData: FormData): Promise<PasswordActionResult> {
-  const guard = await guardRequest();
-  if (!guard.ok) return guard;
-  const { userId } = guard;
-
-  const parsed = parsePasswordChangeForm(formData);
-  if (!parsed.success) {
-    return { ok: false, message: "برخی از فیلدها معتبر نیستند", fieldErrors: parsed.fieldErrors };
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true, isActive: true } });
-  if (!user || !user.isActive) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
-
-  let valid: boolean;
-  if (isBcryptHash(user.password)) {
-    valid = await verifyPassword(parsed.data.currentPassword, user.password);
-  } else {
-    // Legacy plaintext row (pre-hashing); compare then upgrade below.
-    await consumeTiming(parsed.data.currentPassword);
-    valid = user.password === parsed.data.currentPassword;
-  }
-
-  if (!valid) {
-    return { ok: false, message: "رمز عبور فعلی اشتباه است", fieldErrors: { currentPassword: "رمز عبور فعلی اشتباه است" } };
-  }
-
-  try {
-    const hashed = await hashPassword(parsed.data.newPassword);
-    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
-    return { ok: true };
-  } catch (error) {
-    console.error("Password change failed:", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 }

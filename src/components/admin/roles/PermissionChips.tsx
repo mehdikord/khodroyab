@@ -1,5 +1,5 @@
 import React from "react";
-import { Car, HeartHandshake, Megaphone, Table2, Users } from "lucide-react";
+import { Car, HeartHandshake, MapPinned, Megaphone, Table2, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { ADMIN_PERMISSIONS, ADMIN_PERMISSION_META, type AdminPermission } from "@/lib/auth/permissions";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export const PERMISSION_ICONS: Record<AdminPermission, LucideIcon> = {
   users: Users,
   sponsors: HeartHandshake,
+  branches: MapPinned,
   cars: Car,
   ads: Megaphone,
   price_table: Table2,

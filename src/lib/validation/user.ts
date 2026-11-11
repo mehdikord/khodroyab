@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { adminLoginSchema, normalizePhone, type FieldErrors } from "@/lib/validation/admin";
+import { normalizeDigits, normalizePhone, type FieldErrors } from "@/lib/validation/admin";
 import { PASSWORD_MIN_LENGTH } from "@/lib/profile";
 
 /** Iranian mobile numbers: 11 digits starting with 09 (after normalization). */
@@ -22,31 +22,6 @@ export const userPhoneSchema = z
   .refine((value) => IRANIAN_MOBILE_REGEX.test(value), {
     error: "شماره موبایل معتبر نیست (نمونه: ۰۹۱۲۳۴۵۶۷۸۹)",
   });
-
-/** The customer login form uses the same phone + password rules as the admin one. */
-export const userLoginSchema = adminLoginSchema;
-export type UserLoginInput = z.infer<typeof userLoginSchema>;
-
-export function parseUserLoginForm(formData: FormData):
-  | { success: true; data: UserLoginInput }
-  | { success: false; fieldErrors: FieldErrors } {
-  const phoneRaw = formData.get("phone");
-  const passwordRaw = formData.get("password");
-
-  const result = userLoginSchema.safeParse({
-    phone: typeof phoneRaw === "string" ? phoneRaw : "",
-    password: typeof passwordRaw === "string" ? passwordRaw : "",
-  });
-
-  if (result.success) return { success: true, data: result.data };
-
-  const fieldErrors: FieldErrors = {};
-  for (const issue of result.error.issues) {
-    const key = issue.path[0];
-    if (typeof key === "string" && !fieldErrors[key]) fieldErrors[key] = issue.message;
-  }
-  return { success: false, fieldErrors };
-}
 
 /** Collect the first message per field from a zod error. */
 export function zodFieldErrors(error: z.ZodError): FieldErrors {
@@ -70,42 +45,44 @@ export const companyNameSchema = z
   .max(COMPANY_NAME_MAX_LENGTH, { error: `نام مجموعه حداکثر ${COMPANY_NAME_MAX_LENGTH} کاراکتر است` })
   .refine((value) => value.length === 0 || value.length >= 2, { error: "نام مجموعه باید حداقل ۲ کاراکتر باشد" });
 
-export const userRegisterSchema = z
-  .object({
-    name: z
-      .string({ error: "نام الزامی است" })
-      .trim()
-      .min(2, { error: "نام باید حداقل ۲ کاراکتر باشد" })
-      .max(USER_NAME_MAX_LENGTH, { error: `نام حداکثر ${USER_NAME_MAX_LENGTH} کاراکتر است` }),
-    companyName: companyNameSchema,
-    // Persian/Arabic digits are folded to ASCII by `normalizePhone`, so "۰۹۱۲…" is stored as "0912…".
-    phone: userPhoneSchema,
-    password: userPasswordSchema,
-    passwordConfirm: z.string({ error: "تکرار رمز عبور الزامی است" }),
-  })
-  .refine((value) => value.password === value.passwordConfirm, {
-    error: "تکرار رمز عبور با رمز عبور یکسان نیست",
-    path: ["passwordConfirm"],
-  });
+/** Full name of a customer (sign-up step of the OTP flow). */
+export const userNameSchema = z
+  .string({ error: "نام الزامی است" })
+  .trim()
+  .min(2, { error: "نام باید حداقل ۲ کاراکتر باشد" })
+  .max(USER_NAME_MAX_LENGTH, { error: `نام حداکثر ${USER_NAME_MAX_LENGTH} کاراکتر است` });
 
-export type UserRegisterInput = z.infer<typeof userRegisterSchema>;
+/* ───────────────────────── OTP sign-in / sign-up ───────────────────────── */
 
-export function parseUserRegisterForm(formData: FormData):
-  | { success: true; data: UserRegisterInput }
-  | { success: false; fieldErrors: FieldErrors } {
-  const read = (key: string) => {
-    const value = formData.get(key);
-    return typeof value === "string" ? value : "";
-  };
+/** Six ASCII digits; Persian/Arabic digits are folded first. */
+export const otpCodeSchema = z
+  .string({ error: "کد تایید الزامی است" })
+  .transform((value) => normalizeDigits(value).replace(/\s+/g, ""))
+  .refine((value) => value.length > 0, { error: "کد تایید الزامی است" })
+  .refine((value) => /^\d{6}$/.test(value), { error: "کد تایید باید ۶ رقم باشد" });
 
-  const result = userRegisterSchema.safeParse({
-    name: read("name"),
-    companyName: read("companyName"),
-    phone: read("phone"),
-    password: read("password"),
-    passwordConfirm: read("passwordConfirm"),
-  });
+type ParseResult<T> = { success: true; data: T } | { success: false; fieldErrors: FieldErrors };
 
+function readField(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
+/** Step 1: the mobile number a code should be sent to. */
+export function parseOtpRequestForm(formData: FormData): ParseResult<{ phone: string }> {
+  const result = z.object({ phone: userPhoneSchema }).safeParse({ phone: readField(formData, "phone") });
   if (result.success) return { success: true, data: result.data };
+  return { success: false, fieldErrors: zodFieldErrors(result.error) };
+}
+
+/** Step 2: mobile + code, plus the name when a new account is being created. */
+export function parseOtpVerifyForm(
+  formData: FormData,
+  { requireName }: { requireName: boolean }
+): ParseResult<{ phone: string; code: string; name: string }> {
+  const result = z
+    .object({ phone: userPhoneSchema, code: otpCodeSchema, name: requireName ? userNameSchema : z.string() })
+    .safeParse({ phone: readField(formData, "phone"), code: readField(formData, "code"), name: readField(formData, "name") });
+  if (result.success) return { success: true, data: { ...result.data, name: result.data.name.trim() } };
   return { success: false, fieldErrors: zodFieldErrors(result.error) };
 }

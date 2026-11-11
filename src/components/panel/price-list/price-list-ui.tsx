@@ -11,6 +11,7 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { CURRENCY_LABELS, type PriceCurrency } from "@/lib/currency";
 
 function initials(name: string, count: number): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -55,18 +56,20 @@ export function ColorLabel({ name, code, className }: { name: string | null; cod
 }
 
 /**
- * A USD price. `best` marks the lowest price of its column (emerald + crown),
+ * A price in dollars or rials. `best` marks the lowest price of its column (emerald + crown),
  * `partner` marks a collaborator price (sky badge); the default style is the
  * accent badge. Blank prices show "---".
  */
 export function PriceTag({
   price,
+  currency = "usd",
   best = false,
   partner = false,
   size = "md",
   className,
 }: {
   price: string | null | undefined;
+  currency?: PriceCurrency;
   best?: boolean;
   partner?: boolean;
   size?: "sm" | "md";
@@ -88,7 +91,11 @@ export function PriceTag({
     >
       {best && <Crown className="h-3 w-3" aria-label="کمترین قیمت" />}
       {formatPersianNumber(price)}
-      <span className="text-[0.8em] font-black opacity-70">$</span>
+      {currency === "usd" ? (
+        <span className="text-[0.8em] font-black opacity-70">$</span>
+      ) : (
+        <span className="text-[0.7em] font-bold opacity-70">ریال</span>
+      )}
     </span>
   );
 }
@@ -111,6 +118,9 @@ export function ColumnHeading({ column, active = false, className }: { column: P
       <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-panel-text-2">
         <ColorSwatch code={column.colorCode} className="h-3 w-3" />
         {column.colorName}
+        <span className="rounded border border-panel-line/[0.12] px-1 text-[9px] font-extrabold text-panel-muted">
+          {CURRENCY_LABELS[column.currency]}
+        </span>
       </span>
     </span>
   );
@@ -125,12 +135,15 @@ export function ColumnHeading({ column, active = false, className }: { column: P
  */
 export function YearPrices({
   prices,
+  currency,
   best,
   highlight,
   showPartner = false,
   className,
 }: {
   prices: Record<PriceTableAnyPriceField, string | null> | undefined;
+  /** Currency of the column the prices belong to. */
+  currency: PriceCurrency;
   best?: Partial<Record<PriceTableAnyPriceField, boolean>>;
   /** Field to emphasise (the active sort field). */
   highlight?: PriceTablePriceField;
@@ -153,14 +166,14 @@ export function YearPrices({
               {SHORT_PRICE_LABELS[field.key]}
             </dt>
             <dd>
-              <PriceTag price={prices[field.key]} best={Boolean(best?.[field.key])} size="sm" />
+              <PriceTag price={prices[field.key]} currency={currency} best={Boolean(best?.[field.key])} size="sm" />
             </dd>
           </div>
           {showPartner && (
             <div className="mt-1 flex items-center justify-between gap-2">
               <dt className="text-[9px] font-bold text-sky-500/90">همکار</dt>
               <dd>
-                <PriceTag price={prices[field.partnerKey]} best={Boolean(best?.[field.partnerKey])} partner size="sm" />
+                <PriceTag price={prices[field.partnerKey]} currency={currency} best={Boolean(best?.[field.partnerKey])} partner size="sm" />
               </dd>
             </div>
           )}

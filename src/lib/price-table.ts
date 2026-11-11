@@ -10,6 +10,7 @@ import {
   type PriceTableAnyPriceField,
 } from "@/lib/price-table-shared";
 import type { PriceTableEntryInput } from "@/lib/validation/price-table";
+import type { PriceCurrency } from "@/lib/currency";
 
 /** A car the admin has allowed in price tables (the catalogue side of a row). */
 export interface PriceTableCarRecord {
@@ -21,7 +22,7 @@ export interface PriceTableCarRecord {
 }
 
 /**
- * One tier of a row: the three USD prices for a (production year, colour)
+ * One tier of a row: the three prices (in the row's currency) for a (production year, colour)
  * pair, each with a public and a collaborator value.
  */
 export interface PriceTableTierRecord {
@@ -46,6 +47,8 @@ export interface PriceTableTierRecord {
 /** What a customer has entered for one car: one or more (year, colour) price tiers. */
 export interface PriceTableEntryRecord {
   carId: string;
+  /** Currency of every price of the row. */
+  currency: PriceCurrency;
   /** Tiers in the customer's order (never empty for a saved entry). */
   tiers: PriceTableTierRecord[];
 }
@@ -99,6 +102,7 @@ export async function listUserPriceTableEntries(userId: bigint, showPartner = tr
     where: { userId, car: { priceTable: true } },
     select: {
       carId: true,
+      currency: true,
       prices: {
         select: {
           year: true,
@@ -119,6 +123,7 @@ export async function listUserPriceTableEntries(userId: bigint, showPartner = tr
   return entries
     .map((entry) => ({
       carId: entry.carId.toString(),
+      currency: entry.currency,
       tiers: entry.prices
         .map(({ color, colorId, ...tier }) => ({
           ...withVisiblePrices(tier, showPartner),
@@ -142,6 +147,7 @@ export function buildPriceTableRows(cars: PriceTableCarRecord[], entries: PriceT
 /** A saved row of a user's price table with its car, for short previews. */
 export interface RecentPriceTableEntryRecord {
   car: PriceTableCarRecord;
+  currency: PriceCurrency;
   tiers: PriceTableTierRecord[];
   updatedAtLabel: string;
 }
@@ -163,6 +169,7 @@ export async function listRecentUserPriceTableEntries(
       where,
       select: {
         updatedAt: true,
+        currency: true,
         car: { select: priceTableCarSelect },
         prices: {
           select: {
@@ -187,6 +194,7 @@ export async function listRecentUserPriceTableEntries(
     total,
     entries: rows.map((row) => ({
       car: toCarRecord(row.car),
+      currency: row.currency,
       tiers: row.prices.map(({ color, colorId, ...tier }) => ({
         ...tier,
         colorId: colorId.toString(),
@@ -272,6 +280,7 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
       where: { userId, carId: { in: submittedIds } },
       select: {
         carId: true,
+        currency: true,
         prices: {
           select: {
             year: true,
@@ -288,9 +297,11 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
       },
     });
     const existingSignature = new Map(
-      existing.map((entry) => [entry.carId.toString(), entrySignature(entry.prices)])
+      existing.map((entry) => [entry.carId.toString(), `${entry.currency}|${entrySignature(entry.prices)}`])
     );
-    const changed = entries.filter((entry) => existingSignature.get(entry.carId) !== entrySignature(entry.tiers));
+    const changed = entries.filter(
+      (entry) => existingSignature.get(entry.carId) !== `${entry.currency}|${entrySignature(entry.tiers)}`
+    );
 
     await prisma.$transaction(
       async (tx) => {
@@ -302,9 +313,9 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
           const carId = BigInt(entry.carId);
           const saved = await tx.userPriceTableEntry.upsert({
             where: { userId_carId: { userId, carId } },
-            create: { userId, carId },
-            // Touch `updatedAt`: the row itself has no other column that changes.
-            update: { updatedAt: new Date() },
+            create: { userId, carId, currency: entry.currency },
+            // Always touch `updatedAt`, even when only the tiers changed.
+            update: { currency: entry.currency, updatedAt: new Date() },
             select: { id: true },
           });
           await tx.userPriceTablePrice.deleteMany({ where: { entryId: saved.id } });

@@ -35,6 +35,8 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { CURRENCY_LABELS, DEFAULT_PRICE_TABLE_CURRENCY, type PriceCurrency } from "@/lib/currency";
+import { CurrencyToggle } from "@/components/ads/CurrencyToggle";
 
 interface MyPriceTableManagerProps {
   cars: PriceTableCarRecord[];
@@ -58,8 +60,9 @@ interface TierDraft extends Record<PriceTableAnyPriceField, string> {
   colorId: string;
 }
 
-/** One car as edited: its tiers (never empty). */
+/** One car as edited: the currency of all its prices and its tiers (never empty). */
 interface Draft {
+  currency: PriceCurrency;
   tiers: TierDraft[];
 }
 
@@ -81,7 +84,7 @@ function emptyTier(year: string, colorId: string): TierDraft {
 
 /** A fresh row: one blank tier for the customer to fill in. */
 function emptyDraft(): Draft {
-  return { tiers: [emptyTier("", "")] };
+  return { currency: DEFAULT_PRICE_TABLE_CURRENCY, tiers: [emptyTier("", "")] };
 }
 
 function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[]): Drafts {
@@ -92,6 +95,7 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[])
     drafts[car.id] =
       entry && entry.tiers.length > 0
         ? {
+            currency: entry.currency,
             tiers: entry.tiers.map((tier) => ({
               key: nextTierKey(),
               year: tier.year,
@@ -116,6 +120,7 @@ function isFilled(draft: Draft): boolean {
 }
 
 function sameDraft(a: Draft, b: Draft): boolean {
+  if (a.currency !== b.currency) return false;
   if (a.tiers.length !== b.tiers.length) return false;
   return a.tiers.every((tier, index) => {
     const other = b.tiers[index];
@@ -265,14 +270,19 @@ export function MyPriceTableManager({
 
   function updateTier(carId: string, tierKey: string, patch: Partial<TierDraft>) {
     updateDraft(carId, (draft) => ({
+      ...draft,
       tiers: draft.tiers.map((tier) => (tier.key === tierKey ? { ...tier, ...patch } : tier)),
     }));
+  }
+
+  function setRowCurrency(carId: string, currency: PriceCurrency) {
+    updateDraft(carId, (draft) => ({ ...draft, currency }));
   }
 
   /** Append a tier and focus its first empty input. */
   function appendTier(car: PriceTableCarRecord, tier: TierDraft) {
     if (draftOf(car).tiers.length >= PRICE_TABLE_MAX_TIERS) return;
-    updateDraft(car.id, (current) => ({ tiers: [...current.tiers, tier] }));
+    updateDraft(car.id, (current) => ({ ...current, tiers: [...current.tiers, tier] }));
     const focusField = !tier.year ? "year" : !tier.colorId ? "colorId" : "priceUsd";
     window.requestAnimationFrame(() => document.getElementById(`${tier.key}-${focusField}`)?.focus());
   }
@@ -292,7 +302,7 @@ export function MyPriceTableManager({
   }
 
   function removeTier(carId: string, tierKey: string) {
-    updateDraft(carId, (draft) => (draft.tiers.length <= 1 ? draft : { tiers: draft.tiers.filter((tier) => tier.key !== tierKey) }));
+    updateDraft(carId, (draft) => (draft.tiers.length <= 1 ? draft : { ...draft, tiers: draft.tiers.filter((tier) => tier.key !== tierKey) }));
   }
 
   function clearRow(car: PriceTableCarRecord) {
@@ -316,6 +326,7 @@ export function MyPriceTableManager({
       JSON.stringify(
         cars.map((car) => ({
           carId: car.id,
+          currency: draftOf(car).currency,
           tiers: draftOf(car).tiers.map(({ key: _key, ...tier }) => tier),
         }))
       )
@@ -396,7 +407,7 @@ export function MyPriceTableManager({
       <ol className="admin-animate-in grid grid-cols-1 gap-2 sm:grid-cols-3" style={{ animationDelay: "40ms" }}>
         {[
           { icon: CalendarDays, title: "سال و رنگ را انتخاب کنید", text: "سال پیش‌فرض، سال ساخت خودرو است و هر دو قابل تغییرند." },
-          { icon: Table2, title: "قیمت‌ها را وارد کنید", text: "خام، ترخیصی و فوری به دلار، هر کدام عمومی و همکار؛ یکی کافی است." },
+          { icon: Table2, title: "قیمت‌ها را وارد کنید", text: "خام، ترخیصی و فوری به دلار یا ریال، هر کدام عمومی و همکار؛ یکی کافی است." },
           { icon: Layers, title: "ردیف‌های بیشتر اضافه کنید", text: "سال جدید، یا همان سال با رنگ دیگر؛ هر سال و رنگ فقط یک بار." },
         ].map((step, index) => {
           const Icon = step.icon;
@@ -552,6 +563,14 @@ export function MyPriceTableManager({
                         {dirty && <span className="rounded-md bg-[#FF6A00]/10 px-1.5 py-0.5 font-bold text-panel-accent">ذخیره نشده</span>}
                       </div>
                     </div>
+                    <CurrencyToggle
+                      value={draft.currency}
+                      onChange={(currency) => setRowCurrency(car.id, currency)}
+                      disabled={isPending}
+                      size="sm"
+                      label={`واحد قیمت‌های ${car.name}`}
+                      className="shrink-0"
+                    />
                     <button
                       type="button"
                       onClick={() => clearRow(car)}
@@ -571,7 +590,7 @@ export function MyPriceTableManager({
                       <span>رنگ</span>
                       {PRICE_TABLE_PRICE_FIELDS.map((field) => (
                         <span key={field.key}>
-                          {field.label} ($)
+                          {field.label} ({CURRENCY_LABELS[draft.currency]})
                           <span className="mt-0.5 block text-[9px] font-bold text-panel-faint">
                             {PRICE_TYPE_LABELS.public} / {PRICE_TYPE_LABELS.partner}
                           </span>
@@ -726,12 +745,18 @@ export function MyPriceTableManager({
                                             className={cn(
                                               inputBase,
                                               borderFor(Boolean(error)),
-                                              "h-9 pe-2 ps-9 text-[12px] font-semibold md:pe-6 md:text-[13px]",
+                                              "h-9 pe-2 ps-9 text-[12px] font-semibold md:text-[13px]",
+                                              draft.currency === "usd" ? "md:pe-6" : "md:pe-9",
                                               input.type === "partner" && "border-dashed"
                                             )}
                                           />
-                                          <span className="pointer-events-none absolute inset-y-0 end-2 hidden items-center text-xs font-black text-panel-faint md:flex">
-                                            $
+                                          <span
+                                            className={cn(
+                                              "pointer-events-none absolute inset-y-0 end-2 hidden items-center font-black text-panel-faint md:flex",
+                                              draft.currency === "usd" ? "text-xs" : "text-[9px]"
+                                            )}
+                                          >
+                                            {draft.currency === "usd" ? "$" : "ریال"}
                                           </span>
                                         </div>
                                         <ErrorText message={error} />
@@ -799,6 +824,33 @@ export function MyPriceTableManager({
                       </span>
                     </div>
                   </div>
+
+                  {/* Card save: same action as the main "ذخیره جدول" button, so there is no need to scroll back up */}
+                  {isDirty && (
+                    <div className="flex items-center justify-between gap-3 border-t border-panel-line/[0.08] bg-panel-surface-2/30 px-3.5 py-2.5 sm:px-4">
+                      <p className={cn("min-w-0 truncate text-[11px] font-semibold", dirty ? "text-panel-accent" : "text-panel-faint")}>
+                        {dirty
+                          ? dirtyIds.size > 1
+                            ? `تغییرات این خودرو و ${toPersianDigits(dirtyIds.size - 1)} خودروی دیگر ذخیره نشده است`
+                            : "تغییرات این خودرو ذخیره نشده است"
+                          : `${toPersianDigits(dirtyIds.size)} خودروی دیگر تغییر کرده است`}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isPending}
+                        className={cn(
+                          "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-[11px] font-extrabold transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60",
+                          dirty
+                            ? "bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] text-[#07090C] shadow-orange-subtle hover:brightness-110"
+                            : "border border-[#FF6A00]/35 bg-[#FF6A00]/[0.08] text-panel-accent hover:bg-[#FF6A00]/15"
+                        )}
+                      >
+                        {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                        ذخیره تغییرات
+                      </button>
+                    </div>
+                  )}
                 </article>
               );
             })}

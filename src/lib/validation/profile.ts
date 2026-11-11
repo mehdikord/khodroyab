@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { normalizeDigits, type FieldErrors } from "@/lib/validation/admin";
-import { PASSWORD_MAX_LENGTH, companyNameSchema, userPasswordSchema, zodFieldErrors } from "@/lib/validation/user";
+import { companyNameSchema, zodFieldErrors } from "@/lib/validation/user";
 
 /* ───────────────────────── helpers ───────────────────────── */
 
@@ -96,40 +96,6 @@ export function parseProfileUpdateForm(
     postalCode: str(formData, "postalCode"),
     address: str(formData, "address"),
     bio: str(formData, "bio"),
-  });
-  if (result.success) return { success: true, data: result.data };
-  return { success: false, fieldErrors: zodFieldErrors(result.error) };
-}
-
-/* ───────────────────────── password ───────────────────────── */
-
-export const passwordChangeSchema = z
-  .object({
-    currentPassword: z
-      .string({ error: "رمز عبور فعلی الزامی است" })
-      .min(1, { error: "رمز عبور فعلی الزامی است" })
-      .max(PASSWORD_MAX_LENGTH, { error: "رمز عبور فعلی معتبر نیست" }),
-    newPassword: userPasswordSchema,
-    confirmPassword: z.string({ error: "تکرار رمز عبور الزامی است" }).min(1, { error: "تکرار رمز عبور الزامی است" }),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    error: "تکرار رمز عبور با رمز جدید یکسان نیست",
-    path: ["confirmPassword"],
-  })
-  .refine((data) => data.newPassword !== data.currentPassword, {
-    error: "رمز جدید نباید با رمز فعلی یکسان باشد",
-    path: ["newPassword"],
-  });
-
-export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
-
-export function parsePasswordChangeForm(
-  formData: FormData
-): { success: true; data: PasswordChangeInput } | { success: false; fieldErrors: FieldErrors } {
-  const result = passwordChangeSchema.safeParse({
-    currentPassword: str(formData, "currentPassword"),
-    newPassword: str(formData, "newPassword"),
-    confirmPassword: str(formData, "confirmPassword"),
   });
   if (result.success) return { success: true, data: result.data };
   return { success: false, fieldErrors: zodFieldErrors(result.error) };

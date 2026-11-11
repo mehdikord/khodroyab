@@ -73,7 +73,7 @@ export function ConsultationFab({ phone }: ConsultationFabProps) {
                 <Headset className="h-7 w-7" />
               </span>
               <h2 id={titleId} className="mt-4 text-base font-black text-panel-text">
-                مشاوره رایگان خرید خودرو
+                تماس با مشاوران
               </h2>
               <p className="mt-1.5 text-xs leading-6 text-panel-muted">
                 برای انتخاب و خرید خودرو، با کارشناسان ما تماس بگیرید.
@@ -103,7 +103,7 @@ export function ConsultationFab({ phone }: ConsultationFabProps) {
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="مشاوره رایگان خرید خودرو"
+        aria-label="تماس با مشاوران"
         className={cn(
           "panel-consult-fab group fixed bottom-[calc(var(--panel-dock-space)+0.75rem)] end-4 z-[61] flex h-14 items-center gap-2 rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF9A45] ps-4 pe-4 text-[#07090C] shadow-[0_16px_36px_-10px_rgba(255,106,0,0.85)] transition-transform hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF6A00]/35 active:scale-95 sm:end-6 sm:pe-5",
           open && "scale-95"
@@ -113,7 +113,7 @@ export function ConsultationFab({ phone }: ConsultationFabProps) {
         <span className="relative flex h-6 w-6 items-center justify-center">
           {open ? <X className="h-6 w-6" /> : <Headset className="h-6 w-6" />}
         </span>
-        <span className="relative hidden text-sm font-black sm:inline">مشاوره رایگان</span>
+        <span className="relative hidden text-sm font-black sm:inline">تماس با مشاوران</span>
       </button>
     </>
   );

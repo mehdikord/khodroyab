@@ -1,13 +1,14 @@
 import React from "react";
 import Link from "next/link";
-import { CalendarDays, Car, Clock3, EyeOff, HandCoins, Hash, Layers, Pencil, XCircle } from "lucide-react";
+import { CalendarDays, Car, Clock3, EyeOff, Gauge, HandCoins, Hash, Layers, Pencil, XCircle } from "lucide-react";
 
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { AdStatus } from "@/lib/ad-status";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { SafeImage } from "@/components/panel/SafeImage";
-import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { cn, formatMileage, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { currencyLabel } from "@/lib/currency";
 
 interface MyAdCardProps {
   ad: UserCarRecord;
@@ -113,6 +114,11 @@ export function MyAdCard({ ad, canEdit, delay = 0 }: MyAdCardProps) {
             </span>
             <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
             <span className="inline-flex items-center gap-1">
+              <Gauge className="h-3 w-3" />
+              {formatMileage(ad.mileage)}
+            </span>
+            <span aria-hidden="true" className="h-1 w-1 rounded-full bg-panel-faint-2" />
+            <span className="inline-flex items-center gap-1">
               <Layers className="h-3 w-3" />
               {toPersianDigits(ad.qautity)} دستگاه
             </span>
@@ -148,7 +154,7 @@ export function MyAdCard({ ad, canEdit, delay = 0 }: MyAdCardProps) {
                 <span className="truncate text-[11px] font-bold text-panel-text-2">{term.saleTermTitle}</span>
                 <span className="shrink-0 text-end text-[11px] font-extrabold tabular-nums text-panel-text">
                   <span className="block">
-                    {formatPersianNumber(term.price)} <span className="text-[10px] font-semibold text-panel-muted-2">تومان</span>
+                    {formatPersianNumber(term.price)} <span className="text-[10px] font-semibold text-panel-muted-2">{currencyLabel(ad.currency)}</span>
                     {term.perecentage && (
                       <span className="ms-1.5 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-panel-success">
                         {toPersianDigits(term.perecentage)}٪
@@ -156,7 +162,7 @@ export function MyAdCard({ ad, canEdit, delay = 0 }: MyAdCardProps) {
                     )}
                   </span>
                   <span className="mt-0.5 block text-[10px] font-bold text-panel-muted">
-                    همکار: {term.partnerPrice ? `${formatPersianNumber(term.partnerPrice)} تومان` : "ثبت نشده"}
+                    همکار: {term.partnerPrice ? `${formatPersianNumber(term.partnerPrice)} ${currencyLabel(ad.currency)}` : "ثبت نشده"}
                   </span>
                 </span>
               </li>

@@ -15,7 +15,7 @@ let imageCounter = 0;
 
 /**
  * Form state of the sale-ad fields shared by the customer and admin forms:
- * photos (with the primary one), production year, colour and option values.
+ * photos (with the primary one), production year, mileage, colour and option values.
  */
 export function useAdExtras(ad: UserCarRecord | null) {
   const [images, setImages] = useState<AdImageDraft[]>(() =>
@@ -28,6 +28,8 @@ export function useAdExtras(ad: UserCarRecord | null) {
   const [imageError, setImageError] = useState<string | null>(null);
   const [year, setYear] = useState(ad?.carYear ?? "");
   const [colorId, setColorId] = useState(ad?.colorId ?? "");
+  /** Mileage in km as typed; a new ad starts at 0. */
+  const [mileage, setMileage] = useState(String(ad?.mileage ?? 0));
   const [optionValues, setOptionValues] = useState<Record<string, AdOptionValue>>(ad?.optionValues ?? {});
 
   // Object URLs of the previews are released when the form goes away.
@@ -81,6 +83,7 @@ export function useAdExtras(ad: UserCarRecord | null) {
   function appendTo(formData: FormData) {
     formData.set("year", year);
     formData.set("colorId", colorId);
+    formData.set("mileage", mileage);
     formData.set("optionValues", JSON.stringify(optionValues));
 
     const keep: string[] = [];
@@ -111,6 +114,8 @@ export function useAdExtras(ad: UserCarRecord | null) {
     setYear,
     colorId,
     setColorId,
+    mileage,
+    setMileage,
     optionValues,
     setOptionValue,
     appendTo,

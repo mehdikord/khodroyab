@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/user-auth";
 import { getPriceListCarDetail } from "@/lib/price-list";
 import { PRICE_TABLE_PRICE_FIELDS } from "@/lib/price-table-shared";
 import { toPersianDigits } from "@/lib/utils";
+import { CURRENCY_LABELS, PRICE_CURRENCIES } from "@/lib/currency";
 import { BrandLogo, PriceTag } from "@/components/panel/price-list/price-list-ui";
 import { CarOffersView } from "@/components/panel/price-list/CarOffersView";
 
@@ -78,27 +79,39 @@ export default async function PriceListCarPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Best prices */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:min-w-[440px]">
-            {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-              <div key={field.key} className="rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-2 py-3 text-center backdrop-blur">
-                <p className="flex items-center justify-center gap-1 text-[10px] font-bold text-panel-muted">
-                  <Crown className="h-3 w-3 text-panel-success" />
-                  کمترین {field.label.replace("قیمت ", "")}
-                </p>
-                <div className="mt-2 flex justify-center">
-                  <PriceTag price={lowest[field.key]} best={Boolean(lowest[field.key])} />
-                </div>
-                {user.isPartner && (
-                  <div className="mt-2 border-t border-panel-line/[0.06] pt-2">
-                    <p className="text-[9px] font-bold text-panel-muted">همکار</p>
-                    <div className="mt-1 flex justify-center">
-                      <PriceTag price={lowest[field.partnerKey]} partner size="sm" />
-                    </div>
+          {/* Best prices, one block per currency in use */}
+          <div className="space-y-3 lg:min-w-[440px]">
+            {PRICE_CURRENCIES.filter((currency) => lowest[currency]).map((currency) => {
+              const best = lowest[currency]!;
+              return (
+                <div key={currency}>
+                  {Object.keys(lowest).length > 1 && (
+                    <p className="mb-1.5 text-[10px] font-extrabold text-panel-muted">قیمت‌های {CURRENCY_LABELS[currency]}ی</p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                      <div key={field.key} className="rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-2 py-3 text-center backdrop-blur">
+                        <p className="flex items-center justify-center gap-1 text-[10px] font-bold text-panel-muted">
+                          <Crown className="h-3 w-3 text-panel-success" />
+                          کمترین {field.label.replace("قیمت ", "")}
+                        </p>
+                        <div className="mt-2 flex justify-center">
+                          <PriceTag price={best[field.key]} currency={currency} best={Boolean(best[field.key])} />
+                        </div>
+                        {user.isPartner && (
+                          <div className="mt-2 border-t border-panel-line/[0.06] pt-2">
+                            <p className="text-[9px] font-bold text-panel-muted">همکار</p>
+                            <div className="mt-1 flex justify-center">
+                              <PriceTag price={best[field.partnerKey]} currency={currency} partner size="sm" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -131,7 +144,7 @@ export default async function PriceListCarPage({ params }: PageProps) {
             showPartner={user.isPartner}
           />
           <p className="text-[11px] leading-6 text-panel-faint">
-            قیمت‌ها به دلار و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال و رنگ است و
+            قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال، رنگ و واحد قیمت است و
             «—» یعنی فروشنده برای آن سال و رنگ قیمتی ثبت نکرده است. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده و با زدن عنوان هر ستون،
             فروشندگان بر اساس قیمت همان ستون مرتب می‌شوند.
           </p>

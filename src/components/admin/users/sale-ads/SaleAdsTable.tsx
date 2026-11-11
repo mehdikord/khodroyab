@@ -7,7 +7,8 @@ import { Toggle } from "@/components/admin/ui/Toggle";
 import { Badge } from "@/components/admin/ui/Badge";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import type { UserCarRecord } from "@/lib/user-cars";
-import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { formatMileage, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { currencyLabel } from "@/lib/currency";
 
 interface SaleAdsTableProps {
   ads: UserCarRecord[];
@@ -72,7 +73,7 @@ export function SaleAdsTable({ ads, onEdit, onDelete, onToggleActive, busyId }: 
                         {ad.brandName} {ad.carName}
                       </p>
                       <p className="mt-0.5 text-[11px] text-[#8B93A1]">
-                        {ad.carTypeName} · مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)}
+                        {ad.carTypeName} · مدل {toPersianDigits(ad.carModel)} · {toPersianDigits(ad.carYear)} · {formatMileage(ad.mileage)}
                         {ad.colorName && ` · ${ad.colorName}`}
                       </p>
                       {ad.description && (
@@ -94,7 +95,7 @@ export function SaleAdsTable({ ads, onEdit, onDelete, onToggleActive, busyId }: 
                       {ad.saleTerms.map((term) => (
                         <span
                           key={term.id}
-                          title={`عمومی: ${formatPersianNumber(term.price)} تومان · همکار: ${term.partnerPrice ? `${formatPersianNumber(term.partnerPrice)} تومان` : "ثبت نشده"}${term.perecentage ? ` · ${toPersianDigits(term.perecentage)}٪ تخفیف` : ""}`}
+                          title={`عمومی: ${formatPersianNumber(term.price)} ${currencyLabel(ad.currency)} · همکار: ${term.partnerPrice ? `${formatPersianNumber(term.partnerPrice)} ${currencyLabel(ad.currency)}` : "ثبت نشده"}${term.perecentage ? ` · ${toPersianDigits(term.perecentage)}٪ تخفیف` : ""}`}
                           className={
                             term.isActive
                               ? "inline-flex items-center gap-1 rounded-full border border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] px-2 py-0.5 text-[11px] font-semibold text-[#FFB070]"
@@ -111,7 +112,7 @@ export function SaleAdsTable({ ads, onEdit, onDelete, onToggleActive, busyId }: 
                   {price ? (
                     <p className="whitespace-nowrap font-bold text-[#F5F5F5]">
                       {formatPersianNumber(price)}
-                      <span className="ms-1 text-[11px] font-semibold text-[#8B93A1]">تومان</span>
+                      <span className="ms-1 text-[11px] font-semibold text-[#8B93A1]">{currencyLabel(ad.currency)}</span>
                     </p>
                   ) : (
                     <span className="text-xs text-[#5E6672]">—</span>

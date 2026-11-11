@@ -156,6 +156,8 @@ export async function createMyAdAction(formData: FormData): Promise<MyAdActionRe
           description: parsed.data.description,
           year: parsed.data.year,
           colorId: BigInt(parsed.data.colorId),
+          mileage: parsed.data.mileage,
+          currency: parsed.data.currency,
           isActive: true,
           images: { create: storedImages.newRows },
           options: { create: extras.optionRows },
@@ -242,6 +244,8 @@ export async function updateMyAdAction(idRaw: string, formData: FormData): Promi
           description: parsed.data.description,
           year: parsed.data.year,
           colorId: BigInt(parsed.data.colorId),
+          mileage: parsed.data.mileage,
+          currency: parsed.data.currency,
           // Every customer edit re-enters moderation.
           status: "pending",
         },

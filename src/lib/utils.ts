@@ -24,3 +24,9 @@ export function formatPersianNumber(input: string | number | null | undefined): 
   if (!ascii) return "";
   return toPersianDigits(ascii.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
 }
+
+/** Mileage for display: 0 → "صفر کیلومتر", 12000 → "۱۲,۰۰۰ کیلومتر". */
+export function formatMileage(km: number | null | undefined): string {
+  if (!km) return "صفر کیلومتر";
+  return `${formatPersianNumber(km)} کیلومتر`;
+}

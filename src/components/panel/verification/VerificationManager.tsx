@@ -166,7 +166,8 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
     );
   }
 
-  const canSubmit = !record || record.status === "rejected";
+  // An admin may approve the identity without any documents; nothing to submit then.
+  const canSubmit = !authenticaed && (!record || record.status === "rejected");
 
   function updateIdentity(key: VerificationIdentityField, value: string) {
     setIdentity((prev) => ({ ...prev, [key]: value }));
@@ -248,7 +249,7 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
       </div>
 
       {/* Review state */}
-      {record?.status === "approved" && authenticaed && (
+      {authenticaed && (!record || record.status === "approved") && (
         <div role="status" className="admin-animate-in flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3.5">
           <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-panel-success" />
           <div>

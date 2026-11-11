@@ -104,3 +104,16 @@ export async function getMarketRates(): Promise<MarketRates | null> {
   });
   return (await inFlight) ?? cache?.rates ?? null;
 }
+
+/** How old a cached quote may be for price conversions (the upstream itself refreshes every ~30 min). */
+const CONVERSION_MAX_AGE_MS = 10 * 60 * 1000;
+
+/**
+ * Rates for converting ad prices: the same quote the dashboard shows. Reuses the
+ * in-memory cache for up to 10 minutes so ad pages never hit the upstream on
+ * every view; only a missing or older cache triggers (one shared) refresh.
+ */
+export async function getConversionRates(): Promise<MarketRates | null> {
+  if (cache && Date.now() - cache.at < CONVERSION_MAX_AGE_MS) return cache.rates;
+  return getMarketRates();
+}

@@ -33,6 +33,7 @@ import { CountPill, ProfileSection, SectionEmpty } from "@/components/admin/user
 import { Badge } from "@/components/admin/ui/Badge";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { currencyLabel } from "@/lib/currency";
 
 interface UserProfileProps {
   user: UserRecord;
@@ -471,7 +472,7 @@ export function UserProfile({ user, saleAdsCount, recentAds, priceTable, verific
                           {price ? (
                             <>
                               <p className="text-[13px] font-black text-[#F5F5F5]">{formatPersianNumber(price)}</p>
-                              <p className="text-[10px] text-[#5E6672]">تومان</p>
+                              <p className="text-[10px] text-[#5E6672]">{currencyLabel(ad.currency)}</p>
                             </>
                           ) : (
                             <p className="text-[11px] text-[#5E6672]">بدون قیمت</p>

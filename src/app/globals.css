@@ -723,3 +723,540 @@
     animation: none;
   }
 }
+
+/* ─── About page: night-drive hero scene (AboutHeroScene) ─── */
+
+/* 1. Intro: the car's outline draws itself, then the body and lights fill in */
+.about-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: aboutDraw 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards, aboutOutlineFade 1.2s ease 2.2s forwards;
+  filter: drop-shadow(0 0 6px rgba(255, 106, 0, 0.8));
+}
+.about-fill {
+  opacity: 0;
+  animation: aboutFadeIn 0.9s ease 1.3s forwards;
+}
+.about-wheel-in {
+  opacity: 0;
+  animation: aboutFadeIn 0.6s ease forwards;
+}
+.about-headlight {
+  opacity: 0;
+  animation: aboutFadeIn 0.4s ease 1.7s forwards;
+  filter: drop-shadow(0 0 8px rgba(255, 226, 194, 0.95));
+}
+.about-taillight {
+  opacity: 0;
+  animation: aboutFadeIn 0.4s ease 1.8s forwards;
+  filter: drop-shadow(0 0 7px rgba(255, 45, 45, 0.9));
+}
+.about-beam {
+  opacity: 0;
+  animation: aboutFadeIn 0.6s ease 1.9s forwards, aboutBeamBreath 3.2s ease-in-out 2.5s infinite;
+}
+
+/* 2. Driving loop */
+.about-spin {
+  animation: aboutSpin 0.55s linear infinite;
+}
+.about-bob {
+  animation: aboutBob 0.9s ease-in-out 2s infinite;
+}
+.about-scroll-slow {
+  animation: aboutScrollRight 60s linear infinite;
+}
+.about-streak {
+  opacity: 0;
+  animation-name: aboutStreak;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.about-lanes {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 38px, transparent 38px 92px);
+  animation: aboutLanes 0.42s linear infinite;
+}
+
+.about-rise {
+  animation: aboutRise 0.9s cubic-bezier(0.32, 0.72, 0, 1) 0.15s both;
+}
+
+@keyframes aboutDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes aboutOutlineFade {
+  to {
+    stroke-opacity: 0.6;
+  }
+}
+@keyframes aboutFadeIn {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes aboutBeamBreath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+@keyframes aboutSpin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes aboutBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+/* Car drives left, so the world moves right */
+@keyframes aboutScrollRight {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes aboutStreak {
+  0% {
+    opacity: 0;
+    transform: translateX(-20vw);
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(110vw);
+  }
+}
+@keyframes aboutLanes {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 92px;
+  }
+}
+@keyframes aboutRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced motion: the finished, parked scene — no loops, no intro */
+@media (prefers-reduced-motion: reduce) {
+  .about-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+    stroke-opacity: 0.6;
+  }
+  .about-fill,
+  .about-wheel-in,
+  .about-headlight,
+  .about-taillight,
+  .about-beam {
+    animation: none;
+    opacity: 1;
+  }
+  .about-spin,
+  .about-bob,
+  .about-scroll-slow,
+  .about-lanes,
+  .about-rise {
+    animation: none;
+  }
+  .about-streak {
+    display: none;
+  }
+}
+
+/* =====================================================================
+   Panel "Contact us" hero: a radar/signal scene around a ringing handset.
+   Sonar rings pulse out, a radar sweep turns, contact channels orbit.
+   Everything is transform/opacity only; loops stop under reduced motion.
+   ===================================================================== */
+@keyframes contactSonar {
+  0% {
+    opacity: 0.75;
+    transform: scale(0.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+@keyframes contactSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes contactSpinBack {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+/* Handset "rings": a short wiggle, then a long rest */
+@keyframes contactRing {
+  0%,
+  28%,
+  100% {
+    transform: rotate(0);
+  }
+  4%,
+  12%,
+  20% {
+    transform: rotate(-14deg);
+  }
+  8%,
+  16%,
+  24% {
+    transform: rotate(14deg);
+  }
+}
+@keyframes contactRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes contactPop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes contactPinDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-28px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(3px);
+  }
+  80% {
+    transform: translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes contactPinPulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+@keyframes contactLive {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.contact-sonar {
+  animation: contactSonar 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.contact-sweep {
+  background: conic-gradient(from 0deg, rgba(255, 106, 0, 0.32), rgba(255, 106, 0, 0) 22%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle, #000 0 69%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 0 69%, transparent 70%);
+  animation: contactSpin 6s linear infinite;
+}
+.contact-orbit {
+  animation: contactSpin 34s linear infinite;
+}
+/* Keeps each orbiting badge upright while its orbit turns */
+.contact-orbit-upright {
+  animation: contactSpinBack 34s linear infinite;
+}
+.contact-orbit-dash {
+  animation: contactSpinBack 60s linear infinite;
+}
+.contact-ring {
+  transform-origin: 50% 50%;
+  animation: contactRing 3.2s ease-in-out 1.2s infinite;
+}
+.contact-rise {
+  animation: contactRise 0.8s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.contact-pop {
+  animation: contactPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.contact-pin-drop {
+  animation: contactPinDrop 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+.contact-pin-pulse {
+  animation: contactPinPulse 2.2s ease-out 1.2s infinite;
+}
+.contact-live {
+  animation: contactLive 1.6s ease-in-out infinite;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-sonar,
+  .contact-sweep,
+  .contact-orbit,
+  .contact-orbit-upright,
+  .contact-orbit-dash,
+  .contact-ring,
+  .contact-pin-pulse,
+  .contact-live {
+    animation: none;
+  }
+  .contact-sonar {
+    opacity: 0.25;
+  }
+  .contact-rise,
+  .contact-pop,
+  .contact-pin-drop {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* =====================================================================
+   Leaflet maps (branch picker in admin, branch map on the Contact page).
+   `.kh-map` mutes the CARTO tiles; dark by default (admin + dark panel),
+   natural in the light panel theme.
+   ===================================================================== */
+.kh-map {
+  background: #0b0e13;
+  font-family: inherit;
+  isolation: isolate;
+}
+/* Neshan has real day/night styles; only the fallback (CARTO) tiles are recoloured. */
+.kh-map--fallback .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) grayscale(0.85) brightness(0.92) contrast(0.9);
+}
+.panel-root[data-theme="light"] .kh-map {
+  background: #eef0f3;
+}
+.panel-root[data-theme="light"] .kh-map--fallback .leaflet-tile-pane {
+  filter: grayscale(0.4) contrast(1.02);
+}
+.kh-map .leaflet-control-zoom {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}
+.kh-map .leaflet-control-zoom a {
+  width: 34px;
+  height: 34px;
+  line-height: 32px;
+  background: rgba(13, 17, 23, 0.92);
+  color: #f5f5f5;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+}
+.kh-map .leaflet-control-zoom a:hover {
+  background: #ff6a00;
+  color: #07090c;
+}
+.panel-root[data-theme="light"] .kh-map .leaflet-control-zoom {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+.panel-root[data-theme="light"] .kh-map .leaflet-control-zoom a {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f131a;
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+.kh-map .leaflet-control-attribution {
+  background: rgba(7, 9, 12, 0.55);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 9px;
+  border-radius: 8px 0 0 0;
+}
+.kh-map .leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.6);
+}
+.panel-root[data-theme="light"] .kh-map .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(15, 23, 42, 0.5);
+}
+.panel-root[data-theme="light"] .kh-map .leaflet-control-attribution a {
+  color: rgba(15, 23, 42, 0.65);
+}
+
+/* Branch popup */
+.kh-map .leaflet-popup-content-wrapper {
+  background: #0d1117;
+  color: #f5f5f5;
+  border: 1px solid rgba(255, 106, 0, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+}
+.kh-map .leaflet-popup-content {
+  margin: 10px 14px;
+  font-size: 12px;
+  line-height: 1.7;
+  direction: rtl;
+  text-align: right;
+}
+.kh-map .leaflet-popup-tip {
+  background: #0d1117;
+  border: 1px solid rgba(255, 106, 0, 0.35);
+}
+.panel-root[data-theme="light"] .kh-map .leaflet-popup-content-wrapper,
+.panel-root[data-theme="light"] .kh-map .leaflet-popup-tip {
+  background: #fff;
+  color: #0f131a;
+}
+
+/* Orange teardrop pin */
+.kh-pin-wrap {
+  background: none;
+  border: 0;
+}
+.kh-pin {
+  position: relative;
+  width: 40px;
+  height: 52px;
+  transform-origin: 50% 100%;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: khPinDrop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.kh-pin-head {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 32px;
+  height: 32px;
+  margin-left: -16px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #ff8a2a, #ff5a00);
+  box-shadow: 0 8px 18px -6px rgba(255, 106, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-pin-label {
+  transform: rotate(45deg);
+  color: #07090c;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1;
+}
+.kh-pin-dot {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 8px;
+  height: 4px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  filter: blur(1px);
+}
+.kh-pin-pulse {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  border-radius: 50%;
+  background: rgba(255, 106, 0, 0.45);
+  opacity: 0;
+}
+.kh-pin.is-active {
+  transform: scale(1.22);
+  z-index: 1000;
+}
+.kh-pin.is-active .kh-pin-head {
+  background: linear-gradient(135deg, #ffffff, #ffe3cc);
+  border-color: #ff6a00;
+}
+.kh-pin.is-active .kh-pin-label {
+  color: #ff5a00;
+}
+.kh-pin.is-active .kh-pin-pulse {
+  animation: khPinPulse 1.8s ease-out infinite;
+}
+/* `translate` (not `transform`) so it never fights the active-state scale */
+@keyframes khPinDrop {
+  from {
+    opacity: 0;
+    translate: 0 -18px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes khPinPulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Contact page: branch cards rail (snap on phones) */
+.branch-rail {
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 16px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.branch-rail > * {
+  scroll-snap-align: center;
+}
+@media (min-width: 1024px) {
+  .branch-rail {
+    scroll-snap-type: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kh-pin {
+    animation: none;
+    transition: none;
+  }
+  .kh-pin.is-active .kh-pin-pulse {
+    animation: none;
+  }
+}

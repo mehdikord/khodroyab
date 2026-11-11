@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, ChevronDown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronDown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
@@ -12,6 +12,8 @@ import { logoutUserAction } from "@/app/panel/auth-actions";
 import { ThemeSwitch } from "@/components/panel/ThemeSwitch";
 import { VerificationNotice } from "@/components/panel/verification/VerificationNotice";
 import { ConsultationFab } from "@/components/panel/ConsultationFab";
+import { PanelNotice } from "@/components/panel/PanelNotice";
+import { PanelDrawer } from "@/components/panel/PanelDrawer";
 import type { PanelTheme } from "@/lib/panel-theme";
 
 export interface PanelShellUser {
@@ -65,7 +67,12 @@ function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean 
   const active = findActivePanelItem(pathname);
   return (
     <nav aria-label="ناوبری اصلی پنل" className="panel-dock pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-3">
-      <div className="panel-dock-glass pointer-events-auto mx-auto flex max-w-md items-center gap-1 rounded-[22px] p-1.5">
+      <div
+        className={cn(
+          "panel-dock-glass pointer-events-auto mx-auto flex max-w-md items-center gap-1 rounded-[22px] p-1.5",
+          collabrate ? "md:max-w-3xl" : "md:max-w-2xl"
+        )}
+      >
         {panelNavItemsFor(collabrate).map((item) => {
           const Icon = item.icon;
           const isActive = active?.key === item.key;
@@ -75,7 +82,8 @@ function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean 
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40",
+                item.secondary ? "hidden md:flex" : "flex",
+                "relative min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40",
                 isActive
                   ? "bg-gradient-to-b from-[#FF6A00]/[0.22] to-[#FF6A00]/[0.08] text-panel-text"
                   : "text-panel-muted-2 hover:bg-panel-line/[0.04] hover:text-panel-text active:scale-95"
@@ -141,6 +149,7 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-panel-line/[0.07] bg-panel-bg/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+          <PanelDrawer pathname={pathname} />
           <Link href="/panel/dashboard" className="flex items-center gap-2.5" aria-label="داشبورد پنل کاربری">
             <PanelLogo markOnly size="sm" />
             <span className="hidden flex-col leading-tight sm:flex">
@@ -234,19 +243,7 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
         // Leave room under the last row for the floating consultation button.
         style={consultationPhone ? { paddingBottom: "calc(var(--panel-dock-space) + 4.5rem)" } : undefined}
       >
-        {notice && (
-          <div
-            role="note"
-            className="admin-animate-in mb-5 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3.5"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/[0.12] text-panel-warning">
-              <AlertTriangle className="h-[18px] w-[18px]" />
-            </span>
-            <p className="min-w-0 flex-1 whitespace-pre-line break-words pt-1 text-xs font-semibold leading-7 text-panel-warning sm:text-[13px]">
-              {notice}
-            </p>
-          </div>
-        )}
+        {notice && <PanelNotice text={notice} />}
         {user.collabrate && !user.authenticaed && !pathname.startsWith("/panel/verification") && <VerificationNotice />}
         {children}
       </div>

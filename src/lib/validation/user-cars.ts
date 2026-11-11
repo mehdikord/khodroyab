@@ -4,6 +4,7 @@ import { normalizeDigits } from "@/lib/validation/admin";
 import { toPersianDigits } from "@/lib/utils";
 import { AD_STATUSES } from "@/lib/ad-status";
 import { isValidTierYear, normalizeYear } from "@/lib/price-table-shared";
+import { MILEAGE_MAX, PRICE_CURRENCIES } from "@/lib/currency";
 
 /* ───────────────────────── sale-term entry ───────────────────────── */
 
@@ -82,6 +83,18 @@ export const userCarSchema = z.object({
     .string({ error: "انتخاب رنگ الزامی است" })
     .trim()
     .regex(/^\d+$/, { error: "انتخاب رنگ الزامی است" }),
+  /** Mileage (کارکرد) in kilometres; 0 = new. Thousands separators are ignored. */
+  mileage: z
+    .string({ error: "کارکرد خودرو الزامی است" })
+    .transform((value) => normalizeDigits(value).replace(/[,\s٬،]/g, ""))
+    .refine((value) => value.length > 0, { error: "کارکرد خودرو الزامی است" })
+    .refine((value) => /^\d+$/.test(value), { error: "کارکرد خودرو باید عدد باشد" })
+    .transform((value) => Number(value))
+    .refine((value) => value <= MILEAGE_MAX, {
+      error: `کارکرد نمی‌تواند بیشتر از ${toPersianDigits(MILEAGE_MAX.toLocaleString("en-US"))} کیلومتر باشد`,
+    }),
+  /** Currency of every price of the ad. */
+  currency: z.enum(PRICE_CURRENCIES, { error: "واحد قیمت (ریال یا دلار) را انتخاب کنید" }),
   isActive: z.boolean().default(true),
   /** Moderation status; optional because the create flow sets it server-side. */
   status: z
@@ -139,6 +152,8 @@ export function parseUserCarForm(formData: FormData): ParsedUserCarForm {
     description: formData.get("description") ?? "",
     year: formData.get("year") ?? "",
     colorId: formData.get("colorId") ?? "",
+    mileage: formData.get("mileage") ?? "",
+    currency: formData.get("currency") ?? "",
     isActive: formData.get("isActive") !== "false",
     status: (() => {
       const raw = formData.get("status");

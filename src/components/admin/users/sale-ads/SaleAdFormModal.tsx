@@ -20,6 +20,8 @@ import type { OptionRecord } from "@/lib/options";
 import { AD_STATUSES, AD_STATUS_DESCRIPTIONS, AD_STATUS_LABELS, type AdStatus } from "@/lib/ad-status";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { CURRENCY_LABELS, DEFAULT_AD_CURRENCY, type PriceCurrency } from "@/lib/currency";
+import { CurrencyToggle } from "@/components/ads/CurrencyToggle";
 
 interface SaleAdFormModalProps {
   mode: "create" | "edit";
@@ -93,6 +95,8 @@ export function SaleAdFormModal({
   const [qautity, setQautity] = useState(ad?.qautity ?? "1");
   const [description, setDescription] = useState(ad?.description ?? "");
   const [isActive, setIsActive] = useState(ad?.isActive ?? true);
+  const [currency, setCurrency] = useState<PriceCurrency>(ad?.currency ?? DEFAULT_AD_CURRENCY);
+  const currencyName = CURRENCY_LABELS[currency];
   const [status, setStatus] = useState<AdStatus>(ad?.status ?? "approved");
   const [rows, setRows] = useState<TermRow[]>(() =>
     (ad?.saleTerms ?? []).map((term) => ({
@@ -186,6 +190,7 @@ export function SaleAdFormModal({
     formData.set("qautity", qautity);
     formData.set("description", description);
     formData.set("isActive", String(isActive));
+    formData.set("currency", currency);
     if (isEdit) formData.set("status", status);
     extras.appendTo(formData);
     formData.set(
@@ -460,6 +465,17 @@ export function SaleAdFormModal({
             </button>
           </div>
 
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-[#07090C]/60 px-4 py-3">
+            <div>
+              <p className="text-xs font-bold text-[#D2D7DF]">
+                واحد قیمت‌ها <span className="text-[#FF6A00]">*</span>
+              </p>
+              <p className="mt-0.5 text-[11px] text-[#5E6672]">همه قیمت‌ها و تخفیف‌های این آگهی با این واحد ثبت و نمایش داده می‌شوند.</p>
+            </div>
+            <CurrencyToggle value={currency} onChange={setCurrency} disabled={isPending} tone="admin" />
+          </div>
+          <FieldError message={fieldErrors.currency} />
+
           {saleTerms.length === 0 && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs font-semibold text-amber-200">
               هیچ شرایط فروش فعالی تعریف نشده است. از بخش «شرایط فروش» حداقل یک مورد ایجاد کنید.
@@ -544,7 +560,7 @@ export function SaleAdFormModal({
                       ).map((field) => (
                         <div key={field.key} className="space-y-1.5">
                           <label className={labelClassName}>
-                            {field.label} (تومان) <span className="text-[#FF6A00]">*</span>
+                            {field.label} ({currencyName}) <span className="text-[#FF6A00]">*</span>
                           </label>
                           <input
                             type="text"
@@ -557,14 +573,14 @@ export function SaleAdFormModal({
                             className={cn(inputClassName(Boolean(fieldErrors[`${prefix}${field.key}`])), "h-11 text-start font-mono")}
                           />
                           {row[field.key] && !fieldErrors[`${prefix}${field.key}`] && (
-                            <p className="text-[11px] text-[#5E6672]">{formatPersianNumber(row[field.key])} تومان</p>
+                            <p className="text-[11px] text-[#5E6672]">{formatPersianNumber(row[field.key])} {currencyName}</p>
                           )}
                           <FieldError message={fieldErrors[`${prefix}${field.key}`]} />
                         </div>
                       ))}
 
                       <div className="space-y-1.5">
-                        <label className={labelClassName}>مبلغ تخفیف (تومان)</label>
+                        <label className={labelClassName}>مبلغ تخفیف ({currencyName})</label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -576,7 +592,7 @@ export function SaleAdFormModal({
                           className={cn(inputClassName(Boolean(fieldErrors[`${prefix}sale`])), "h-11 text-start font-mono")}
                         />
                         {row.sale && !fieldErrors[`${prefix}sale`] && (
-                          <p className="text-[11px] text-[#5E6672]">{formatPersianNumber(row.sale)} تومان</p>
+                          <p className="text-[11px] text-[#5E6672]">{formatPersianNumber(row.sale)} {currencyName}</p>
                         )}
                         <FieldError message={fieldErrors[`${prefix}sale`]} />
                       </div>

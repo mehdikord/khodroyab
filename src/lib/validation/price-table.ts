@@ -11,6 +11,7 @@ import {
   type PriceTableAnyPriceField,
 } from "@/lib/price-table-shared";
 import { toPersianDigits } from "@/lib/utils";
+import { DEFAULT_PRICE_TABLE_CURRENCY, PRICE_CURRENCIES, type PriceCurrency } from "@/lib/currency";
 
 export { PRICE_TABLE_PRICE_MAX_DIGITS };
 
@@ -23,6 +24,8 @@ export interface PriceTableTierInput extends Record<PriceTableAnyPriceField, str
 /** One submitted row of the customer's price table. */
 export interface PriceTableEntryInput {
   carId: string;
+  /** Currency of every price of the row. */
+  currency: PriceCurrency;
   /** Non-empty, in the customer's order, with unique (year, colour) pairs. */
   tiers: PriceTableTierInput[];
 }
@@ -54,6 +57,7 @@ const rawTierSchema = z.object({
 
 const rawEntrySchema = z.object({
   carId: z.string().regex(/^\d+$/, { error: "شناسه خودرو نامعتبر است" }),
+  currency: z.enum(PRICE_CURRENCIES, { error: "واحد قیمت نامعتبر است" }).default(DEFAULT_PRICE_TABLE_CURRENCY),
   tiers: z.array(rawTierSchema).max(PRICE_TABLE_MAX_TIERS * 2),
 });
 
@@ -182,7 +186,7 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
       tiers.push(tier);
     });
 
-    if (rowValid) entries.push({ carId: row.carId, tiers });
+    if (rowValid) entries.push({ carId: row.carId, currency: row.currency, tiers });
   }
 
   if (Object.keys(fieldErrors).length > 0) {

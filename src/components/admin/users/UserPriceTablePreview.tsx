@@ -3,6 +3,7 @@ import { Table2 } from "lucide-react";
 
 import type { RecentPriceTableEntryRecord } from "@/lib/price-table";
 import { PRICE_TABLE_PRICE_FIELDS } from "@/lib/price-table-shared";
+import { currencyLabel } from "@/lib/currency";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { CountPill, ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
 import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
@@ -67,7 +68,8 @@ export function UserPriceTablePreview({ userId, total, entries }: UserPriceTable
                   {price ? (
                     <>
                       <p className={price.partner ? "text-[13px] font-black text-sky-300" : "text-[13px] font-black text-[#F5F5F5]"}>
-                        {formatPersianNumber(price.value)}$
+                        {formatPersianNumber(price.value)}
+                        <span className="ms-1 text-[10px] font-semibold opacity-70">{currencyLabel(entry.currency)}</span>
                       </p>
                       <p className="text-[10px] text-[#5E6672]">{price.label}</p>
                     </>

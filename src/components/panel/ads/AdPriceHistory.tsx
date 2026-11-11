@@ -6,6 +6,7 @@ import { Activity, ArrowDownRight, ArrowUpRight, Minus, TrendingDown, TrendingUp
 import type { SearchAdSaleTerm } from "@/lib/panel-search-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 import { PriceHistoryChart } from "@/components/panel/search/PriceHistoryChart";
+import { currencyLabel } from "@/lib/currency";
 
 function percent(delta: number, base: number): string {
   if (!base) return "";
@@ -42,7 +43,7 @@ function PriceHistoryPanel({ term }: { term: SearchAdSaleTerm }) {
             <p className="text-[10px] font-bold text-panel-muted-2">قیمت فعلی</p>
             <p dir="rtl" className="mt-1 text-2xl font-black tabular-nums text-panel-text">
               {formatPersianNumber(term.currentPrice)}
-              <span className="ms-1 text-xs font-semibold text-panel-muted-2">تومان</span>
+              <span className="ms-1 text-xs font-semibold text-panel-muted-2">{currencyLabel(term.currency)}</span>
             </p>
             {term.previousPrice !== null && (
               <p className="mt-1 text-[11px] text-panel-faint">
@@ -82,7 +83,7 @@ function PriceHistoryPanel({ term }: { term: SearchAdSaleTerm }) {
 
       {/* Chart */}
       <div className="rounded-3xl border border-panel-line/[0.08] bg-gradient-to-b from-panel-surface to-panel-bg p-2 pt-3">
-        <PriceHistoryChart points={term.history} />
+        <PriceHistoryChart points={term.history} currency={term.currency} />
       </div>
 
       {/* Stats */}
@@ -136,7 +137,7 @@ function PriceHistoryPanel({ term }: { term: SearchAdSaleTerm }) {
                 />
                 <div className="min-w-0 flex-1">
                   <p dir="rtl" className="text-sm font-black tabular-nums text-panel-text">
-                    {formatPersianNumber(point.price)} <span className="text-[10px] font-semibold text-panel-muted-2">تومان</span>
+                    {formatPersianNumber(point.price)} <span className="text-[10px] font-semibold text-panel-muted-2">{currencyLabel(term.currency)}</span>
                   </p>
                   <p className="text-[10px] text-panel-faint">
                     {point.dateLabel} · {point.timeLabel}

@@ -4,6 +4,8 @@
  * import them; the data loaders live in `panel-search.ts`.
  */
 
+import type { PriceCurrency } from "@/lib/currency";
+
 export const SEARCH_SORTS = ["newest", "oldest", "brand", "name", "year_desc", "year_asc"] as const;
 export type SearchSort = (typeof SEARCH_SORTS)[number];
 
@@ -49,7 +51,7 @@ export interface SearchOptions {
 
 /** One point of a sale term's price timeline. */
 export interface SearchPricePoint {
-  /** Price in tomans. */
+  /** Price in the ad's currency (`SearchAdRecord.currency`). */
   price: number;
   /** ISO timestamp of the change. */
   at: string;
@@ -63,6 +65,8 @@ export interface SearchPricePoint {
 export interface SearchAdSaleTerm {
   id: string;
   title: string;
+  /** Currency of every price of this term (the ad's currency). */
+  currency: PriceCurrency;
   /** Current public price (قیمت عمومی). The history and delta below track this price. */
   currentPrice: number;
   /**
@@ -89,6 +93,10 @@ export interface SearchAdRecord {
   carName: string;
   carModel: string;
   carYear: string;
+  /** Mileage (کارکرد) in kilometres. */
+  mileage: number;
+  /** Currency of every price on the ad. */
+  currency: PriceCurrency;
   carTypeName: string;
   brandName: string;
   brandImage: string | null;

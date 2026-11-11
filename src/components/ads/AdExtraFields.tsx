@@ -8,7 +8,7 @@ import type { AdExtrasState } from "@/components/ads/useAdExtras";
 import { AD_IMAGE_MAX_COUNT } from "@/lib/ad-form-shared";
 import type { ColorRecord } from "@/lib/colors";
 import type { OptionRecord } from "@/lib/options";
-import { cn, toPersianDigits } from "@/lib/utils";
+import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 /** The admin panel is always dark; the customer panel follows its theme tokens. */
 const THEMES = {
@@ -148,32 +148,74 @@ export function AdImagesField({ theme, extras, fieldErrors, disabled }: Omit<AdE
   );
 }
 
-/** Production year, colour and the admin-defined options of the car form. */
+/** "12000" → "۱۲,۰۰۰ کیلومتر"; 0 → صفر کیلومتر (new). */
+function mileageHint(raw: string): string {
+  const formatted = formatPersianNumber(raw);
+  if (!formatted) return "برای خودروی نو ۰ وارد کنید.";
+  return /^[۰,]+$/.test(formatted) ? "صفر کیلومتر (نو)" : `${formatted} کیلومتر`;
+}
+
+/** Production year, mileage, colour and the admin-defined options of the car form. */
 export function AdSpecFields({ theme, extras, colors, options, fieldErrors, disabled }: AdExtraFieldsProps) {
   const t = THEMES[theme];
   const yearId = useId();
+  const mileageId = useId();
   const labelClass = cn("block text-xs font-bold", t.label);
   const required = <span className="text-[#FF6A00]">*</span>;
 
   return (
     <section className="space-y-5">
-      <div className="space-y-2 sm:max-w-xs">
-        <label htmlFor={yearId} className={labelClass}>
-          سال ساخت خودرو {required}
-        </label>
-        <input
-          id={yearId}
-          type="text"
-          inputMode="numeric"
-          dir="ltr"
-          maxLength={4}
-          disabled={disabled}
-          value={extras.year}
-          onChange={(e) => extras.setYear(e.target.value)}
-          placeholder="مثال: 2024 یا 1403"
-          className={cn(fieldClass(theme, Boolean(fieldErrors.year)), "text-start font-mono")}
-        />
-        {fieldErrors.year && <p className={cn("text-xs font-semibold", t.error)}>{fieldErrors.year}</p>}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label htmlFor={yearId} className={labelClass}>
+            سال ساخت خودرو {required}
+          </label>
+          <input
+            id={yearId}
+            type="text"
+            inputMode="numeric"
+            dir="ltr"
+            maxLength={4}
+            disabled={disabled}
+            value={extras.year}
+            onChange={(e) => extras.setYear(e.target.value)}
+            placeholder="مثال: 2024 یا 1403"
+            className={cn(fieldClass(theme, Boolean(fieldErrors.year)), "text-start font-mono")}
+          />
+          {fieldErrors.year && <p className={cn("text-xs font-semibold", t.error)}>{fieldErrors.year}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor={mileageId} className={labelClass}>
+            کارکرد خودرو (کیلومتر) {required}
+          </label>
+          <div className="relative">
+            <input
+              id={mileageId}
+              type="text"
+              inputMode="numeric"
+              dir="ltr"
+              maxLength={9}
+              disabled={disabled}
+              value={extras.mileage}
+              onChange={(e) => extras.setMileage(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+              placeholder="0"
+              aria-describedby={`${mileageId}-hint`}
+              className={cn(fieldClass(theme, Boolean(fieldErrors.mileage)), "pe-16 text-start font-mono")}
+            />
+            <span className={cn("pointer-events-none absolute inset-y-0 end-3 flex items-center text-[11px] font-bold", t.label)}>
+              km
+            </span>
+          </div>
+          {fieldErrors.mileage ? (
+            <p className={cn("text-xs font-semibold", t.error)}>{fieldErrors.mileage}</p>
+          ) : (
+            <p id={`${mileageId}-hint`} className={cn("text-[11px]", t.label, "opacity-70")}>
+              {mileageHint(extras.mileage)}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">

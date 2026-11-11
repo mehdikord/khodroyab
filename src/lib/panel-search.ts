@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { activeCodeUserWhere, getActiveUserCodes } from "@/lib/user-codes";
 import { normalizeDigits } from "@/lib/validation/admin";
 import { adOptionsToDisplay, userCarImagesOrder, userCarOptionsInclude } from "@/lib/user-cars";
+import type { PriceCurrency } from "@/lib/currency";
 
 import {
   type AdDetailRecord,
@@ -150,7 +151,7 @@ function toPricePoint(price: string, at: Date): SearchPricePoint {
  * The timeline tracks the public price only. The collaborator price is
  * included only when `showPartner` is set, so it never reaches other viewers.
  */
-function toSearchSaleTerm(row: SearchTermRow, showPartner: boolean): SearchAdSaleTerm {
+function toSearchSaleTerm(row: SearchTermRow, showPartner: boolean, currency: PriceCurrency): SearchAdSaleTerm {
   const points: SearchPricePoint[] = [];
   for (const entry of row.priceHistory) {
     const point = toPricePoint(entry.price, entry.createdAt);
@@ -164,6 +165,7 @@ function toSearchSaleTerm(row: SearchTermRow, showPartner: boolean): SearchAdSal
   return {
     id: row.id.toString(),
     title: row.saleTerm.title,
+    currency,
     currentPrice: current,
     partnerPrice: showPartner && row.partnerPrice ? toPrice(row.partnerPrice) : null,
     previousPrice,
@@ -185,6 +187,8 @@ function toSearchAdRecord(row: SearchAdRow, showPartner: boolean, sellerCodes: M
     carName: row.car.name,
     carModel: row.car.model,
     carYear: row.year,
+    mileage: row.mileage,
+    currency: row.currency,
     colorName: row.color?.name ?? null,
     colorCode: row.color?.code ?? null,
     carTypeName: row.car.carType.name,
@@ -192,7 +196,7 @@ function toSearchAdRecord(row: SearchAdRow, showPartner: boolean, sellerCodes: M
     brandImage: row.car.brand.image,
     imageUrl: row.images[0]?.imageUrl ?? row.car.carImages[0]?.imageUrl ?? null,
     sellerCode: sellerCodes.get(row.userId.toString()) ?? "",
-    saleTerms: row.saleTerms.filter((item) => item.saleTerm.isActive).map((term) => toSearchSaleTerm(term, showPartner)),
+    saleTerms: row.saleTerms.filter((item) => item.saleTerm.isActive).map((term) => toSearchSaleTerm(term, showPartner, row.currency)),
     createdAtLabel: faDate.format(row.createdAt),
   };
 }
@@ -322,7 +326,7 @@ export async function getAdDetail(idRaw: string, adViewer: AdViewer): Promise<Ad
     galleryIsCatalogue: ownPhotos.length === 0,
     options: adOptionsToDisplay(row.options),
     saleTerms: liveTerms.map((term) => ({
-      ...toSearchSaleTerm(term, showPartner),
+      ...toSearchSaleTerm(term, showPartner, row.currency),
       sale: term.sale,
       perecentage: term.perecentage,
       description: term.description,

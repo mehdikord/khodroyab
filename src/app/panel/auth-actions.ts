@@ -5,8 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import prisma from "@/lib/prisma";
-import { authenticateUser } from "@/lib/auth/user-auth";
-import { hashPassword } from "@/lib/auth/password";
+import { OTP_IS_PLACEHOLDER, requestOtp, verifyOtp } from "@/lib/auth/otp";
 import { checkRateLimit, recordFailedAttempt, resetAttempts } from "@/lib/auth/rate-limit";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import {
@@ -15,11 +14,8 @@ import {
   setUserSessionCookie,
 } from "@/lib/auth/user-session";
 import type { FieldErrors } from "@/lib/validation/admin";
-import { parseUserLoginForm, parseUserRegisterForm } from "@/lib/validation/user";
-
-export type UserLoginActionResult =
-  | { ok: true }
-  | { ok: false; message: string; fieldErrors?: FieldErrors };
+import { parseOtpRequestForm, parseOtpVerifyForm } from "@/lib/validation/user";
+import { toPersianDigits } from "@/lib/utils";
 
 /** Best-effort client IP for throttling. */
 function getClientIp(): string {
@@ -29,116 +25,167 @@ function getClientIp(): string {
   return headerList.get("x-real-ip") || "unknown";
 }
 
-/**
- * Authenticate a customer and establish a user-panel session cookie.
- * Returns a discriminated result; the client navigates on success.
- */
-export async function loginUserAction(formData: FormData): Promise<UserLoginActionResult> {
-  if (!isTrustedOrigin()) {
-    return { ok: false, message: "درخواست نامعتبر است. لطفاً دوباره تلاش کنید." };
-  }
+const INVALID_REQUEST = "درخواست نامعتبر است. لطفاً دوباره تلاش کنید.";
+const GENERIC_FAILURE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
-  const parsed = parseUserLoginForm(formData);
-  if (!parsed.success) {
-    return { ok: false, message: "اطلاعات وارد شده معتبر نیست.", fieldErrors: parsed.fieldErrors };
-  }
-
-  const { phone, password } = parsed.data;
-  const throttleKey = `user::${getClientIp()}::${phone}`;
-
-  const limit = checkRateLimit(throttleKey);
-  if (!limit.allowed) {
-    return {
-      ok: false,
-      message: `تلاش‌های ناموفق بیش از حد مجاز. لطفاً پس از ${Math.ceil(limit.retryAfterSeconds / 60)} دقیقه دوباره تلاش کنید.`,
-    };
-  }
-
-  const result = await authenticateUser(phone, password);
-
-  if (!result.ok) {
-    if (result.reason === "inactive") {
-      // Correct credentials, disabled account: say so without counting a failure.
-      return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };
-    }
-    recordFailedAttempt(throttleKey);
-    return { ok: false, message: "شماره موبایل یا رمز عبور نادرست است." };
-  }
-
-  resetAttempts(throttleKey);
-  const token = await issueUserSessionToken(result.user);
-  setUserSessionCookie(token);
-
-  return { ok: true };
+function minutes(seconds: number): string {
+  return toPersianDigits(Math.max(1, Math.ceil(seconds / 60)));
 }
 
-export type UserRegisterActionResult =
-  | { ok: true }
-  | { ok: false; message: string; fieldErrors?: FieldErrors };
+export type RequestOtpActionResult =
+  | {
+      ok: true;
+      phone: string;
+      /** No account exists for this number yet: the next step also asks for the name. */
+      isNewUser: boolean;
+      resendInSeconds: number;
+      expiresInSeconds: number;
+      /** No SMS gateway yet: the code is the fixed placeholder, shown as a hint. */
+      placeholderCode: boolean;
+    }
+  | { ok: false; message: string; fieldErrors?: FieldErrors; retryAfterSeconds?: number };
 
 /**
- * Self-registration for customers. The account is active and approved right
- * away and the customer is signed in. New accounts are never collaborators;
- * only an administrator can turn collaborator mode on.
+ * Step 1 of the customer sign-in / sign-up: send a one-time code to the mobile
+ * number. Tells the client whether the number already has an account so the
+ * next step can also ask a new customer for their name.
  */
-export async function registerUserAction(formData: FormData): Promise<UserRegisterActionResult> {
-  if (!isTrustedOrigin()) {
-    return { ok: false, message: "درخواست نامعتبر است. لطفاً دوباره تلاش کنید." };
-  }
+export async function requestOtpAction(formData: FormData): Promise<RequestOtpActionResult> {
+  if (!isTrustedOrigin()) return { ok: false, message: INVALID_REQUEST };
 
-  // Throttle sign-ups per IP so the queue cannot be flooded.
-  const throttleKey = `register::${getClientIp()}`;
-  const limit = checkRateLimit(throttleKey);
-  if (!limit.allowed) {
+  const parsed = parseOtpRequestForm(formData);
+  if (!parsed.success) {
+    return { ok: false, message: "شماره موبایل معتبر نیست.", fieldErrors: parsed.fieldErrors };
+  }
+  const { phone } = parsed.data;
+
+  // Per-IP cap on code requests, so one client cannot spam many numbers.
+  const ipKey = `otp-send::${getClientIp()}`;
+  const ipLimit = checkRateLimit(ipKey);
+  if (!ipLimit.allowed) {
     return {
       ok: false,
-      message: `تعداد ثبت‌نام‌ها بیش از حد مجاز است. لطفاً پس از ${Math.ceil(limit.retryAfterSeconds / 60)} دقیقه دوباره تلاش کنید.`,
+      message: `درخواست‌های ارسال کد بیش از حد مجاز است. لطفاً پس از ${minutes(ipLimit.retryAfterSeconds)} دقیقه دوباره تلاش کنید.`,
     };
   }
 
-  const parsed = parseUserRegisterForm(formData);
-  if (!parsed.success) {
-    return { ok: false, message: "اطلاعات وارد شده معتبر نیست.", fieldErrors: parsed.fieldErrors };
-  }
-
-  const { name, companyName, phone, password } = parsed.data;
-
   try {
-    const duplicate = await prisma.user.findFirst({ where: { phone }, select: { id: true } });
-    if (duplicate) {
-      recordFailedAttempt(throttleKey);
+    const user = await prisma.user.findFirst({
+      where: { phone },
+      orderBy: { id: "asc" },
+      select: { isActive: true },
+    });
+    if (user && !user.isActive) {
+      return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };
+    }
+
+    const sent = await requestOtp(phone);
+    if (!sent.ok) {
       return {
         ok: false,
-        message: "این شماره موبایل قبلاً ثبت شده است.",
-        fieldErrors: { phone: "کاربری با این شماره موبایل وجود دارد؛ وارد شوید." },
+        retryAfterSeconds: sent.retryAfterSeconds,
+        message:
+          sent.reason === "cooldown"
+            ? `کد قبلی هنوز معتبر است. برای ارسال دوباره ${toPersianDigits(sent.retryAfterSeconds)} ثانیه صبر کنید.`
+            : `تعداد درخواست کد برای این شماره بیش از حد مجاز است. لطفاً پس از ${minutes(sent.retryAfterSeconds)} دقیقه دوباره تلاش کنید.`,
       };
     }
 
-    const created = await prisma.user.create({
-      data: {
-        name,
-        companyName: companyName || null,
-        phone,
-        password: await hashPassword(password),
-        isActive: true,
-        approvedAt: new Date(),
-        collabrate: false,
-        authenticaed: false,
-      },
-      select: { id: true, name: true, phone: true },
-    });
-
-    const token = await issueUserSessionToken({ id: created.id.toString(), name: created.name, phone: created.phone });
-    setUserSessionCookie(token);
+    recordFailedAttempt(ipKey); // every send counts towards the per-IP cap
+    return {
+      ok: true,
+      phone,
+      isNewUser: !user,
+      resendInSeconds: sent.resendInSeconds,
+      expiresInSeconds: sent.expiresInSeconds,
+      placeholderCode: OTP_IS_PLACEHOLDER,
+    };
   } catch (error) {
-    console.error("[users:register] failed", error);
-    return { ok: false, message: "خطایی رخ داد؛ لطفاً دوباره تلاش کنید." };
+    console.error("[users:otp-request] failed", error);
+    return { ok: false, message: GENERIC_FAILURE };
+  }
+}
+
+export type VerifyOtpActionResult = { ok: true } | { ok: false; message: string; fieldErrors?: FieldErrors };
+
+/**
+ * Step 2: check the code and sign the customer in. When the number has no
+ * account yet, one is created with the given name (active and approved right
+ * away, never a collaborator; only an administrator can turn that on).
+ */
+export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActionResult> {
+  if (!isTrustedOrigin()) return { ok: false, message: INVALID_REQUEST };
+
+  const phoneOnly = parseOtpRequestForm(formData);
+  if (!phoneOnly.success) {
+    return { ok: false, message: "شماره موبایل معتبر نیست.", fieldErrors: phoneOnly.fieldErrors };
+  }
+  const phone = phoneOnly.data.phone;
+
+  const throttleKey = `otp-verify::${getClientIp()}::${phone}`;
+  const limit = checkRateLimit(throttleKey);
+  if (!limit.allowed) {
+    return {
+      ok: false,
+      message: `تلاش‌های ناموفق بیش از حد مجاز. لطفاً پس از ${minutes(limit.retryAfterSeconds)} دقیقه دوباره تلاش کنید.`,
+    };
   }
 
-  recordFailedAttempt(throttleKey); // counts every sign-up towards the per-IP cap
-  revalidatePath("/admin/users");
-  revalidatePath("/admin/dashboard");
-  return { ok: true };
+  try {
+    const existing = await prisma.user.findFirst({
+      where: { phone },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true, phone: true, isActive: true },
+    });
+
+    const parsed = parseOtpVerifyForm(formData, { requireName: !existing });
+    if (!parsed.success) {
+      return { ok: false, message: "اطلاعات وارد شده معتبر نیست.", fieldErrors: parsed.fieldErrors };
+    }
+
+    if (existing && !existing.isActive) {
+      return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };
+    }
+
+    const check = await verifyOtp(phone, parsed.data.code);
+    if (!check.ok) {
+      recordFailedAttempt(throttleKey);
+      const message =
+        check.reason === "invalid"
+          ? "کد تایید نادرست است."
+          : check.reason === "locked"
+            ? "تعداد تلاش‌های نادرست زیاد بود؛ کد جدید دریافت کنید."
+            : "کد تایید منقضی شده است؛ کد جدید دریافت کنید.";
+      return { ok: false, message, fieldErrors: { code: message } };
+    }
+    resetAttempts(throttleKey);
+
+    let sessionUser = existing ? { id: existing.id.toString(), name: existing.name, phone: existing.phone } : null;
+    if (!sessionUser) {
+      const created = await prisma.user.create({
+        data: {
+          name: parsed.data.name,
+          phone,
+          password: null,
+          isActive: true,
+          approvedAt: new Date(),
+          collabrate: false,
+          authenticaed: false,
+        },
+        select: { id: true, name: true, phone: true },
+      });
+      sessionUser = { id: created.id.toString(), name: created.name, phone: created.phone };
+      revalidatePath("/admin/users");
+      revalidatePath("/admin/dashboard");
+    }
+
+    const token = await issueUserSessionToken(sessionUser);
+    setUserSessionCookie(token);
+    return { ok: true };
+  } catch (error) {
+    console.error("[users:otp-verify] failed", error);
+    return { ok: false, message: GENERIC_FAILURE };
+  }
 }
 
 /** Destroy the current user session. */

@@ -64,21 +64,7 @@ export function profileCompletion(profile: ProfileRecord): { percent: number; mi
   return { percent: Math.round((filled / total) * 100), missing };
 }
 
-/* ───────────────────────── password UX ───────────────────────── */
+/* ───────────────────────── password ───────────────────────── */
 
-/** Minimum customer password length (also enforced server-side in validation/user.ts). */
+/** Minimum password length (administrator accounts; customers sign in with OTP). */
 export const PASSWORD_MIN_LENGTH = 6;
-
-/**
- * Rough password strength score (0–4) for the client-side meter.
- * Purely a UX hint; the server only enforces length limits.
- */
-export function passwordStrength(password: string): number {
-  if (!password) return 0;
-  let score = 0;
-  if (password.length >= PASSWORD_MIN_LENGTH) score += 1;
-  if (password.length >= 10) score += 1;
-  if (/[A-Za-z]/.test(password) && /\d/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
-  return Math.min(score, 4);
-}

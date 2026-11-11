@@ -3,6 +3,7 @@ import { Activity, ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 import type { SearchAdSaleTerm } from "@/lib/panel-search-shared";
 import { cn, formatPersianNumber } from "@/lib/utils";
+import { CurrencyTag } from "@/components/ads/CurrencyTag";
 
 interface PriceDeltaBadgeProps {
   term: SearchAdSaleTerm;
@@ -35,6 +36,7 @@ export function PriceDeltaBadge({ term }: PriceDeltaBadgeProps) {
             {up ? "+" : "−"}
             {formatPersianNumber(Math.abs(delta))}
           </span>
+          <CurrencyTag currency={term.currency} className="ms-0 text-[9px]" />
           <Activity className="h-3 w-3 opacity-50" />
         </span>
       )}

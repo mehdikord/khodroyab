@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import type { Prisma } from "@prisma/client";
 
 import type { AdStatus } from "@/lib/ad-status";
+import type { PriceCurrency } from "@/lib/currency";
 
 /** Relations required to build a `UserCarRecord`. */
 export const userCarOptionsInclude = {
@@ -111,6 +112,10 @@ export interface UserCarRecord {
   colorId: string | null;
   colorName: string | null;
   colorCode: string | null;
+  /** Mileage (کارکرد) in kilometres. */
+  mileage: number;
+  /** Currency of every price on this ad. */
+  currency: PriceCurrency;
   /** The ad's own photos, primary first. */
   images: UserCarImageRecord[];
   /** Cover: the ad's primary photo, else the car's catalogue photo. */
@@ -152,6 +157,8 @@ export function userCarToRecord(userCar: UserCarWithRelations): UserCarRecord {
     colorId: userCar.colorId?.toString() ?? null,
     colorName: userCar.color?.name ?? null,
     colorCode: userCar.color?.code ?? null,
+    mileage: userCar.mileage,
+    currency: userCar.currency,
     images: userCar.images.map((image) => ({ id: image.id.toString(), url: image.imageUrl, isPrimary: image.isPrimary })),
     imageUrl: userCar.images[0]?.imageUrl ?? userCar.car.carImages[0]?.imageUrl ?? null,
     optionValues: adOptionsToFormValues(userCar.options),

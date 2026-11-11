@@ -52,7 +52,10 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
         setAuthenticaed(result.authenticaed);
         setRejectOpen(false);
         setReason("");
-        showToast("success", decision === "approve" ? "احراز هویت کاربر تایید شد" : "احراز هویت کاربر رد شد");
+        showToast(
+          "success",
+          decision === "approve" ? "احراز هویت کاربر تایید شد" : result.verification ? "احراز هویت کاربر رد شد" : "تایید احراز هویت کاربر لغو شد"
+        );
       } else {
         if (result.fieldErrors?.reason) setReasonError(result.fieldErrors.reason);
         showToast("error", result.message);
@@ -80,34 +83,42 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
             <FilePen className="h-3.5 w-3.5" />
             {verification ? "ثبت مجدد مدارک" : "ثبت مدارک به جای کاربر"}
           </button>
-          {verification && (
-          <>
-            {!authenticaed && (
-              <button
-                type="button"
-                onClick={() => review("approve")}
-                disabled={isPending}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-extrabold text-[#07090C] transition-all hover:brightness-110 disabled:opacity-60"
-              >
-                {isPending && !rejectOpen ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5" />}
-                تایید احراز هویت
-              </button>
-            )}
-            {verification.status !== "rejected" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setReason("");
-                  setRejectOpen(true);
-                }}
-                disabled={isPending}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-60"
-              >
-                <ShieldX className="h-3.5 w-3.5" />
-                {authenticaed ? "لغو تایید و رد" : "رد احراز هویت"}
-              </button>
-            )}
-          </>
+          {!authenticaed && (
+            <button
+              type="button"
+              onClick={() => review("approve")}
+              disabled={isPending}
+              title={verification ? undefined : "تایید هویت کاربر بدون نیاز به ارسال مدارک"}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-extrabold text-[#07090C] transition-all hover:brightness-110 disabled:opacity-60"
+            >
+              {isPending && !rejectOpen ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5" />}
+              {verification ? "تایید احراز هویت" : "تایید بدون مدارک"}
+            </button>
+          )}
+          {verification && verification.status !== "rejected" && (
+            <button
+              type="button"
+              onClick={() => {
+                setReason("");
+                setRejectOpen(true);
+              }}
+              disabled={isPending}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-60"
+            >
+              <ShieldX className="h-3.5 w-3.5" />
+              {authenticaed ? "لغو تایید و رد" : "رد احراز هویت"}
+            </button>
+          )}
+          {!verification && authenticaed && (
+            <button
+              type="button"
+              onClick={() => review("reject")}
+              disabled={isPending}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-60"
+            >
+              {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldX className="h-3.5 w-3.5" />}
+              لغو تایید
+            </button>
           )}
         </>
       }
@@ -178,10 +189,17 @@ export function UserVerificationSection({ userId, initialAuthenticaed, initialVe
       )}
 
       {!verification ? (
-        <SectionEmpty
-          title="این کاربر هنوز مدرکی برای احراز هویت ارسال نکرده است"
-          hint="پس از ارسال مدارک از پنل کاربری، آن‌ها در این بخش نمایش داده می‌شوند؛ یا خودتان با «ثبت مدارک به جای کاربر» آن‌ها را ثبت کنید."
-        />
+        authenticaed ? (
+          <SectionEmpty
+            title="هویت این کاربر بدون ارسال مدارک توسط مدیر تایید شده است"
+            hint="در صورت نیاز می‌توانید با «ثبت مدارک به جای کاربر» مدارک او را هم ثبت کنید."
+          />
+        ) : (
+          <SectionEmpty
+            title="این کاربر هنوز مدرکی برای احراز هویت ارسال نکرده است"
+            hint="می‌توانید بدون مدارک، با «تایید بدون مدارک» هویت کاربر را تایید کنید؛ یا با «ثبت مدارک به جای کاربر» مدارک را ثبت کنید."
+          />
+        )
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-white/[0.06] bg-[#07090C]/60 px-3 py-2 text-[11px] text-[#8B93A1]">
