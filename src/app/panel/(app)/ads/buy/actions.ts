@@ -195,7 +195,7 @@ export async function deleteBuyAdAction(idRaw: string): Promise<BuyAdSimpleResul
 
 /* ───────────────────────── Bidding ───────────────────────── */
 
-const BIDDING_CLOSED_MESSAGE = "قیمت‌دهی این آگهی توسط ثبت‌کننده بسته شده است";
+const BIDDING_CLOSED_MESSAGE = "قیمت‌دهی این آگهی بسته شده است";
 
 /** Close or reopen bidding on one of the user's own buy ads. Offers are kept either way. */
 export async function setBuyAdBiddingAction(idRaw: string, open: boolean): Promise<BuyAdOffersResult> {

@@ -1986,15 +1986,15 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/[id]/page.tsx": {
-    "mtime": 1794433616.0806212,
-    "seen": 1794433869.8945506,
-    "ast_hash": "82033d4577665e4b4ce54f2530bf6c9f",
+    "mtime": 1794487085.096748,
+    "seen": 1794489934.939681,
+    "ast_hash": "94341ebb7db1bed5cf43c2bf9533542e",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/actions.ts": {
-    "mtime": 1794433383.6115332,
-    "seen": 1794433869.8945513,
-    "ast_hash": "316baa0408a162271fe8d5b40da71f88",
+    "mtime": 1794486917.758303,
+    "seen": 1794489934.9396834,
+    "ast_hash": "13f4c4a0454327bd513a73d12550f5bf",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/new/[carId]/page.tsx": {
@@ -2010,9 +2010,9 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/search/buy/page.tsx": {
-    "mtime": 1794433741.013837,
-    "seen": 1794433869.8949132,
-    "ast_hash": "e3b28530d62c30fae2530b59b6a10f03",
+    "mtime": 1794487108.2065623,
+    "seen": 1794489934.9404476,
+    "ast_hash": "7c5ea35cb20384888dc7eafefde9a2a5",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/search/layout.tsx": {
@@ -2028,15 +2028,15 @@
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/BuyAdCard.tsx": {
-    "mtime": 1794433456.1028686,
-    "seen": 1794433869.8980803,
-    "ast_hash": "f4ffa2b1dd4b64852896e620349006c6",
+    "mtime": 1794487108.2061872,
+    "seen": 1794489934.9491377,
+    "ast_hash": "09fa4c1b3699fc4f913171c2dba16b51",
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/BuyAdDetailView.tsx": {
-    "mtime": 1794433642.8915548,
-    "seen": 1794433869.8980815,
-    "ast_hash": "59651da08c2a8e1734edea19cf70f85a",
+    "mtime": 1794489920.8809264,
+    "seen": 1794489934.9491417,
+    "ast_hash": "38d55a147270367f08406512ad770aa5",
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/BuyAdFilters.tsx": {
@@ -2046,9 +2046,9 @@
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/BuyAdForm.tsx": {
-    "mtime": 1794433590.3632054,
-    "seen": 1794433869.8980832,
-    "ast_hash": "b230388b411c0325408c18a81a75af49",
+    "mtime": 1794486935.847883,
+    "seen": 1794489934.94925,
+    "ast_hash": "f746ba38ef159d394ab4f55c41cca6a1",
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/BuyAdOwnerActions.tsx": {
@@ -2058,9 +2058,9 @@
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/MyBuyAdCard.tsx": {
-    "mtime": 1794433512.0772717,
-    "seen": 1794433869.8980963,
-    "ast_hash": "6cedfb5d1eb55e6de73cd93e4bb13e16",
+    "mtime": 1794487108.2062361,
+    "seen": 1794489934.9493632,
+    "ast_hash": "cdae61a68d4202880e3f752a27c9fa24",
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/MyBuyAdsManager.tsx": {
@@ -2082,21 +2082,33 @@
     "semantic_hash": ""
   },
   "src/lib/buy-ads-shared.ts": {
-    "mtime": 1794433313.6553771,
-    "seen": 1794433869.8994038,
-    "ast_hash": "fb0bbf3525939ac2914bd7ebb35755b0",
+    "mtime": 1794486860.197294,
+    "seen": 1794489934.9546254,
+    "ast_hash": "8e13bd235eefee9012bb102434e017d8",
     "semantic_hash": ""
   },
   "src/lib/buy-ads.ts": {
-    "mtime": 1794433616.073342,
-    "seen": 1794433869.899405,
-    "ast_hash": "a075dd4542d86d39d2015b3a58db3f81",
+    "mtime": 1794486874.1855128,
+    "seen": 1794489934.9546294,
+    "ast_hash": "374c6a77b1125d70bce87f4ac737a8d1",
     "semantic_hash": ""
   },
   "src/lib/validation/buy-ads.ts": {
-    "mtime": 1794433314.4441938,
-    "seen": 1794433869.9005861,
-    "ast_hash": "e31fb07bc339d6bce74eeb1517145e16",
+    "mtime": 1794486917.7581608,
+    "seen": 1794489934.9581287,
+    "ast_hash": "019f47eb5f53ef99b6b7ed5da88dcd50",
+    "semantic_hash": ""
+  },
+  "src/app/api/panel/buy-ads/[id]/offers/route.ts": {
+    "mtime": 1794486917.7640934,
+    "seen": 1794489934.9381685,
+    "ast_hash": "76ddfc39027e9362bff1340dbc6a3e7b",
+    "semantic_hash": ""
+  },
+  "src/components/panel/buy-ads/BuyAdOffersPanel.tsx": {
+    "mtime": 1794489911.5786078,
+    "seen": 1794489934.949254,
+    "ast_hash": "d935e38372960344aacd9f3adee541c9",
     "semantic_hash": ""
   }
 }

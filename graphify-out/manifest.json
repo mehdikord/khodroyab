@@ -576,9 +576,9 @@
     "semantic_hash": "449e1f7412e2c2107a2275efdc5e9b02"
   },
   "src/components/admin/admin-nav.tsx": {
-    "mtime": 1794413098.1123421,
-    "seen": 1794413498.8745437,
-    "ast_hash": "adfbc8ed26e5beb78897bef58c82e432",
+    "mtime": 1794490943.3833594,
+    "seen": 1794490966.7064295,
+    "ast_hash": "00b0de29958763fe799107365f927e7d",
     "semantic_hash": ""
   },
   "src/components/admin/admins/AdminFormModal.tsx": {
@@ -1980,9 +1980,9 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/[id]/not-found.tsx": {
-    "mtime": 1794433616.0813422,
-    "seen": 1794433869.8945498,
-    "ast_hash": "e0e2abaadac9113f0ea82545b35d0713",
+    "mtime": 1794490958.2341356,
+    "seen": 1794490966.7055643,
+    "ast_hash": "14bbc35902e4fb36ba5086a3560f25ca",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/[id]/page.tsx": {
@@ -1992,9 +1992,9 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/actions.ts": {
-    "mtime": 1794486917.758303,
-    "seen": 1794489934.9396834,
-    "ast_hash": "13f4c4a0454327bd513a73d12550f5bf",
+    "mtime": 1794490958.2314656,
+    "seen": 1794490966.7055979,
+    "ast_hash": "730426edb55a0b1857f65ddbcdcd8f7f",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/ads/buy/new/[carId]/page.tsx": {
@@ -2106,9 +2106,69 @@
     "semantic_hash": ""
   },
   "src/components/panel/buy-ads/BuyAdOffersPanel.tsx": {
-    "mtime": 1794489911.5786078,
-    "seen": 1794489934.949254,
-    "ast_hash": "d935e38372960344aacd9f3adee541c9",
+    "mtime": 1794490958.2312307,
+    "seen": 1794490966.709649,
+    "ast_hash": "7d6b37410119a49a1cdb9922823416c0",
+    "semantic_hash": ""
+  },
+  "src/app/admin/(panel)/buy-ads/[id]/page.tsx": {
+    "mtime": 1794490943.3827922,
+    "seen": 1794490966.7039056,
+    "ast_hash": "59375fd1e93ffa53789c7fc82918cd38",
+    "semantic_hash": ""
+  },
+  "src/app/admin/(panel)/buy-ads/actions.ts": {
+    "mtime": 1794490769.334372,
+    "seen": 1794490966.703907,
+    "ast_hash": "a9f97bdd2074f33398996a64f66270a3",
+    "semantic_hash": ""
+  },
+  "src/app/admin/(panel)/buy-ads/page.tsx": {
+    "mtime": 1794490934.5048866,
+    "seen": 1794490966.7039082,
+    "ast_hash": "55a8115ba320a1ce5611f4e22676926a",
+    "semantic_hash": ""
+  },
+  "src/components/admin/buy-ads/BuyAdDetailManager.tsx": {
+    "mtime": 1794490943.373015,
+    "seen": 1794490966.7067585,
+    "ast_hash": "982608dc0967bf4a56f4bb7efdb12a79",
+    "semantic_hash": ""
+  },
+  "src/components/admin/buy-ads/BuyAdPerson.tsx": {
+    "mtime": 1794490810.4940364,
+    "seen": 1794490966.7067595,
+    "ast_hash": "49ceac5f5cdecaeff18f534ddb487d8f",
+    "semantic_hash": ""
+  },
+  "src/components/admin/buy-ads/BuyAdsFilters.tsx": {
+    "mtime": 1794490811.2700477,
+    "seen": 1794490966.7067604,
+    "ast_hash": "f4e2f7431376f7f2b4700276cdb454bb",
+    "semantic_hash": ""
+  },
+  "src/components/admin/buy-ads/BuyAdsManager.tsx": {
+    "mtime": 1794490862.7674744,
+    "seen": 1794490966.7067611,
+    "ast_hash": "67e2e78be6ce8804624bd39bd98cbadf",
+    "semantic_hash": ""
+  },
+  "src/components/admin/buy-ads/BuyAdsTable.tsx": {
+    "mtime": 1794490861.978874,
+    "seen": 1794490966.706762,
+    "ast_hash": "0f9fc71322ff8c24d742782de6b2ed67",
+    "semantic_hash": ""
+  },
+  "src/lib/admin-buy-ads-shared.ts": {
+    "mtime": 1794490630.1456926,
+    "seen": 1794490966.7107615,
+    "ast_hash": "b5296b1821ece1cbfe9179c1101b23ab",
+    "semantic_hash": ""
+  },
+  "src/lib/admin-buy-ads.ts": {
+    "mtime": 1794490683.3143125,
+    "seen": 1794490966.7107627,
+    "ast_hash": "e62125d3c12032e9d3be8720824008fb",
     "semantic_hash": ""
   }
 }

@@ -660,7 +660,7 @@ export function BuyAdOffersPanel({ initialState }: BuyAdOffersPanelProps) {
               <div className="flex items-start gap-2.5 rounded-2xl border border-red-500/25 bg-red-500/[0.06] px-4 py-3">
                 <Lock className="mt-0.5 h-4 w-4 shrink-0 text-panel-danger-2" />
                 <p className="text-[11px] leading-5 text-panel-text-2">
-                  قیمت‌دهی این آگهی توسط ثبت‌کننده بسته شده است. آخرین پیشنهادها به همین صورت ذخیره مانده‌اند.
+                  قیمت‌دهی این آگهی بسته شده است. آخرین پیشنهادها به همین صورت ذخیره مانده‌اند.
                   {state.myOffer && (
                     <>
                       {" "}

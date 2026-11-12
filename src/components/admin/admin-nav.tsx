@@ -116,6 +116,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
             enLabel: "ALL ADS",
             href: "/admin/ads",
           },
+          {
+            key: "buy_ads",
+            label: "آگهی‌های خرید",
+            enLabel: "BUY ADS",
+            href: "/admin/buy-ads",
+          },
         ],
       },
     ],
