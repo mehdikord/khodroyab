@@ -11,7 +11,7 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
-import { CURRENCY_LABELS, type PriceCurrency } from "@/lib/currency";
+import { CURRENCY_LABELS, convertPrice, currencyLabel, type PriceCurrency } from "@/lib/currency";
 
 function initials(name: string, count: number): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -100,6 +100,31 @@ export function PriceTag({
   );
 }
 
+/**
+ * Small "≈ equivalent" of a price in the other currency (rial ↔ dollar) at the
+ * open-market rate; nothing when the price is blank or no rate is known.
+ */
+export function PriceEquivalent({
+  price,
+  currency,
+  rialPerUsd,
+  className,
+}: {
+  price: string | null | undefined;
+  currency: PriceCurrency;
+  rialPerUsd: number | null | undefined;
+  className?: string;
+}) {
+  if (!price || !rialPerUsd) return null;
+  const converted = convertPrice(Number(price.replace(/[^\d]/g, "")), currency, rialPerUsd);
+  if (!converted || converted.amount <= 0) return null;
+  return (
+    <span className={cn("block whitespace-nowrap text-[9px] font-semibold leading-4 tabular-nums text-panel-muted-2", className)}>
+      ≈ {formatPersianNumber(converted.amount)} {currencyLabel(converted.currency)}
+    </span>
+  );
+}
+
 /** Short labels of the three prices inside a year cell. */
 export const SHORT_PRICE_LABELS: Record<PriceTablePriceField, string> = {
   priceUsd: "خام",
@@ -131,7 +156,8 @@ export function ColumnHeading({ column, active = false, className }: { column: P
  * with short labels, or a single dash when nothing was priced for that
  * (year, colour). `best` marks fields that equal the column's lowest price.
  * With `showPartner` (verified collaborators) each price is followed by its
- * collaborator price.
+ * collaborator price. With `rialPerUsd` each price also shows its small
+ * equivalent in the other currency.
  */
 export function YearPrices({
   prices,
@@ -139,6 +165,7 @@ export function YearPrices({
   best,
   highlight,
   showPartner = false,
+  rialPerUsd = null,
   className,
 }: {
   prices: Record<PriceTableAnyPriceField, string | null> | undefined;
@@ -148,6 +175,8 @@ export function YearPrices({
   /** Field to emphasise (the active sort field). */
   highlight?: PriceTablePriceField;
   showPartner?: boolean;
+  /** Open-market rial per dollar; enables the converted-price hints. */
+  rialPerUsd?: number | null;
   className?: string;
 }) {
   if (!prices) {
@@ -165,15 +194,17 @@ export function YearPrices({
             <dt className={cn("text-[10px] font-bold", highlight === field.key ? "text-panel-accent" : "text-panel-muted")}>
               {SHORT_PRICE_LABELS[field.key]}
             </dt>
-            <dd>
+            <dd className="flex flex-col items-end">
               <PriceTag price={prices[field.key]} currency={currency} best={Boolean(best?.[field.key])} size="sm" />
+              <PriceEquivalent price={prices[field.key]} currency={currency} rialPerUsd={rialPerUsd} className="mt-0.5" />
             </dd>
           </div>
           {showPartner && (
             <div className="mt-1 flex items-center justify-between gap-2">
               <dt className="text-[9px] font-bold text-sky-500/90">همکار</dt>
-              <dd>
+              <dd className="flex flex-col items-end">
                 <PriceTag price={prices[field.partnerKey]} currency={currency} best={Boolean(best?.[field.partnerKey])} partner size="sm" />
+                <PriceEquivalent price={prices[field.partnerKey]} currency={currency} rialPerUsd={rialPerUsd} className="mt-0.5 text-sky-500/70" />
               </dd>
             </div>
           )}

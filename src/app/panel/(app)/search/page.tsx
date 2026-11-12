@@ -10,6 +10,7 @@ import {
   searchApprovedAds,
   type SearchFilterValues,
 } from "@/lib/panel-search";
+import { getConversionRates } from "@/lib/market-rates";
 import { LiveClock } from "@/components/panel/search/LiveClock";
 import { SearchFilters } from "@/components/panel/search/SearchFilters";
 import { AdCard } from "@/components/panel/search/AdCard";
@@ -69,7 +70,13 @@ export default async function PanelSearchPage({ searchParams }: { searchParams: 
   const filters = parseFilters(searchParams);
   const requestedPage = Math.max(1, Number.parseInt(single(searchParams.page), 10) || 1);
 
-  const [result, options] = await Promise.all([searchApprovedAds(filters, requestedPage, user.isPartner), getSearchOptions()]);
+  // Same cached open-market quote as the dashboard and ads; never a fresh request per view.
+  const [result, options, rates] = await Promise.all([
+    searchApprovedAds(filters, requestedPage, user.isPartner),
+    getSearchOptions(),
+    getConversionRates(),
+  ]);
+  const rialPerUsd = rates?.usd?.priceRial ?? null;
 
   const hasFilters =
     Boolean(filters.q || filters.brand || filters.carType || filters.saleTerm || filters.color || filters.yearFrom || filters.yearTo);
@@ -125,7 +132,7 @@ export default async function PanelSearchPage({ searchParams }: { searchParams: 
         <>
           <div key={`${filtersKey}:${result.page}`} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {result.ads.map((ad, index) => (
-              <AdCard key={ad.id} ad={ad} delay={Math.min(index, 8) * 45} />
+              <AdCard key={ad.id} ad={ad} delay={Math.min(index, 8) * 45} rialPerUsd={rialPerUsd} />
             ))}
           </div>
           <SearchPagination page={result.page} pageCount={result.pageCount} baseQuery={baseQuery} pathname={PATHNAME} />

@@ -5,7 +5,8 @@ import type { LucideIcon } from "lucide-react";
 
 import { requireUser } from "@/lib/auth/user-auth";
 import { countPriceListSellers, listPriceListRows } from "@/lib/price-list";
-import { toPersianDigits } from "@/lib/utils";
+import { getConversionRates } from "@/lib/market-rates";
+import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
 import { LiveClock } from "@/components/panel/search/LiveClock";
 import { PriceListBrowser } from "@/components/panel/price-list/PriceListBrowser";
 
@@ -37,7 +38,11 @@ function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
 export default async function PanelPriceListPage() {
   const user = await requireUser();
 
-  const [rows, sellerCount] = await Promise.all([listPriceListRows(user.isPartner), countPriceListSellers()]);
+  // Same cached open-market quote as the dashboard and ads; never a fresh request per view.
+  const [rows, sellerCount, rates] = await Promise.all([listPriceListRows(user.isPartner), countPriceListSellers(), getConversionRates()]);
+  const rialPerUsd = rates?.usd?.priceRial ?? null;
+  // "1405/08/20 14:30:12" → "۱۴۰۵/۰۸/۲۰ ۱۴:۳۰"
+  const rateUpdatedAt = rates?.usd?.updatedAtJalali ? toPersianDigits(rates.usd.updatedAtJalali.slice(0, 16)) : null;
   const pricedCount = rows.filter((row) => row.sellerCount > 0).length;
 
   return (
@@ -84,10 +89,17 @@ export default async function PanelPriceListPage() {
         </div>
       ) : (
         <>
-          <PriceListBrowser rows={rows} showPartner={user.isPartner} />
+          <PriceListBrowser rows={rows} showPartner={user.isPartner} rialPerUsd={rialPerUsd} />
           <p className="text-[11px] leading-6 text-panel-faint">
             قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) هستند. هر ستون یک سال ساخت، رنگ و واحد قیمت است و کمترین قیمت خام، ترخیصی و فوری آن را از بین جدول قیمت فروشندگان
             نشان می‌دهد؛ «—» یعنی برای آن سال و رنگ قیمتی ثبت نشده است. برای دیدن قیمت همه فروشندگان روی هر ردیف بزنید.
+            {rialPerUsd && (
+              <>
+                {" "}
+                معادل‌های کوچک زیر هر قیمت (≈) تقریبی و بر اساس نرخ لحظه‌ای دلار آزاد ({formatPersianNumber(rialPerUsd)} ریال
+                {rateUpdatedAt && <> · {rateUpdatedAt}</>}) محاسبه شده‌اند.
+              </>
+            )}
           </p>
         </>
       )}

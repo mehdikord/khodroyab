@@ -4,17 +4,18 @@ import { CalendarDays, Car, Gauge, HandCoins } from "lucide-react";
 
 import type { SearchAdRecord } from "@/lib/panel-search-shared";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import { cn, formatMileage, toPersianDigits } from "@/lib/utils";
-import { CURRENCY_LABELS } from "@/lib/currency";
+import { cn, formatMileage, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { convertPrice, currencyLabel } from "@/lib/currency";
 import { CopyCodeButton } from "@/components/panel/search/CopyCodeButton";
 import { SafeImage } from "@/components/panel/SafeImage";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
-import { PriceDeltaBadge } from "@/components/panel/search/PriceDeltaBadge";
 
 interface AdCardProps {
   ad: SearchAdRecord;
   /** Entrance animation delay in ms. */
   delay?: number;
+  /** Open-market rial per dollar for the converted-price hint; null hides it. */
+  rialPerUsd?: number | null;
 }
 
 const MAX_TERMS = 3;
@@ -34,11 +35,11 @@ function NoImage() {
 
 /**
  * Public-safe ad card for the customer search: car identity, the seller's
- * (copyable) public code, cover photo, sale-term titles with their
- * price-change badges and the (copyable) ad code. The whole card opens the
+ * (copyable) public code, cover photo, sale terms (title + current price and
+ * its small equivalent in the other currency) and the (copyable) ad code. The whole card opens the
  * ad's page. Never shows the seller's name, photo or contact details.
  */
-export function AdCard({ ad, delay = 0 }: AdCardProps) {
+export function AdCard({ ad, delay = 0, rialPerUsd = null }: AdCardProps) {
   const visibleTerms = ad.saleTerms.slice(0, MAX_TERMS);
   const hiddenTerms = ad.saleTerms.length - visibleTerms.length;
 
@@ -136,22 +137,38 @@ export function AdCard({ ad, delay = 0 }: AdCardProps) {
           <p className="mb-1.5 flex items-center gap-1 text-[10px] text-panel-faint">
             <HandCoins className="h-3 w-3" />
             شرایط فروش
-            <span className="ms-auto rounded-md border border-panel-line/[0.1] px-1.5 py-px text-[9px] font-bold text-panel-muted">
-              قیمت به {CURRENCY_LABELS[ad.currency]}
-            </span>
           </p>
           {visibleTerms.length === 0 ? (
             <p className="text-[11px] text-panel-faint">شرایطی ثبت نشده است</p>
           ) : (
-            <ul className="flex flex-wrap gap-1.5">
-              {visibleTerms.map((term) => (
-                <li key={term.id} className="inline-flex items-center gap-1">
-                  <PriceDeltaBadge term={term} />
-                </li>
-              ))}
+            <ul className="space-y-1.5">
+              {visibleTerms.map((term) => {
+                const converted = rialPerUsd ? convertPrice(term.currentPrice, term.currency, rialPerUsd) : null;
+                return (
+                  <li
+                    key={term.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-panel-line/[0.06] bg-panel-line/[0.025] py-1.5 pe-2 ps-1.5"
+                  >
+                    <span className="min-w-0 truncate rounded-lg border border-[#FF6A00]/25 bg-[#FF6A00]/[0.08] px-2 py-0.5 text-[11px] font-bold text-panel-accent-soft">
+                      {term.title}
+                    </span>
+                    <span className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-1.5 text-end">
+                      <span className="whitespace-nowrap text-[13px] font-black tabular-nums text-panel-success">
+                        {formatPersianNumber(term.currentPrice)}
+                        <span className="ms-1 text-[10px] font-bold opacity-80">{currencyLabel(term.currency)}</span>
+                      </span>
+                      {converted && converted.amount > 0 && (
+                        <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums text-panel-muted-2">
+                          ≈ {formatPersianNumber(converted.amount)} {currencyLabel(converted.currency)}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
               {hiddenTerms > 0 && (
-                <li className="rounded-lg border border-panel-line/[0.1] bg-panel-line/[0.04] px-2 py-1 text-[11px] font-bold text-panel-muted">
-                  +{toPersianDigits(hiddenTerms)}
+                <li className="text-[10px] font-bold text-panel-muted">
+                  +{toPersianDigits(hiddenTerms)} شرط فروش دیگر
                 </li>
               )}
             </ul>

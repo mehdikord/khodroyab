@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/price-list/page.tsx": {
-    "mtime": 1794407628.164701,
-    "seen": 1794407710.3164709,
-    "ast_hash": "b18e1da4bf2f30e52a7ce137ff19fd84",
+    "mtime": 1794503534.4983387,
+    "seen": 1794503544.0813403,
+    "ast_hash": "25434425fd7c5312e907249227451d04",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/price-table/actions.ts": {
@@ -504,10 +504,10 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/search/page.tsx": {
-    "mtime": 1793644218.3428328,
-    "seen": 1794215896.0740802,
-    "ast_hash": "8092f3a1546aea38c4484b3eb0353893",
-    "semantic_hash": "8092f3a1546aea38c4484b3eb0353893"
+    "mtime": 1794503794.7941284,
+    "seen": 1794503802.0888443,
+    "ast_hash": "823ba088fe0731ec2f52391159f76975",
+    "semantic_hash": ""
   },
   "src/app/panel/(app)/verification/actions.ts": {
     "mtime": 1793881974.0842586,
@@ -1116,15 +1116,15 @@
     "semantic_hash": "74c231e7e647b1e133f747161b2ccab3"
   },
   "src/components/panel/price-list/PriceListBrowser.tsx": {
-    "mtime": 1794407597.5241442,
-    "seen": 1794407710.3189557,
-    "ast_hash": "1e48d60342763a6f2eeb88b0bdeefe4c",
+    "mtime": 1794503534.4982388,
+    "seen": 1794503544.0845058,
+    "ast_hash": "c4a531676ca88d44c84bc70846006387",
     "semantic_hash": ""
   },
   "src/components/panel/price-list/price-list-ui.tsx": {
-    "mtime": 1794407580.3595219,
-    "seen": 1794407710.318957,
-    "ast_hash": "1b60e06883f578b081b6a785ef23eade",
+    "mtime": 1794503534.4980464,
+    "seen": 1794503544.0845065,
+    "ast_hash": "6e8e2c764b833c41aeb8dc77539a2f58",
     "semantic_hash": ""
   },
   "src/components/panel/price-table/MyPriceTableManager.tsx": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": "2f63b8e88da6d342f742d83582451a52"
   },
   "src/components/panel/search/AdCard.tsx": {
-    "mtime": 1794407392.2024405,
-    "seen": 1794407710.31904,
-    "ast_hash": "b8f226336d1998d59a96d859cb718983",
+    "mtime": 1794503794.7939258,
+    "seen": 1794503802.0921483,
+    "ast_hash": "9e91a3794fd12184cc32cb2a1e0bb565",
     "semantic_hash": ""
   },
   "src/components/panel/search/CopyCodeButton.tsx": {
@@ -1174,12 +1174,6 @@
     "seen": 1794215896.074193,
     "ast_hash": "53006aa2677542f4e7feff838db7b13a",
     "semantic_hash": "53006aa2677542f4e7feff838db7b13a"
-  },
-  "src/components/panel/search/PriceDeltaBadge.tsx": {
-    "mtime": 1794407392.2106054,
-    "seen": 1794407710.3190944,
-    "ast_hash": "d80f4eb774725f3a5b71c3b3be13dde2",
-    "semantic_hash": ""
   },
   "src/components/panel/search/PriceHistoryChart.tsx": {
     "mtime": 1794407402.522384,
