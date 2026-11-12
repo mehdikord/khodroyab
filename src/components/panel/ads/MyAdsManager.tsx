@@ -44,7 +44,7 @@ export function MyAdsManager({ ads, canPublish }: MyAdsManagerProps) {
       {/* Header */}
       <div className="admin-animate-in flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-black text-panel-text sm:text-2xl">آگهی‌های من</h1>
+          <h1 className="text-xl font-black text-panel-text sm:text-2xl">آگهی‌های فروش من</h1>
           <p className="mt-1 text-xs text-panel-muted sm:text-sm">
             {ads.length === 0
               ? "هنوز آگهی‌ای ثبت نکرده‌اید."

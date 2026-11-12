@@ -25,8 +25,25 @@ function NoImage() {
   );
 }
 
-/** First step of a new ad: search the catalogue and pick a car. */
-export function AdCarPicker({ cars }: { cars: AdCarChoice[] }) {
+interface AdCarPickerProps {
+  cars: AdCarChoice[];
+  /** Each car links to `${basePath}/${carId}`. */
+  basePath?: string;
+  backHref?: string;
+  backLabel?: string;
+  title?: string;
+  subtitle?: string;
+}
+
+/** First step of a new ad (sale or buy): search the catalogue and pick a car. */
+export function AdCarPicker({
+  cars,
+  basePath = "/panel/ads/new",
+  backHref = "/panel/ads",
+  backLabel = "آگهی‌های من",
+  title = "ثبت آگهی جدید",
+  subtitle = "خودروی مورد نظر را انتخاب کنید تا به مرحله ورود اطلاعات آگهی بروید.",
+}: AdCarPickerProps) {
   const [query, setQuery] = useState("");
   const [brandId, setBrandId] = useState("");
 
@@ -56,12 +73,12 @@ export function AdCarPicker({ cars }: { cars: AdCarChoice[] }) {
   return (
     <div className="space-y-5">
       <div className="admin-animate-in">
-        <Link href="/panel/ads" className="inline-flex items-center gap-1.5 text-xs font-bold text-panel-muted hover:text-panel-text">
+        <Link href={backHref} className="inline-flex items-center gap-1.5 text-xs font-bold text-panel-muted hover:text-panel-text">
           <ArrowRight className="h-3.5 w-3.5" />
-          آگهی‌های من
+          {backLabel}
         </Link>
-        <h1 className="mt-2 text-xl font-black text-panel-text sm:text-2xl">ثبت آگهی جدید</h1>
-        <p className="mt-1 text-xs text-panel-muted sm:text-sm">خودروی مورد نظر را انتخاب کنید تا به مرحله ورود اطلاعات آگهی بروید.</p>
+        <h1 className="mt-2 text-xl font-black text-panel-text sm:text-2xl">{title}</h1>
+        <p className="mt-1 text-xs text-panel-muted sm:text-sm">{subtitle}</p>
       </div>
 
       <div className="group relative">
@@ -100,7 +117,7 @@ export function AdCarPicker({ cars }: { cars: AdCarChoice[] }) {
           {visible.map((car) => (
             <Link
               key={car.id}
-              href={`/panel/ads/new/${car.id}`}
+              href={`${basePath}/${car.id}`}
               className="group flex items-center gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-surface p-3 transition-colors hover:border-[#FF6A00]/40"
             >
               <span className="h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-panel-media">

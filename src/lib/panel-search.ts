@@ -45,7 +45,7 @@ function toBigIntOrNull(value: string): bigint | null {
 }
 
 /** Sellers whose content is public: collaborators with a verified identity. */
-const PUBLIC_SELLER_WHERE = { collabrate: true, authenticaed: true } satisfies Prisma.UserWhereInput;
+export const PUBLIC_SELLER_WHERE = { collabrate: true, authenticaed: true } satisfies Prisma.UserWhereInput;
 
 /** Only approved, active ads of verified collaborators are ever visible to customers. */
 const PUBLIC_AD_WHERE = { status: "approved", isActive: true, user: PUBLIC_SELLER_WHERE } satisfies Prisma.UserCarWhereInput;
@@ -224,6 +224,31 @@ export async function searchApprovedAds(filters: SearchFilterValues, requestedPa
 
   const sellerCodes = await sellerCodesFor(rows);
   return { ads: rows.map((row) => toSearchAdRecord(row, showPartner, sellerCodes)), total, page, pageCount, pageSize: SEARCH_PAGE_SIZE };
+}
+
+/** Number of sale ads every customer can see (the search tab badge). */
+export function countPublicSaleAds(): Promise<number> {
+  return prisma.userCar.count({ where: PUBLIC_AD_WHERE });
+}
+
+/**
+ * Public sale ads of one catalogue car, newest first: the offers that may
+ * satisfy a buy ad. Returns the total too, for the "see all" link.
+ */
+export async function getSaleAdsForCar(
+  carIdRaw: string,
+  showPartner: boolean,
+  limit = 3
+): Promise<{ ads: SearchAdRecord[]; total: number }> {
+  const carId = toBigIntOrNull(carIdRaw);
+  if (carId === null) return { ads: [], total: 0 };
+  const where = { ...PUBLIC_AD_WHERE, carId } satisfies Prisma.UserCarWhereInput;
+  const [total, rows] = await Promise.all([
+    prisma.userCar.count({ where }),
+    prisma.userCar.findMany({ where, include: searchInclude, orderBy: buildOrderBy("newest"), take: limit }),
+  ]);
+  const sellerCodes = await sellerCodesFor(rows);
+  return { ads: rows.map((row) => toSearchAdRecord(row, showPartner, sellerCodes)), total };
 }
 
 /**
