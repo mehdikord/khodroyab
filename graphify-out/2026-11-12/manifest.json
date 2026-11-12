@@ -504,10 +504,10 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/search/page.tsx": {
-    "mtime": 1793644218.3428328,
-    "seen": 1794215896.0740802,
-    "ast_hash": "8092f3a1546aea38c4484b3eb0353893",
-    "semantic_hash": "8092f3a1546aea38c4484b3eb0353893"
+    "mtime": 1794503794.7941284,
+    "seen": 1794503802.0888443,
+    "ast_hash": "823ba088fe0731ec2f52391159f76975",
+    "semantic_hash": ""
   },
   "src/app/panel/(app)/verification/actions.ts": {
     "mtime": 1793881974.0842586,
@@ -1158,9 +1158,9 @@
     "semantic_hash": "2f63b8e88da6d342f742d83582451a52"
   },
   "src/components/panel/search/AdCard.tsx": {
-    "mtime": 1794407392.2024405,
-    "seen": 1794407710.31904,
-    "ast_hash": "b8f226336d1998d59a96d859cb718983",
+    "mtime": 1794503794.7939258,
+    "seen": 1794503802.0921483,
+    "ast_hash": "9e91a3794fd12184cc32cb2a1e0bb565",
     "semantic_hash": ""
   },
   "src/components/panel/search/CopyCodeButton.tsx": {
@@ -1174,12 +1174,6 @@
     "seen": 1794215896.074193,
     "ast_hash": "53006aa2677542f4e7feff838db7b13a",
     "semantic_hash": "53006aa2677542f4e7feff838db7b13a"
-  },
-  "src/components/panel/search/PriceDeltaBadge.tsx": {
-    "mtime": 1794407392.2106054,
-    "seen": 1794407710.3190944,
-    "ast_hash": "d80f4eb774725f3a5b71c3b3be13dde2",
-    "semantic_hash": ""
   },
   "src/components/panel/search/PriceHistoryChart.tsx": {
     "mtime": 1794407402.522384,

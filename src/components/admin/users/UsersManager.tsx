@@ -259,10 +259,6 @@ export function UsersManager({ initialUsers, initialFilter, canManage, currentCo
               <th className="px-6 py-4">کاربر</th>
               <th className="px-6 py-4">کد کاربر</th>
               <th className="px-6 py-4">تلفن</th>
-              <th className="px-6 py-4">ایمیل</th>
-              <th className="px-6 py-4">کد ملی</th>
-              <th className="px-6 py-4">کد پستی</th>
-              <th className="px-6 py-4">آدرس</th>
               <th className="px-6 py-4 text-center">همکار</th>
               <th className="px-6 py-4 text-center">احراز هویت</th>
               <th className="px-6 py-4 text-center">وضعیت</th>
@@ -272,7 +268,7 @@ export function UsersManager({ initialUsers, initialFilter, canManage, currentCo
           <tbody className="divide-y divide-white/[0.05]">
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-6 py-10 text-center text-xs text-[#8B93A1]">
+                <td colSpan={7} className="px-6 py-10 text-center text-xs text-[#8B93A1]">
                   کاربری با این مشخصات یافت نشد.
                 </td>
               </tr>
@@ -313,10 +309,6 @@ export function UsersManager({ initialUsers, initialFilter, canManage, currentCo
                   )}
                 </td>
                 <td className="px-6 py-4 font-mono text-[#D2D7DF]">{user.phone}</td>
-                <td className="px-6 py-4 text-[#D2D7DF]">{user.email || "-"}</td>
-                <td className="px-6 py-4 text-[#D2D7DF]">{user.nationalCode || "-"}</td>
-                <td className="px-6 py-4 text-[#D2D7DF]">{user.postalCode || "-"}</td>
-                <td className="px-6 py-4 max-w-[220px] truncate text-[#D2D7DF]" title={user.address ?? ""}>{user.address || "-"}</td>
                 <td className="px-6 py-4 text-center">
                   {canManage ? (
                   <button
