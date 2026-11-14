@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft, Info, KeyRound, Loader2, Pencil, RotateCw, Shie
 
 import { cn, toPersianDigits } from "@/lib/utils";
 import { requestOtpAction, verifyOtpAction } from "@/app/panel/auth-actions";
+import { PANEL_HOME } from "@/lib/auth/public-panel";
 
 const fieldClass = (hasError: boolean) =>
   cn(
@@ -53,12 +54,17 @@ function FormAlert({ message }: { message: string | null }) {
   );
 }
 
+interface UserAuthCardProps {
+  /** Validated panel path to open after signing in (defaults to the dashboard). */
+  next?: string | null;
+}
+
 /**
  * Customer sign-in / sign-up with a one-time SMS code. One flow for everyone:
  * the mobile number gets a code; a number without an account is also asked for
  * the customer's name, and the account is created when the code is confirmed.
  */
-export const UserAuthCard: React.FC = () => {
+export const UserAuthCard: React.FC<UserAuthCardProps> = ({ next }) => {
   const router = useRouter();
   const phoneId = useId();
   const nameId = useId();
@@ -118,7 +124,7 @@ export const UserAuthCard: React.FC = () => {
     startTransition(async () => {
       const result = await verifyOtpAction(formData);
       if (result.ok) {
-        router.replace("/panel/dashboard");
+        router.replace(next ?? PANEL_HOME);
         router.refresh();
         return;
       }
@@ -228,11 +234,11 @@ export const UserAuthCard: React.FC = () => {
         <div className="flex items-start gap-2 rounded-2xl border border-sky-500/25 bg-sky-500/[0.08] px-4 py-3 text-xs leading-6 text-panel-muted">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
           <span>
-            ارسال پیامک هنوز فعال نشده است؛ کد تایید موقت{" "}
+            برای ورود کد{" "}
             <span dir="ltr" className="font-mono font-bold text-panel-text">
               {toPersianDigits("123456")}
             </span>{" "}
-            است.
+            را وارد کنید
           </span>
         </div>
       )}

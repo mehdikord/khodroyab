@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SearchX, Sparkles } from "lucide-react";
 
-import { requireUser } from "@/lib/auth/user-auth";
+import { getCurrentUser } from "@/lib/auth/user-auth";
 import {
   getSearchOptions,
   isSearchSort,
@@ -17,8 +17,7 @@ import { AdCard } from "@/components/panel/search/AdCard";
 import { SearchPagination } from "@/components/panel/search/SearchPagination";
 
 export const metadata: Metadata = {
-  title: "جستجوی خودرو | پنل کاربری خودرو یاب",
-  robots: "noindex, nofollow",
+  title: "جستجوی خودرو | خودرو یاب",
 };
 
 export const dynamic = "force-dynamic";
@@ -61,18 +60,18 @@ function filtersToQuery(filters: SearchFilterValues): string {
 }
 
 /**
- * Customer car search: every approved, active sale ad in the system, with
- * text search, advanced filters, sorting and pagination.
+ * Car search: every approved, active sale ad in the system, with text search,
+ * advanced filters, sorting and pagination. Open to guests (public prices only).
  */
 export default async function PanelSearchPage({ searchParams }: { searchParams: SearchParams }) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   const filters = parseFilters(searchParams);
   const requestedPage = Math.max(1, Number.parseInt(single(searchParams.page), 10) || 1);
 
   // Same cached open-market quote as the dashboard and ads; never a fresh request per view.
   const [result, options, rates] = await Promise.all([
-    searchApprovedAds(filters, requestedPage, user.isPartner),
+    searchApprovedAds(filters, requestedPage, user?.isPartner ?? false),
     getSearchOptions(),
     getConversionRates(),
   ]);

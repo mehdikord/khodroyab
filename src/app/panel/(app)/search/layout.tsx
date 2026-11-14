@@ -1,15 +1,19 @@
 import React from "react";
 
-import { requireUser } from "@/lib/auth/user-auth";
+import { getCurrentUser } from "@/lib/auth/user-auth";
 import { countPublicSaleAds } from "@/lib/panel-search";
 import { countPublicBuyAds } from "@/lib/buy-ads";
 import { AdKindTabs } from "@/components/panel/ads/AdKindTabs";
 
 export const dynamic = "force-dynamic";
 
-/** Car search: the sale / buy tabs stay mounted while the user switches between them. */
+/**
+ * Car search: the sale / buy tabs stay mounted while the user switches between them.
+ * Guests only have the sale ads (buy ads are for members), so they get no tabs.
+ */
 export default async function SearchTabsLayout({ children }: { children: React.ReactNode }) {
-  await requireUser();
+  const user = await getCurrentUser();
+  if (!user) return <>{children}</>;
   const [saleCount, buyCount] = await Promise.all([countPublicSaleAds(), countPublicBuyAds()]);
 
   return (

@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/components/panel/dashboard/SearchAdsCard.tsx"
+        ],
+        "createdAt": "2026-11-14T20:52:22.841Z",
+        "reason": "Claude: matches the project's existing brand pattern; the login heading in src/app/panel/page.tsx uses the same orange gradient text"
+      }
+    ]
+  }
+}

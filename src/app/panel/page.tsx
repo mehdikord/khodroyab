@@ -2,8 +2,10 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
+import { PANEL_HOME, safePanelNext } from "@/lib/auth/public-panel";
 import { listActiveSponsors } from "@/lib/sponsors";
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
@@ -11,18 +13,28 @@ import { SponsorsMarquee } from "@/components/panel/SponsorsMarquee";
 import { UserAuthCard } from "@/components/panel/UserAuthCard";
 
 export const metadata: Metadata = {
-  title: "ورود / ثبت‌نام | پنل کاربری خودرو یاب",
-  description: "ورود یا ثبت‌نام کاربران خودرو یاب برای جستجوی خودرو و مدیریت آگهی‌ها",
+  title: "ورود یا ثبت‌نام همکاران | خودرو یاب",
+  description: "ورود یا ثبت‌نام همکاران خودرو یاب برای مدیریت آگهی‌ها و جدول قیمت",
   robots: "noindex, nofollow",
 };
 
-/** Customer login / registration screen at exactly `/panel`, with the active sponsors' logo strip at the top. */
-export default async function PanelLoginPage() {
+interface PageProps {
+  searchParams: Record<string, string | string[] | undefined>;
+}
+
+/**
+ * Login / registration screen at exactly `/panel`, with the active sponsors'
+ * logo strip at the top. `?next=` (a panel path) is where the visitor returns
+ * after signing in, e.g. the profile page they tapped as a guest.
+ */
+export default async function PanelLoginPage({ searchParams }: PageProps) {
+  const next = safePanelNext(searchParams.next);
+
   // A *valid* session skips the login screen. A stale/invalid cookie simply
   // falls through to the form (never trusted without verification).
   const user = await getCurrentUser();
   if (user) {
-    redirect("/panel/dashboard");
+    redirect(next ?? PANEL_HOME);
   }
 
   const sponsors = await listActiveSponsors();
@@ -45,12 +57,21 @@ export default async function PanelLoginPage() {
           sponsors.length > 0 ? "pt-8" : "pt-[max(2.5rem,env(safe-area-inset-top))]"
         )}
       >
+        {/* Back to the public site */}
+        <Link
+          href={PANEL_HOME}
+          className="admin-animate-in mb-6 inline-flex items-center gap-1.5 self-start rounded-xl px-1 py-1 text-xs font-bold text-panel-muted transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40"
+        >
+          <ArrowRight className="h-4 w-4" />
+          بازگشت به خودرو یاب
+        </Link>
+
         {/* Brand */}
         <div className="admin-animate-in flex flex-col items-center text-center">
           <PanelLogo markOnly size="lg" />
           <h1 className="mt-5 text-2xl font-black tracking-tight text-panel-text sm:text-3xl">
-            پنل کاربری
-            <span className="bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] bg-clip-text text-transparent"> خودرو یاب</span>
+            ورود یا ثبت‌نام
+            <span className="bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] bg-clip-text text-transparent"> همکاران</span>
           </h1>
           <p className="mt-2 max-w-xs text-sm leading-7 text-panel-muted">
             با شماره موبایل و کد تایید پیامکی وارد شوید؛ اگر حساب ندارید، همین‌جا ساخته می‌شود.
@@ -62,7 +83,7 @@ export default async function PanelLoginPage() {
           className="admin-animate-in mt-8 rounded-3xl border border-panel-line/[0.1] bg-panel-surface/95 p-5 shadow-[0_40px_80px_rgba(0,0,0,0.9),0_0_60px_rgba(255,106,0,0.07)] backdrop-blur-2xl sm:p-7"
           style={{ animationDelay: "80ms" }}
         >
-          <UserAuthCard />
+          <UserAuthCard next={next} />
         </div>
       </div>
 

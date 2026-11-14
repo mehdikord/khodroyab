@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { requireUser } from "@/lib/auth/user-auth";
+import { getCurrentUser } from "@/lib/auth/user-auth";
 import { getAdDetail } from "@/lib/panel-search";
 import { getConversionRates } from "@/lib/market-rates";
 import { toPersianDigits } from "@/lib/utils";
@@ -10,19 +10,21 @@ import type { UsdRateInfo } from "@/lib/currency";
 import { AdDetailView } from "@/components/panel/ads/AdDetailView";
 
 export const metadata: Metadata = {
-  title: "جزئیات آگهی | پنل کاربری خودرو یاب",
-  robots: "noindex, nofollow",
+  title: "جزئیات آگهی | خودرو یاب",
 };
 
 export const dynamic = "force-dynamic";
 
-/** Dedicated page of one sale ad. */
+/**
+ * Dedicated page of one sale ad. Guests may open any public ad (public prices
+ * only); a signed-in owner also sees their own pending / rejected / inactive ad.
+ */
 export default async function AdDetailPage({ params }: { params: { id: string } }) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   // Same cached open-market quote as the dashboard; never a fresh request per view.
   const [ad, rates] = await Promise.all([
-    getAdDetail(params.id, { id: user.id, isPartner: user.isPartner }),
+    getAdDetail(params.id, { id: user?.id ?? null, isPartner: user?.isPartner ?? false }),
     getConversionRates(),
   ]);
   if (!ad) notFound();

@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { OTP_IS_PLACEHOLDER, requestOtp, verifyOtp } from "@/lib/auth/otp";
 import { checkRateLimit, recordFailedAttempt, resetAttempts } from "@/lib/auth/rate-limit";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
+import { PANEL_HOME } from "@/lib/auth/public-panel";
 import {
   clearUserSessionCookie,
   issueUserSessionToken,
@@ -188,8 +189,8 @@ export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActi
   }
 }
 
-/** Destroy the current user session. */
+/** Destroy the current user session; the visitor stays on the public dashboard as a guest. */
 export async function logoutUserAction(): Promise<void> {
   clearUserSessionCookie();
-  redirect("/panel");
+  redirect(PANEL_HOME);
 }

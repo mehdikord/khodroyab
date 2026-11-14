@@ -309,24 +309,26 @@ const adDetailInclude = {
   options: userCarOptionsInclude,
 } satisfies Prisma.UserCarInclude;
 
-/** Who is looking at an ad: their id and whether they are a verified collaborator. */
+/** Who is looking at an ad: their id (`null` for a guest) and whether they are a verified collaborator. */
 export interface AdViewer {
-  id: string;
+  id: string | null;
   isPartner: boolean;
 }
 
 /**
- * One ad for its dedicated page. Other customers only reach approved, active
- * ads; the owner also reaches their own pending, rejected or deactivated ones.
- * Collaborator prices are shown to verified collaborators and to the owner.
+ * One ad for its dedicated page. Guests and other customers only reach
+ * approved, active ads; the owner also reaches their own pending, rejected or
+ * deactivated ones. Collaborator prices are shown to verified collaborators
+ * and to the owner.
  */
 export async function getAdDetail(idRaw: string, adViewer: AdViewer): Promise<AdDetailRecord | null> {
   const id = toBigIntOrNull(idRaw);
-  const viewer = toBigIntOrNull(adViewer.id);
-  if (id === null || viewer === null) return null;
+  if (id === null) return null;
+  const viewer = adViewer.id === null ? null : toBigIntOrNull(adViewer.id);
+  if (adViewer.id !== null && viewer === null) return null;
 
   const row = await prisma.userCar.findFirst({
-    where: { id, OR: [PUBLIC_AD_WHERE, { userId: viewer }] },
+    where: viewer === null ? { id, ...PUBLIC_AD_WHERE } : { id, OR: [PUBLIC_AD_WHERE, { userId: viewer }] },
     include: adDetailInclude,
   });
   if (!row) return null;

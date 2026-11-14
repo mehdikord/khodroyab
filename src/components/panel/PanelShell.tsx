@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
@@ -15,6 +15,7 @@ import { ConsultationFab } from "@/components/panel/ConsultationFab";
 import { PanelNotice } from "@/components/panel/PanelNotice";
 import { PanelDrawer } from "@/components/panel/PanelDrawer";
 import type { PanelTheme } from "@/lib/panel-theme";
+import { panelLoginHref } from "@/lib/auth/public-panel";
 
 export interface PanelShellUser {
   name: string;
@@ -27,7 +28,8 @@ export interface PanelShellUser {
 }
 
 interface PanelShellProps {
-  user: PanelShellUser;
+  /** Signed-in customer, or `null` for a guest browsing the public pages. */
+  user: PanelShellUser | null;
   /** Server-resolved theme (from cookie). */
   theme: PanelTheme;
   /** Free-consultation phone number (system settings); empty hides the floating button. */
@@ -63,7 +65,7 @@ function Avatar({ user, className }: { user: PanelShellUser; className?: string 
 }
 
 /** Fixed bottom dock holding the panel's main navigation. */
-function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean }) {
+function Dock({ pathname, collabrate, guest }: { pathname: string; collabrate: boolean; guest: boolean }) {
   const active = findActivePanelItem(pathname);
   return (
     <nav aria-label="ناوبری اصلی پنل" className="panel-dock pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-3">
@@ -76,10 +78,12 @@ function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean 
         {panelNavItemsFor(collabrate).map((item) => {
           const Icon = item.icon;
           const isActive = active?.key === item.key;
+          // Guests reach account-only items (profile) through the sign-in screen.
+          const href = guest && item.requiresAccount ? panelLoginHref(item.href) : item.href;
           return (
             <Link
               key={item.key}
-              href={item.href}
+              href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 item.secondary ? "hidden md:flex" : "flex",
@@ -115,7 +119,24 @@ function Dock({ pathname, collabrate }: { pathname: string; collabrate: boolean 
   );
 }
 
-/** Customer-panel chrome: sticky top bar, content area, fixed bottom dock. */
+/** Sign-in button shown in the top bar to guests, in place of the account menu. */
+function GuestSignIn({ pathname }: { pathname: string }) {
+  return (
+    <Link
+      href={panelLoginHref(pathname)}
+      className="group flex h-10 shrink-0 items-center gap-2 rounded-full bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-3.5 text-xs font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/50 active:scale-95 sm:px-4 sm:text-sm"
+    >
+      <LogIn className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+      <span>ورود همکاران</span>
+    </Link>
+  );
+}
+
+/**
+ * Customer-panel chrome: sticky top bar, content area, fixed bottom dock.
+ * Guests (no `user`) see the same chrome with a sign-in button instead of the
+ * account menu; account-only dock items take them to the sign-in screen.
+ */
 export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultationPhone, notice, children }) => {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -165,75 +186,71 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
           {/* Theme switch */}
           <ThemeSwitch initialTheme={theme} />
 
-          {/* Account menu */}
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((value) => !value)}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              className="flex items-center gap-2 rounded-full border border-panel-line/[0.08] bg-panel-surface p-1 pe-2.5 transition-colors hover:border-[#FF6A00]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40"
-            >
-              <Avatar user={user} className="h-8 w-8" />
-              <span className="hidden max-w-[120px] truncate text-xs font-bold text-panel-text sm:block">{user.name}</span>
-              <ChevronDown className={cn("h-4 w-4 text-panel-faint transition-transform", menuOpen && "rotate-180")} />
-            </button>
-
-            {menuOpen && (
-              <div
-                role="menu"
-                className="admin-animate-in absolute end-0 mt-2 w-64 overflow-hidden rounded-2xl border border-panel-line/[0.1] bg-panel-surface shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+          {/* Account menu (guests get a sign-in button instead) */}
+          {!user ? (
+            <GuestSignIn pathname={pathname} />
+          ) : (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((value) => !value)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="flex items-center gap-2 rounded-full border border-panel-line/[0.08] bg-panel-surface p-1 pe-2.5 transition-colors hover:border-[#FF6A00]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40"
               >
-                <div className="flex items-center gap-3 border-b border-panel-line/[0.07] px-4 py-3">
-                  <Avatar user={user} className="h-10 w-10 text-sm" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-panel-text">{user.name}</p>
-                    <p dir="ltr" className="mt-0.5 text-start font-mono text-[11px] text-panel-muted">
-                      {user.phone}
-                    </p>
+                <Avatar user={user} className="h-8 w-8" />
+                <span className="hidden max-w-[120px] truncate text-xs font-bold text-panel-text sm:block">{user.name}</span>
+                <ChevronDown className={cn("h-4 w-4 text-panel-faint transition-transform", menuOpen && "rotate-180")} />
+              </button>
+
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="admin-animate-in absolute end-0 mt-2 w-64 overflow-hidden rounded-2xl border border-panel-line/[0.1] bg-panel-surface shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+                >
+                  <div className="flex items-center gap-3 border-b border-panel-line/[0.07] px-4 py-3">
+                    <Avatar user={user} className="h-10 w-10 text-sm" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-panel-text">{user.name}</p>
+                      <p dir="ltr" className="mt-0.5 text-start font-mono text-[11px] text-panel-muted">
+                        {user.phone}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-1.5">
+                    {user.collabrate && (
+                      <Link
+                        href="/panel/verification"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
+                      >
+                        <ShieldCheck className={cn("h-4 w-4", user.authenticaed ? "text-panel-success" : "text-panel-warning")} />
+                        <span>احراز هویت</span>
+                        <span
+                          className={cn(
+                            "ms-auto rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                            user.authenticaed ? "bg-emerald-500/10 text-panel-success" : "bg-panel-warning/10 text-panel-warning"
+                          )}
+                        >
+                          {user.authenticaed ? "تایید شده" : "انجام نشده"}
+                        </span>
+                      </Link>
+                    )}
+                    <form action={logoutUserAction}>
+                      <button
+                        type="submit"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-panel-danger transition-colors hover:bg-red-500/10 hover:text-panel-danger"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>خروج از حساب</span>
+                      </button>
+                    </form>
                   </div>
                 </div>
-                <div className="p-1.5">
-                  {user.collabrate && (
-                    <Link
-                      href="/panel/verification"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
-                    >
-                      <ShieldCheck className={cn("h-4 w-4", user.authenticaed ? "text-panel-success" : "text-panel-warning")} />
-                      <span>احراز هویت</span>
-                      <span
-                        className={cn(
-                          "ms-auto rounded-md px-1.5 py-0.5 text-[10px] font-bold",
-                          user.authenticaed ? "bg-emerald-500/10 text-panel-success" : "bg-panel-warning/10 text-panel-warning"
-                        )}
-                      >
-                        {user.authenticaed ? "تایید شده" : "انجام نشده"}
-                      </span>
-                    </Link>
-                  )}
-                  <Link
-                    href="/"
-                    role="menuitem"
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>مشاهده سایت خودرو یاب</span>
-                  </Link>
-                  <form action={logoutUserAction}>
-                    <button
-                      type="submit"
-                      role="menuitem"
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-panel-danger transition-colors hover:bg-red-500/10 hover:text-panel-danger"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>خروج از حساب</span>
-                    </button>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -244,13 +261,13 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
         style={consultationPhone ? { paddingBottom: "calc(var(--panel-dock-space) + 4.5rem)" } : undefined}
       >
         {notice && <PanelNotice text={notice} />}
-        {user.collabrate && !user.authenticaed && !pathname.startsWith("/panel/verification") && <VerificationNotice />}
+        {user?.collabrate && !user.authenticaed && !pathname.startsWith("/panel/verification") && <VerificationNotice />}
         {children}
       </div>
 
       {consultationPhone && <ConsultationFab phone={consultationPhone} />}
 
-      <Dock pathname={pathname} collabrate={user.collabrate} />
+      <Dock pathname={pathname} collabrate={user?.collabrate ?? false} guest={!user} />
     </div>
   );
 };

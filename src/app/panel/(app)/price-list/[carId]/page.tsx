@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Crown, UsersRound } from "lucide-react";
 
-import { requireUser } from "@/lib/auth/user-auth";
+import { getCurrentUser } from "@/lib/auth/user-auth";
 import { getPriceListCarDetail } from "@/lib/price-list";
 import { PRICE_TABLE_PRICE_FIELDS } from "@/lib/price-table-shared";
 import { toPersianDigits } from "@/lib/utils";
@@ -23,17 +23,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const detail = await getPriceListCarDetail(params.carId, false, null);
   return {
     title: detail
-      ? `لیست قیمت‌های ${detail.car.name} - ${detail.car.brandName} | پنل کاربری خودرو یاب`
-      : "لیست قیمت | پنل کاربری خودرو یاب",
-    robots: "noindex, nofollow",
+      ? `لیست قیمت‌های ${detail.car.name} - ${detail.car.brandName} | خودرو یاب`
+      : "لیست قیمت | خودرو یاب",
   };
 }
 
-/** Every seller's raw, clearance and instant price for one price-list car. */
+/** Every seller's raw, clearance and instant price for one price-list car (open to guests, public prices only). */
 export default async function PriceListCarPage({ params }: PageProps) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  const isPartner = user?.isPartner ?? false;
 
-  const detail = await getPriceListCarDetail(params.carId, user.isPartner, user.id);
+  const detail = await getPriceListCarDetail(params.carId, isPartner, user?.id ?? null);
   if (!detail) notFound();
   const { car, offers, lowest, lowestByColumn, columns } = detail;
   const years = Array.from(new Set(columns.map((column) => column.year)));
@@ -98,7 +98,7 @@ export default async function PriceListCarPage({ params }: PageProps) {
                         <div className="mt-2 flex justify-center">
                           <PriceTag price={best[field.key]} currency={currency} best={Boolean(best[field.key])} />
                         </div>
-                        {user.isPartner && (
+                        {isPartner && (
                           <div className="mt-2 border-t border-panel-line/[0.06] pt-2">
                             <p className="text-[9px] font-bold text-panel-muted">همکار</p>
                             <div className="mt-1 flex justify-center">
@@ -124,7 +124,7 @@ export default async function PriceListCarPage({ params }: PageProps) {
               <UsersRound className="h-7 w-7" />
             </span>
             <p className="mt-5 text-base font-extrabold text-panel-text">هنوز فروشنده‌ای برای این خودرو قیمت ثبت نکرده است</p>
-            {user.collabrate && (
+            {user?.collabrate && (
               <Link
                 href="/panel/price-table"
                 className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-5 text-sm font-bold text-panel-accent transition-colors hover:bg-[#FF6A00]/20"
@@ -141,7 +141,7 @@ export default async function PriceListCarPage({ params }: PageProps) {
             offers={offers}
             lowestByColumn={lowestByColumn}
             columns={columns}
-            showPartner={user.isPartner}
+            showPartner={isPartner}
           />
           <p className="text-[11px] leading-6 text-panel-faint">
             قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال، رنگ و واحد قیمت است و

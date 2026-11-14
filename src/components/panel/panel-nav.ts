@@ -12,6 +12,8 @@ export interface PanelNavItem {
   primary?: boolean;
   /** Only collaborators (کاربران همکار) see this item: publishing ads and a price table. */
   collaboratorOnly?: boolean;
+  /** Needs an account: for a guest the dock item opens the sign-in screen instead. */
+  requiresAccount?: boolean;
   /**
    * Informational page (about, contact). Shown in the dock on desktop only; on
    * small screens it lives in the side drawer opened from the header.
@@ -28,7 +30,7 @@ export const PANEL_NAV_ITEMS: PanelNavItem[] = [
   { key: "ads", label: "آگهی‌های من", shortLabel: "آگهی‌ها", href: "/panel/ads", icon: Megaphone, collaboratorOnly: true },
   { key: "price-list", label: "لیست قیمت", shortLabel: "لیست قیمت", href: "/panel/price-list", icon: ListOrdered },
   { key: "price-table", label: "جدول من", shortLabel: "جدول من", href: "/panel/price-table", icon: Table2, collaboratorOnly: true },
-  { key: "profile", label: "پروفایل", shortLabel: "پروفایل", href: "/panel/profile", icon: UserRound },
+  { key: "profile", label: "پروفایل", shortLabel: "پروفایل", href: "/panel/profile", icon: UserRound, requiresAccount: true },
   {
     key: "about",
     label: "درباره خودرویاب",
