@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { ArrowDownWideNarrow, ArrowUpDown, CalendarDays, History, X } from "lucide-react";
+import { ArrowDownNarrowWide, ArrowDownWideNarrow, CalendarDays, History, X } from "lucide-react";
 
 import type { PriceListCarInfo, PriceListOffer, PriceListPricesByColumn } from "@/lib/price-list";
 import {
@@ -13,12 +13,11 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColumnHeading, SHORT_PRICE_LABELS, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 import { PurchaseRequestButton } from "@/components/panel/purchase-requests/PurchaseRequestButton";
-import type { PurchaseRequestTarget, PurchaseRequestViewer } from "@/lib/purchase-requests-shared";
-import { CURRENCY_LABELS } from "@/lib/currency";
+import type { PurchaseRequestTarget, PurchaseRequestTierOption, PurchaseRequestViewer } from "@/lib/purchase-requests-shared";
 
 interface CarOffersViewProps {
   car: PriceListCarInfo;
@@ -38,7 +37,8 @@ interface CarOffersViewProps {
   carImage?: string | null;
 }
 
-type YearOrder = "newest" | "oldest";
+/** Seller order by price: cheapest first, or most expensive first. */
+type PriceOrder = "asc" | "desc";
 
 /** "آخرین به‌روزرسانی ۱۴۰۵/۰۸/۲۴" under a seller's code. */
 function UpdatedAt({ label, className }: { label: string; className?: string }) {
@@ -74,19 +74,21 @@ function sortValue(offer: PriceListOffer, key: PriceTablePriceField, column: str
 }
 
 /**
- * Sort by the chosen price first (blanks last), then by the remaining prices.
- * Across all columns, sellers are grouped by currency first (dollar rows
- * first) so prices in different currencies are never compared; a single
- * column only ever holds one currency.
+ * Sort by the chosen price first (blanks always last), then by the remaining
+ * prices, in the chosen direction. Across all columns, sellers are grouped by
+ * currency first (dollar rows first) so prices in different currencies are
+ * never compared; a single column only ever holds one currency.
  */
 function sortOffers(
   offers: PriceListOffer[],
   primary: PriceTablePriceField,
   fields: readonly PriceTablePriceField[],
   column: string | null,
-  columnKeys: string[]
+  columnKeys: string[],
+  direction: PriceOrder
 ): PriceListOffer[] {
   const order = [primary, ...fields.filter((key) => key !== primary)];
+  const sign = direction === "asc" ? 1 : -1;
   return [...offers].sort((a, b) => {
     if (!column && a.currency !== b.currency) return a.currency === "usd" ? -1 : 1;
     for (const key of order) {
@@ -95,7 +97,7 @@ function sortOffers(
       if (x === y) continue;
       if (x === null) return 1;
       if (y === null) return -1;
-      return compareDigits(x, y);
+      return sign * compareDigits(x, y);
     }
     return a.sellerCode.localeCompare(b.sellerCode);
   });
@@ -108,9 +110,9 @@ function sortOffers(
  * within a column gets a crown.
  *
  * Controls: a year filter (only that year's columns, and only sellers who
- * priced it), the column order (newest or oldest year first), the price type
- * to sort sellers by (when more than one is enabled), and sorting within one
- * column by clicking its header. Each seller shows their code and the
+ * priced it), the price order (cheapest or most expensive first), the price
+ * type to sort sellers by (when more than one is enabled), and sorting within
+ * one column by clicking its header. Columns run newest year first. Each seller shows their code and the
  * (Jalali) date they last updated their prices.
  *
  * Desktop: table with the seller column pinned and the price columns
@@ -131,18 +133,17 @@ export function CarOffersView({
   const [sortBy, setSortBy] = useState<PriceTablePriceField>(fieldKeys[0] ?? "instantPrice");
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [year, setYear] = useState<string | null>(null);
-  const [yearOrder, setYearOrder] = useState<YearOrder>("newest");
+  const [priceOrder, setPriceOrder] = useState<PriceOrder>("asc");
 
-  const years = useMemo(() => {
-    const unique = Array.from(new Set(columns.map((column) => column.year)));
-    return unique.sort((a, b) => (yearOrder === "newest" ? Number(b) - Number(a) : Number(a) - Number(b)));
-  }, [columns, yearOrder]);
+  /** Every column, newest year first (colour order kept within a year). */
+  const orderedColumns = useMemo(() => [...columns].sort((a, b) => Number(b.year) - Number(a.year)), [columns]);
+  const years = useMemo(() => Array.from(new Set(orderedColumns.map((column) => column.year))), [orderedColumns]);
 
-  /** Columns shown: the chosen year only (or all), ordered by year as chosen; colour order kept within a year. */
-  const visibleColumns = useMemo(() => {
-    const filtered = year ? columns.filter((column) => column.year === year) : columns;
-    return [...filtered].sort((a, b) => (yearOrder === "newest" ? Number(b.year) - Number(a.year) : Number(a.year) - Number(b.year)));
-  }, [columns, year, yearOrder]);
+  /** Columns shown: the chosen year only, or all. */
+  const visibleColumns = useMemo(
+    () => (year ? orderedColumns.filter((column) => column.year === year) : orderedColumns),
+    [orderedColumns, year]
+  );
   const visibleKeys = useMemo(() => visibleColumns.map((column) => column.key), [visibleColumns]);
 
   const visibleOffers = useMemo(
@@ -151,8 +152,8 @@ export function CarOffersView({
   );
   const activeSortColumn = sortColumn && visibleKeys.includes(sortColumn) ? sortColumn : null;
   const sorted = useMemo(
-    () => sortOffers(visibleOffers, sortBy, fieldKeys, activeSortColumn, visibleKeys),
-    [visibleOffers, sortBy, fieldKeys, activeSortColumn, visibleKeys]
+    () => sortOffers(visibleOffers, sortBy, fieldKeys, activeSortColumn, visibleKeys, priceOrder),
+    [visibleOffers, sortBy, fieldKeys, activeSortColumn, visibleKeys, priceOrder]
   );
   const sortedColumn = columns.find((column) => column.key === activeSortColumn) ?? null;
 
@@ -165,6 +166,30 @@ export function CarOffersView({
     ) as Record<PriceTableAnyPriceField, boolean>;
   };
 
+  /** One seller's priced (year, colour) options for the request form, with their enabled prices. */
+  const tierOptions = (offer: PriceListOffer): PurchaseRequestTierOption[] =>
+    orderedColumns
+      .filter((column) => offer.byColumn[column.key])
+      .map((column) => {
+        const prices = offer.byColumn[column.key];
+        const lines: PurchaseRequestTierOption["prices"] = [];
+        for (const field of fields) {
+          const label = fields.length > 1 ? SHORT_PRICE_LABELS[field.key] : "";
+          const price = prices[field.key];
+          if (price) lines.push({ label, price });
+          const partner = showPartner ? prices[field.partnerKey] : null;
+          if (partner) lines.push({ label: label ? `${label} همکار` : "همکار", price: partner, partner: true });
+        }
+        return {
+          key: column.key,
+          year: column.year,
+          colorName: column.colorName,
+          colorCode: column.colorCode,
+          currency: column.currency,
+          prices: lines,
+        };
+      });
+
   /** Purchase-request target for one seller (never for the viewer's own prices). */
   const requestTarget = (offer: PriceListOffer): PurchaseRequestTarget | null =>
     offer.isMine || !offer.sellerCode
@@ -175,13 +200,7 @@ export function CarOffersView({
           carLabel: `${car.brandName} ${car.name} - مدل ${toPersianDigits(car.model)}`,
           sellerCode: offer.sellerCode,
           imageUrl: carImage,
-          tiers: columns
-            .filter((column) => offer.byColumn[column.key])
-            .map((column) => ({
-              key: column.key,
-              label: `${column.year} · ${column.colorName} · ${CURRENCY_LABELS[column.currency]}`,
-              colorCode: column.colorCode,
-            })),
+          tiers: tierOptions(offer),
         };
 
   const toggleSortColumn = (key: string) => setSortColumn((current) => (current === key ? null : key));
@@ -246,7 +265,7 @@ export function CarOffersView({
           </div>
         </div>
 
-        {/* Year filter + year order */}
+        {/* Year filter + price order */}
         <div className="flex items-center gap-2">
           <div
             role="radiogroup"
@@ -270,16 +289,36 @@ export function CarOffersView({
               </button>
             ))}
           </div>
-          {years.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setYearOrder((order) => (order === "newest" ? "oldest" : "newest"))}
-              title="ترتیب ستون‌ها بر اساس سال ساخت"
-              className="mb-1 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-panel-line/[0.1] bg-panel-surface px-3 text-[11px] font-bold text-panel-muted transition-colors hover:text-panel-text"
-            >
-              <ArrowUpDown className="h-3.5 w-3.5 text-panel-accent" />
-              {yearOrder === "newest" ? "جدیدترین سال اول" : "قدیمی‌ترین سال اول"}
-            </button>
+          {visibleOffers.length > 1 && (
+            <div role="radiogroup" aria-label="ترتیب قیمت" className="mb-1 flex shrink-0 rounded-xl border border-panel-line/[0.1] bg-panel-surface p-0.5">
+              {(
+                [
+                  { value: "asc", label: "کم به زیاد", short: "ارزان‌ترین", icon: ArrowDownNarrowWide },
+                  { value: "desc", label: "زیاد به کم", short: "گران‌ترین", icon: ArrowDownWideNarrow },
+                ] as const
+              ).map((option) => {
+                const active = priceOrder === option.value;
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    title={`قیمت: ${option.label}`}
+                    onClick={() => setPriceOrder(option.value)}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-[10px] px-2.5 text-[11px] font-bold transition-all",
+                      active ? "bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] text-[#07090C] shadow-orange-subtle" : "text-panel-muted hover:text-panel-text"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="sm:hidden">{option.short}</span>
+                    <span className="hidden sm:inline">قیمت {option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -304,7 +343,7 @@ export function CarOffersView({
                   <th
                     key={column.key}
                     scope="col"
-                    aria-sort={active ? "ascending" : undefined}
+                    aria-sort={active ? (priceOrder === "asc" ? "ascending" : "descending") : undefined}
                     className={cn(
                       headClass,
                       "min-w-[168px] border-s border-panel-line/[0.08] p-0",
@@ -321,7 +360,11 @@ export function CarOffersView({
                       )}
                     >
                       <ColumnHeading column={column} active />
-                      <ArrowDownWideNarrow className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
+                      {priceOrder === "asc" ? (
+                        <ArrowDownNarrowWide className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
+                      ) : (
+                        <ArrowDownWideNarrow className={cn("h-3.5 w-3.5", active ? "text-panel-accent" : "text-panel-faint")} />
+                      )}
                     </button>
                   </th>
                 );

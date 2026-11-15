@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import type { CurrentUser } from "@/lib/auth/user-auth";
 import { PUBLIC_AD_WHERE } from "@/lib/panel-search";
 import { findUserIdsByAnyCode, getActiveUserCode, getActiveUserCodes } from "@/lib/user-codes";
-import { getEnabledPriceFields } from "@/lib/system-settings";
+import { getActiveProvinceIds, getEnabledPriceFields } from "@/lib/system-settings";
 import { normalizeDigits } from "@/lib/validation/admin";
 import { parseJalaliDate } from "@/lib/jalali";
 import {
@@ -69,7 +69,6 @@ function carLabelOf(car: { name: string; model: string; brand: { name: string } 
 export type CreatePurchaseRequestResult = { ok: true; id: string } | { ok: false; message: string; fieldErrors?: Record<string, string> };
 
 const MAX_SNAPSHOT_LINES = 40;
-const SHORT_LABELS = { priceUsd: "خام", clearancePrice: "ترخیصی", instantPrice: "فوری" } as const;
 
 /** Resolved target of a request: who sells what, and what the requester saw. */
 interface ResolvedTarget {
@@ -177,18 +176,15 @@ async function resolvePriceList(
   const enabledKeys = fields.map((field) => field.key);
   const visible = entry.prices.map((tier) => ({ ...tier, ...withEnabledPrices(withVisiblePrices(tier, showPartner), enabledKeys) }));
 
-  const chosen = tierKey ? visible.find((tier) => priceColumnKey(tier.year, tier.colorId.toString(), entry.currency) === tierKey) : undefined;
-  if (tierKey && !chosen) return "سال و رنگ انتخاب‌شده دیگر در قیمت‌های این فروشنده نیست.";
+  const chosen = visible.find((tier) => priceColumnKey(tier.year, tier.colorId.toString(), entry.currency) === tierKey);
+  if (!chosen) return "سال و رنگ انتخاب‌شده دیگر در قیمت‌های این فروشنده نیست؛ صفحه را دوباره باز کنید.";
 
   const lines: PurchaseRequestPriceLine[] = [];
-  for (const tier of chosen ? [chosen] : visible) {
-    const prefix = chosen ? "" : `${tier.year} · ${tier.color.name} · `;
-    for (const field of fields) {
-      const price = tier[field.key];
-      if (price) lines.push({ label: `${prefix}${chosen ? field.label : SHORT_LABELS[field.key]}`, price });
-      const partner = tier[field.partnerKey];
-      if (partner) lines.push({ label: `${prefix}${chosen ? field.label : SHORT_LABELS[field.key]} (همکار)`, price: partner, partner: true });
-    }
+  for (const field of fields) {
+    const price = chosen[field.key];
+    if (price) lines.push({ label: field.label, price });
+    const partner = chosen[field.partnerKey];
+    if (partner) lines.push({ label: `${field.label} (همکار)`, price: partner, partner: true });
   }
 
   return {
@@ -198,9 +194,9 @@ async function resolvePriceList(
     carLabel: carLabelOf(entry.car),
     userCarId: null,
     adCode: null,
-    year: chosen?.year ?? null,
-    colorId: chosen?.colorId ?? null,
-    colorName: chosen?.color.name ?? null,
+    year: chosen.year,
+    colorId: chosen.colorId,
+    colorName: chosen.color.name,
     currency: entry.currency,
     lines: lines.slice(0, MAX_SNAPSHOT_LINES),
   };
@@ -237,6 +233,10 @@ export async function createPurchaseRequest(input: PurchaseRequestFormInput, use
     requesterCode = (await getActiveUserCode(requesterId)).code;
   } else {
     const guest = input.guest!;
+    const activeProvinces = await getActiveProvinceIds();
+    if (activeProvinces && !activeProvinces.includes(guest.provinceId)) {
+      return { ok: false, message: "ثبت درخواست برای این استان فعال نیست.", fieldErrors: { provinceId: "استان دیگری انتخاب کنید" } };
+    }
     const city = await prisma.city.findFirst({ where: { id: guest.cityId, provinceId: guest.provinceId }, select: { id: true } });
     if (!city) return { ok: false, message: "شهر انتخاب‌شده معتبر نیست.", fieldErrors: { cityId: "شهر را دوباره انتخاب کنید" } };
     name = guest.name;

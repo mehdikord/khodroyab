@@ -77,6 +77,7 @@ export async function addCarImageAction(
     });
 
     revalidatePath(`/admin/cars/${carId}/images`);
+    revalidatePath(`/panel/price-list/${carId}`);
     return { ok: true, record: carImageToRecord(record) };
   } catch (error) {
     console.error("[carImages:add] failed", error);
@@ -112,9 +113,42 @@ export async function deleteCarImageAction(
     await removeUpload(current.imageUrl, "cars");
 
     revalidatePath(`/admin/cars/${carId}/images`);
+    revalidatePath(`/panel/price-list/${carId}`);
     return { ok: true };
   } catch (error) {
     console.error("[carImages:delete] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
+}
+
+export async function deleteCarVideoAction(
+  id: string,
+  carId: string
+): Promise<CarImageSimpleActionResult> {
+  const guardResult = await guardRequest();
+  if (guardResult) return guardResult;
+
+  if (!/^\d{1,20}$/.test(id)) {
+    return { ok: false, message: "شناسه ویدیو نامعتبر است" };
+  }
+
+  try {
+    const current = await prisma.carVideo.findUnique({
+      where: { id: BigInt(id) },
+      select: { videoUrl: true },
+    });
+    if (!current) {
+      return { ok: false, message: "ویدیو یافت نشد" };
+    }
+
+    await prisma.carVideo.delete({ where: { id: BigInt(id) } });
+    await removeUpload(current.videoUrl, "cars");
+
+    revalidatePath(`/admin/cars/${carId}/images`);
+    revalidatePath(`/panel/price-list/${carId}`);
+    return { ok: true };
+  } catch (error) {
+    console.error("[carVideos:delete] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 }

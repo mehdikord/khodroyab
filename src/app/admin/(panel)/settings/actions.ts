@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import prisma from "@/lib/prisma";
 import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { getSystemSettings, saveSystemSettings, type SystemSettings } from "@/lib/system-settings";
@@ -24,6 +25,17 @@ export async function saveSystemSettingsAction(formData: FormData): Promise<Syst
   if (!parsed.success) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
 
   try {
+    // Keep only provinces that exist.
+    const existing = await prisma.province.findMany({
+      where: { id: { in: parsed.data.activeProvinceIds ?? [] } },
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
+    if (existing.length === 0) {
+      return { ok: false, message: "لطفاً خطاهای فرم را برطرف کنید", fieldErrors: { activeProvinceIds: "حداقل یک استان باید فعال باشد" } };
+    }
+    parsed.data.activeProvinceIds = existing.map((province) => province.id);
+
     const previous = await getSystemSettings();
     await saveSystemSettings(parsed.data);
     if (previous.userCodeRotationMinutes !== parsed.data.userCodeRotationMinutes) {

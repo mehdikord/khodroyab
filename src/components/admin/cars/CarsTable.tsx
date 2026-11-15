@@ -59,7 +59,7 @@ export function CarsTable({
                 <div className="flex items-center justify-end gap-1.5">
                   <Link
                     href={`/admin/cars/${car.id}/images`}
-                    title="مدیریت تصاویر"
+                    title="مدیریت تصاویر و ویدیوها"
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] text-[#9BA3AE] transition-colors hover:border-[#FF6A00]/40 hover:bg-[#FF6A00]/10 hover:text-[#FF8A2A]"
                   >
                     <ImageIcon className="h-4 w-4" />

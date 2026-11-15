@@ -4,11 +4,11 @@ import { notFound } from "next/navigation";
 
 import prisma from "@/lib/prisma";
 import { requireAdminAccess } from "@/lib/auth/guards";
-import { carImageToRecord } from "@/lib/car-images";
+import { carImageToRecord, carVideoToRecord } from "@/lib/car-images";
 import { CarImagesManager } from "@/components/admin/cars/CarImagesManager";
 
 export const metadata: Metadata = {
-  title: "مدیریت تصاویر خودرو | پنل مدیریت خودرو یاب",
+  title: "مدیریت تصاویر و ویدیوهای خودرو | پنل مدیریت خودرو یاب",
   robots: "noindex, nofollow",
 };
 
@@ -37,16 +37,17 @@ export default async function CarImagesPage({ params }: PageProps) {
     return notFound();
   }
 
-  const images = await prisma.carImage.findMany({
-    where: { carId },
-    orderBy: { createdAt: "desc" },
-  });
+  const [images, videos] = await Promise.all([
+    prisma.carImage.findMany({ where: { carId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+    prisma.carVideo.findMany({ where: { carId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+  ]);
 
   return (
     <CarImagesManager
       carId={params.id}
       carName={car.name}
       initialImages={images.map(carImageToRecord)}
+      initialVideos={videos.map(carVideoToRecord)}
     />
   );
 }

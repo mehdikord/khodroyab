@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/user-auth";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { checkRateLimit, recordFailedAttempt } from "@/lib/auth/rate-limit";
 import { listProvinceOptions, type ProvinceOption } from "@/lib/branches";
+import { getActiveProvinceIds } from "@/lib/system-settings";
 import { createPurchaseRequest } from "@/lib/purchase-requests";
 import { parsePurchaseRequestForm } from "@/lib/validation/purchase-requests";
 import { toPersianDigits } from "@/lib/utils";
@@ -61,7 +62,10 @@ export async function submitPurchaseRequestAction(formData: FormData): Promise<S
 /** Provinces with their cities for the guest form (loaded when the form opens). */
 export async function loadPurchaseRequestLocationsAction(): Promise<ProvinceOption[]> {
   try {
-    return await listProvinceOptions();
+    const [provinces, activeIds] = await Promise.all([listProvinceOptions(), getActiveProvinceIds()]);
+    if (!activeIds) return provinces;
+    const active = new Set(activeIds);
+    return provinces.filter((province) => active.has(province.id));
   } catch (error) {
     console.error("[purchase-requests:locations] failed", error);
     return [];

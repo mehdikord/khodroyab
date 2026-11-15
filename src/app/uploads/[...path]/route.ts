@@ -13,7 +13,9 @@ import { EXTENSION_TO_MIME, resolveUploadPath } from "@/lib/uploads";
  * directly from `UPLOAD_ROOT` on every request (no manifest), with:
  * - strict path validation (no traversal, whitelisted extensions),
  * - long-lived immutable caching (file names are unique per upload),
- * - conditional requests via ETag / Last-Modified.
+ * - conditional requests via ETag / Last-Modified,
+ * - byte ranges (`Range: bytes=…` → 206), which video players need to seek
+ *   and which iOS Safari requires before it plays a video at all.
  */
 
 export const dynamic = "force-dynamic";
@@ -49,8 +51,33 @@ function buildHeaders(file: NonNullable<Awaited<ReturnType<typeof lookup>>>): He
     "Cache-Control": "public, max-age=31536000, immutable",
     "Last-Modified": file.stat.mtime.toUTCString(),
     ETag: file.etag,
+    "Accept-Ranges": "bytes",
     "X-Content-Type-Options": "nosniff",
   });
+}
+
+/**
+ * First byte range of a `Range: bytes=start-end` header (suffix `-n` and
+ * open-ended `start-` included), clamped to the file; null when absent,
+ * "invalid" when unsatisfiable. Multi-range requests are served as the first range.
+ */
+function parseRange(header: string | null, size: number): { start: number; end: number } | null | "invalid" {
+  if (!header) return null;
+  const match = /^bytes=(\d*)-(\d*)/.exec(header.trim());
+  if (!match || (!match[1] && !match[2])) return "invalid";
+  let start: number;
+  let end: number;
+  if (!match[1]) {
+    const suffix = Number(match[2]);
+    if (suffix === 0) return "invalid";
+    start = Math.max(0, size - suffix);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+  }
+  if (start >= size || start > end) return "invalid";
+  return { start, end };
 }
 
 export async function GET(request: NextRequest, { params }: RouteContext): Promise<Response> {
@@ -64,6 +91,19 @@ export async function GET(request: NextRequest, { params }: RouteContext): Promi
   if (ifNoneMatch && ifNoneMatch === file.etag) {
     headers.delete("Content-Length");
     return new Response(null, { status: 304, headers });
+  }
+
+  const range = parseRange(request.headers.get("range"), file.stat.size);
+  if (range === "invalid") {
+    headers.set("Content-Range", `bytes */${file.stat.size}`);
+    headers.delete("Content-Length");
+    return new Response(null, { status: 416, headers });
+  }
+  if (range) {
+    headers.set("Content-Range", `bytes ${range.start}-${range.end}/${file.stat.size}`);
+    headers.set("Content-Length", String(range.end - range.start + 1));
+    const partial = createReadStream(file.absolute, { start: range.start, end: range.end });
+    return new Response(Readable.toWeb(partial) as unknown as ReadableStream<Uint8Array>, { status: 206, headers });
   }
 
   const nodeStream = createReadStream(file.absolute);

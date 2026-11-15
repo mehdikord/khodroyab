@@ -268,9 +268,21 @@ export type PurchaseRequestTarget =
       carLabel: string;
       sellerCode: string;
       imageUrl: string | null;
-      /** The seller's priced (year, colour, currency) columns the requester may pick from. */
-      tiers: { key: string; label: string; colorCode: string }[];
+      /** The seller's priced (year, colour, currency) columns; the requester must pick one. */
+      tiers: PurchaseRequestTierOption[];
     };
+
+/** One (year, colour, currency) the requester may pick, with the seller's prices for it. */
+export interface PurchaseRequestTierOption {
+  /** "<year>:<colorId>:<currency>" */
+  key: string;
+  year: string;
+  colorName: string;
+  colorCode: string;
+  currency: "usd" | "rial";
+  /** Enabled prices of the tier; `label` is empty when only one price type is in use. */
+  prices: { label: string; price: string; partner?: boolean }[];
+}
 
 /** The viewer of the page that shows the button. */
 export interface PurchaseRequestViewer {

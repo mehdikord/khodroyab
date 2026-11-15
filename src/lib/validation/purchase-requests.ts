@@ -18,11 +18,8 @@ const targetSchema = z.discriminatedUnion("source", [
     source: z.literal("price_list"),
     carId: z.string().regex(/^\d{1,20}$/, { error: "خودرو نامعتبر است" }),
     sellerCode: z.string().regex(/^\d{8}$/, { error: "کد فروشنده نامعتبر است" }),
-    /** Optional "<year>:<colorId>:<currency>" column of the seller's prices. */
-    tierKey: z
-      .string()
-      .regex(/^(\d{4}:\d{1,20}:(usd|rial))?$/, { error: "سال و رنگ انتخاب‌شده نامعتبر است" })
-      .default(""),
+    /** The chosen "<year>:<colorId>:<currency>" column of the seller's prices (required). */
+    tierKey: z.string().regex(/^\d{4}:\d{1,20}:(usd|rial)$/, { error: "سال و رنگ مورد نظر را انتخاب کنید" }),
   }),
 ]);
 

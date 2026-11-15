@@ -5,6 +5,7 @@ import {
   AlertCircle,
   AlertTriangle,
   BadgeDollarSign,
+  Check,
   ExternalLink,
   Headset,
   Info,
@@ -14,8 +15,10 @@ import {
   MessageCircle,
   Phone,
   PhoneCall,
+  Map as MapIcon,
   RefreshCcw,
   Save,
+  Search,
   Send,
   Settings,
   UserPlus,
@@ -36,8 +39,16 @@ import {
 } from "@/lib/system-settings-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
 
+export interface SettingsProvinceOption {
+  id: number;
+  name: string;
+  cityCount: number;
+}
+
 interface SystemSettingsFormProps {
   initialSettings: SystemSettings;
+  /** Every province of the system, alphabetically. */
+  provinces: SettingsProvinceOption[];
 }
 
 const inputClassName = (hasError: boolean) =>
@@ -158,7 +169,7 @@ function ContactInput({
 }
 
 /** Root-only system settings: user-code rotation, consultation phone, the panel notice, the About page text and the Contact page details. */
-export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps) {
+export function SystemSettingsForm({ initialSettings, provinces }: SystemSettingsFormProps) {
   const [minutes, setMinutes] = useState(String(initialSettings.userCodeRotationMinutes));
   const [phone, setPhone] = useState(initialSettings.consultationPhone);
   const [notice, setNotice] = useState(initialSettings.adPageNotice);
@@ -166,6 +177,12 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
   const [contact, setContact] = useState<ContactValues>(() => pickContact(initialSettings));
   const [priceFields, setPriceFields] = useState<PriceTablePriceField[]>(initialSettings.enabledPriceFields);
   const [registrationOpen, setRegistrationOpen] = useState(initialSettings.registrationOpen);
+  // Never saved (null) = every province is active.
+  const allProvinceIds = provinces.map((province) => province.id);
+  const [activeProvinces, setActiveProvinces] = useState<Set<number>>(
+    () => new Set(initialSettings.activeProvinceIds ?? allProvinceIds)
+  );
+  const [provinceQuery, setProvinceQuery] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -213,6 +230,7 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
         setContact(pickContact(result.settings));
         setPriceFields(result.settings.enabledPriceFields);
         setRegistrationOpen(result.settings.registrationOpen);
+        setActiveProvinces(new Set(result.settings.activeProvinceIds ?? allProvinceIds));
         showToast("success", "تنظیمات سیستم ذخیره شد.");
       } else {
         setFieldErrors(result.fieldErrors ?? {});
@@ -222,6 +240,22 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
   }
 
   const noticeTrimmed = notice.trim();
+
+  const query = provinceQuery.trim();
+  const shownProvinces = query ? provinces.filter((province) => province.name.includes(query)) : provinces;
+  const activeCount = provinces.filter((province) => activeProvinces.has(province.id)).length;
+
+  function setProvinces(ids: number[], on: boolean) {
+    setActiveProvinces((current) => {
+      const next = new Set(current);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+    clearError("activeProvinceIds");
+  }
 
   /** Switch one price type on or off; the last active one cannot be switched off. */
   function togglePriceField(key: PriceTablePriceField, on: boolean) {
@@ -342,6 +376,108 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
             </div>
             <Toggle checked={registrationOpen} onCheckedChange={setRegistrationOpen} label="ثبت‌نام کاربران جدید" disabled={isPending} />
           </div>
+        </SettingCard>
+
+        <SettingCard
+          icon={MapIcon}
+          title="استان‌های فعال"
+          description="در فرم «درخواست خرید» (صفحه آگهی و صفحه لیست قیمت خودرو)، کاربرانی که وارد حساب نشده‌اند فقط می‌توانند یکی از استان‌های فعال (و شهرهای آن) را انتخاب کنند. حداقل یک استان باید فعال باشد."
+        >
+          {provinces
+            .filter((province) => activeProvinces.has(province.id))
+            .map((province) => (
+              <input key={province.id} type="hidden" name="activeProvinceIds" value={province.id} />
+            ))}
+
+          {provinces.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-white/[0.1] px-4 py-6 text-center text-xs text-[#8B93A1]">
+              هنوز استانی در سیستم ثبت نشده است.
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                  <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5E6672]" />
+                  <input
+                    type="search"
+                    value={provinceQuery}
+                    onChange={(e) => setProvinceQuery(e.target.value)}
+                    placeholder="جستجوی استان…"
+                    aria-label="جستجوی استان"
+                    className={cn(inputClassName(false), "h-11 ps-10")}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      "rounded-lg px-2.5 py-1 text-[11px] font-extrabold",
+                      activeCount > 0 ? "bg-[#FF6A00]/10 text-[#FF8A2A]" : "bg-red-500/10 text-red-300"
+                    )}
+                  >
+                    {toPersianDigits(activeCount)} از {toPersianDigits(provinces.length)} استان فعال
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setProvinces(shownProvinces.map((province) => province.id), true)}
+                    disabled={isPending}
+                    className="h-9 rounded-lg border border-white/[0.1] px-3 text-[11px] font-bold text-[#D2D7DF] transition-colors hover:border-[#FF6A00]/40 hover:text-[#F5F5F5] disabled:opacity-50"
+                  >
+                    {query ? "فعال کردن نتایج" : "فعال کردن همه"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProvinces(shownProvinces.map((province) => province.id), false)}
+                    disabled={isPending}
+                    className="h-9 rounded-lg border border-white/[0.1] px-3 text-[11px] font-bold text-[#D2D7DF] transition-colors hover:border-red-500/40 hover:text-red-300 disabled:opacity-50"
+                  >
+                    {query ? "غیرفعال کردن نتایج" : "غیرفعال کردن همه"}
+                  </button>
+                </div>
+              </div>
+
+              <div
+                role="group"
+                aria-label="استان‌ها"
+                className="admin-scrollbar mt-4 grid max-h-[22rem] grid-cols-2 gap-2 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4"
+              >
+                {shownProvinces.map((province) => {
+                  const on = activeProvinces.has(province.id);
+                  return (
+                    <button
+                      key={province.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={on}
+                      onClick={() => setProvinces([province.id], !on)}
+                      disabled={isPending}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/50 disabled:opacity-60",
+                        on ? "border-[#FF6A00]/40 bg-[#FF6A00]/[0.07]" : "border-white/[0.08] bg-[#07090C] hover:border-white/20"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
+                          on ? "border-[#FF6A00] bg-[#FF6A00] text-[#07090C]" : "border-white/25"
+                        )}
+                        aria-hidden="true"
+                      >
+                        {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className={cn("block truncate text-xs font-bold", on ? "text-[#F5F5F5]" : "text-[#8B93A1]")}>{province.name}</span>
+                        <span className="block text-[10px] text-[#5E6672]">{toPersianDigits(province.cityCount)} شهر</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                {shownProvinces.length === 0 && (
+                  <p className="col-span-full py-6 text-center text-xs text-[#8B93A1]">استانی با این نام پیدا نشد.</p>
+                )}
+              </div>
+            </>
+          )}
+          {fieldErrors.activeProvinceIds && <p className="mt-2 text-xs text-red-400">{fieldErrors.activeProvinceIds}</p>}
         </SettingCard>
 
         <SettingCard

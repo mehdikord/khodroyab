@@ -7,6 +7,8 @@ import { carRecordInclude, carToRecord, type CarRecord } from "@/lib/cars";
 import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { parseCarForm } from "@/lib/validation/cars";
+import { normalizeRichText } from "@/lib/rich-text";
+import { removeUpload } from "@/lib/uploads";
 
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
@@ -66,6 +68,7 @@ export async function createCarAction(
         name: parsed.data.name,
         slug: parsed.data.slug,
         model: parsed.data.model,
+        description: normalizeRichText(parsed.data.description),
       },
       include: carRecordInclude,
     });
@@ -111,11 +114,14 @@ export async function updateCarAction(
         name: parsed.data.name,
         slug: parsed.data.slug,
         model: parsed.data.model,
+        // Only touched when the form sent the editor's content.
+        ...(formData.has("description") ? { description: normalizeRichText(parsed.data.description) } : {}),
       },
       include: carRecordInclude,
     });
 
     revalidatePath("/admin/cars");
+    revalidatePath(`/panel/price-list/${id}`);
     return { ok: true, record: carToRecord(updated) };
   } catch (error) {
     if (isPrismaCode(error, "P2003")) return STALE_RELATION_RESULT;
@@ -137,7 +143,14 @@ export async function deleteCarAction(
     return { ok: false, message: "شناسه خودرو نامعتبر است" };
   }
 
+  // Media files are removed from disk once the car (and its rows) are gone.
+  let mediaUrls: string[] = [];
   try {
+    const media = await prisma.car.findUnique({
+      where: { id: carId },
+      select: { carImages: { select: { imageUrl: true } }, carVideos: { select: { videoUrl: true } } },
+    });
+    mediaUrls = [...(media?.carImages.map((image) => image.imageUrl) ?? []), ...(media?.carVideos.map((video) => video.videoUrl) ?? [])];
     await prisma.car.delete({ where: { id: carId } });
   } catch (error) {
     if (isPrismaCode(error, "P2003")) {
@@ -151,6 +164,25 @@ export async function deleteCarAction(
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 
+  await Promise.all(mediaUrls.map((url) => removeUpload(url, "cars")));
   revalidatePath("/admin/cars");
   return { ok: true };
+}
+
+/** The car's current description (editor HTML), loaded when its edit form opens. */
+export async function getCarDescriptionAction(
+  id: string
+): Promise<{ ok: true; description: string } | { ok: false; message: string }> {
+  const guardResult = await guardRequest();
+  if (guardResult) return guardResult;
+  if (!/^\d{1,20}$/.test(id)) return { ok: false, message: "شناسه خودرو نامعتبر است" };
+
+  try {
+    const car = await prisma.car.findUnique({ where: { id: BigInt(id) }, select: { description: true } });
+    if (!car) return { ok: false, message: "خودرو یافت نشد" };
+    return { ok: true, description: car.description ?? "" };
+  } catch (error) {
+    console.error("[cars:description] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
 }

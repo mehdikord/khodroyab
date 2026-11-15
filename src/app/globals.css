@@ -1323,3 +1323,101 @@
     opacity: 0;
   }
 }
+
+/* =====================================================================
+   Rich text (admin-authored car descriptions): editor + panel display.
+   Uses the panel tokens, which default to the dark values on :root.
+   ===================================================================== */
+.rich-content {
+  color: rgb(var(--p-text-2));
+  font-size: 0.875rem;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.rich-content > * + * { margin-top: 0.75em; }
+.rich-content h2 {
+  margin-top: 1.4em;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.6;
+  color: rgb(var(--p-text));
+}
+.rich-content h3 {
+  margin-top: 1.2em;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.6;
+  color: rgb(var(--p-text));
+}
+.rich-content > h2:first-child,
+.rich-content > h3:first-child { margin-top: 0; }
+.rich-content strong, .rich-content b { font-weight: 800; color: rgb(var(--p-text)); }
+.rich-content a {
+  color: rgb(var(--p-accent));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich-content ul, .rich-content ol { padding-inline-start: 1.4em; }
+.rich-content ul { list-style: disc; }
+.rich-content ol { list-style: decimal; }
+.rich-content li + li { margin-top: 0.25em; }
+.rich-content li > p { margin: 0; }
+.rich-content li::marker { color: rgb(var(--p-accent)); }
+.rich-content blockquote {
+  border-inline-start: 3px solid #ff6a00;
+  background: rgb(var(--p-line) / 0.04);
+  border-radius: 0.75rem;
+  padding: 0.6em 1em;
+  color: rgb(var(--p-text-2));
+}
+.rich-content hr {
+  border: 0;
+  height: 1px;
+  background: rgb(var(--p-line) / 0.1);
+  margin: 1.25em 0;
+}
+.rich-content mark { border-radius: 0.3em; padding: 0 0.15em; color: inherit; }
+.rich-content .rich-table,
+.rich-content .tableWrapper {
+  overflow-x: auto;
+  border: 1px solid rgb(var(--p-line) / 0.1);
+  border-radius: 0.9rem;
+}
+.rich-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+.rich-content th, .rich-content td {
+  border: 1px solid rgb(var(--p-line) / 0.08);
+  padding: 0.5em 0.75em;
+  text-align: start;
+  vertical-align: top;
+  min-width: 5.5em;
+}
+.rich-content th {
+  background: rgb(var(--p-line) / 0.05);
+  color: rgb(var(--p-text));
+  font-weight: 800;
+  white-space: nowrap;
+}
+.rich-content tr:nth-child(even) td { background: rgb(var(--p-line) / 0.02); }
+.rich-content th > p, .rich-content td > p { margin: 0; }
+/* Hide the outer cell borders: the wrapper draws the frame. */
+.rich-content tr > :first-child { border-inline-start: 0; }
+.rich-content tr > :last-child { border-inline-end: 0; }
+.rich-content tr:first-child > * { border-top: 0; }
+.rich-content tr:last-child > * { border-bottom: 0; }
+
+/* Editor-only bits */
+.rich-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: inline-start;
+  height: 0;
+  pointer-events: none;
+  color: rgb(var(--p-faint));
+}
+.rich-editor .selectedCell { background: rgba(255, 106, 0, 0.14) !important; }
+.rich-editor table { margin: 0; }

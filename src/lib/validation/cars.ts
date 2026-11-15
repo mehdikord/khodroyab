@@ -31,7 +31,12 @@ export interface CarFormValues {
   name: string;
   slug: string;
   model: string;
+  /** Raw editor HTML (sanitised before storage); empty when not sent. */
+  description: string;
 }
+
+/** Longest editor HTML accepted from the form (mirrors `RICH_TEXT_MAX_LENGTH`). */
+export const CAR_DESCRIPTION_MAX_LENGTH = 200_000;
 
 export type ParsedCarForm =
   | { success: true; data: CarFormValues }
@@ -43,6 +48,8 @@ export function parseCarForm(formData: FormData): ParsedCarForm {
   const rawName = formData.get("name");
   const rawSlug = formData.get("slug");
   const rawModel = formData.get("model");
+  const rawDescription = formData.get("description");
+  const description = typeof rawDescription === "string" ? rawDescription : "";
 
   const parseResult = carCoreSchema.safeParse({
     brandId: rawBrandId,
@@ -51,6 +58,14 @@ export function parseCarForm(formData: FormData): ParsedCarForm {
     slug: rawSlug,
     model: rawModel,
   });
+
+  if (description.length > CAR_DESCRIPTION_MAX_LENGTH) {
+    return {
+      success: false,
+      fieldErrors: { description: "توضیحات خودرو بیش از حد طولانی است" },
+      message: "توضیحات خودرو بیش از حد طولانی است",
+    };
+  }
 
   if (!parseResult.success) {
     const fieldErrors: Record<string, string> = {};
@@ -79,6 +94,7 @@ export function parseCarForm(formData: FormData): ParsedCarForm {
       name: parseResult.data.name.trim(),
       slug,
       model: parseResult.data.model.trim(),
+      description,
     },
   };
 }

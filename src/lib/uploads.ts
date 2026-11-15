@@ -42,7 +42,84 @@ export const EXTENSION_TO_MIME: Record<string, string> = {
   jpeg: "image/jpeg",
   webp: "image/webp",
   avif: "image/avif",
+  mp4: "video/mp4",
+  webm: "video/webm",
 };
+
+/** Video containers accepted for car videos, keyed by MIME type → extension. */
+export const VIDEO_MIME_TO_EXTENSION: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+};
+
+/**
+ * Container of a video from its first bytes (never trust the browser's MIME
+ * type alone): MP4/M4V/MOV start with an `ftyp` box, WebM with the EBML magic.
+ */
+export function sniffVideoContainer(head: Uint8Array): "mp4" | "webm" | null {
+  if (head.length >= 8 && head[4] === 0x66 && head[5] === 0x74 && head[6] === 0x79 && head[7] === 0x70) return "mp4";
+  if (head.length >= 4 && head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3) return "webm";
+  return null;
+}
+
+export class UploadTooLargeError extends Error {}
+export class UploadInvalidTypeError extends Error {}
+
+/**
+ * Stream a video upload (the raw request body) to disk without buffering it
+ * in memory, and return its public URL path. Stops and removes the partial
+ * file once `maxBytes` is exceeded (`UploadTooLargeError`) or when the first
+ * bytes are not an MP4/WebM container (`UploadInvalidTypeError`).
+ */
+export async function saveVideoStream(
+  subdir: UploadSubdir,
+  body: ReadableStream<Uint8Array>,
+  maxBytes: number,
+  baseName?: string
+): Promise<{ url: string; size: number }> {
+  const dir = path.join(UPLOAD_ROOT, subdir);
+  await fs.mkdir(dir, { recursive: true });
+  const prefix = sanitizeBaseName(baseName, "video");
+  const tempName = `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+  const tempPath = path.join(dir, `${tempName}.part`);
+
+  const handle = await fs.open(tempPath, "w");
+  const reader = body.getReader();
+  let size = 0;
+  let container: "mp4" | "webm" | null = null;
+  let head = new Uint8Array(0);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || value.length === 0) continue;
+      size += value.length;
+      if (size > maxBytes) throw new UploadTooLargeError();
+      if (!container) {
+        const merged = new Uint8Array(head.length + value.length);
+        merged.set(head);
+        merged.set(value, head.length);
+        head = merged.slice(0, 16);
+        if (head.length >= 8) {
+          container = sniffVideoContainer(head);
+          if (!container) throw new UploadInvalidTypeError();
+        }
+      }
+      await handle.write(value);
+    }
+    if (!container) throw new UploadInvalidTypeError();
+  } catch (error) {
+    await reader.cancel().catch(() => undefined);
+    await handle.close().catch(() => undefined);
+    await fs.unlink(tempPath).catch(() => undefined);
+    throw error;
+  }
+  await handle.close();
+
+  const fileName = `${tempName}.${container}`;
+  await fs.rename(tempPath, path.join(dir, fileName));
+  return { url: `${UPLOAD_URL_PREFIX}/${subdir}/${fileName}`, size };
+}
 
 /** Conservative file-name whitelist: letters, digits, dot, dash, underscore. */
 const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;

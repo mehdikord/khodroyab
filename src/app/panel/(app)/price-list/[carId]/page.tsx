@@ -12,7 +12,9 @@ import { cn, toPersianDigits } from "@/lib/utils";
 import { CURRENCY_LABELS, PRICE_CURRENCIES } from "@/lib/currency";
 import { BrandLogo, PriceTag } from "@/components/panel/price-list/price-list-ui";
 import { CarOffersView } from "@/components/panel/price-list/CarOffersView";
-import { CarHeroGallery } from "@/components/panel/price-list/CarHeroGallery";
+import { CarMediaSlider } from "@/components/panel/price-list/CarMediaSlider";
+import { CarSpecsDisclosure } from "@/components/panel/price-list/CarSpecsDisclosure";
+import type { CarMediaItem } from "@/lib/car-media-shared";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,12 @@ export default async function PriceListCarPage({ params }: PageProps) {
   const years = Array.from(new Set(columns.map((column) => column.year))).sort((a, b) => Number(b) - Number(a));
   const sellerCount = offers.length;
   const currencies = PRICE_CURRENCIES.filter((currency) => lowest[currency]);
+  // Cover photo first, then the videos, then the other photos.
+  const media: CarMediaItem[] = [
+    ...car.images.slice(0, 1).map((url) => ({ type: "image" as const, url })),
+    ...car.videos.map((url) => ({ type: "video" as const, url })),
+    ...car.images.slice(1).map((url) => ({ type: "image" as const, url })),
+  ];
 
   return (
     <div className="space-y-5">
@@ -54,16 +62,16 @@ export default async function PriceListCarPage({ params }: PageProps) {
         بازگشت به لیست قیمت
       </Link>
 
-      {/* Car hero: photos (start) · name, facts and best prices */}
+      {/* Car hero: photo/video slider (start) · name, facts and best prices · collapsible description */}
       <section className="panel-card-in relative overflow-hidden rounded-[28px] border border-panel-line/[0.1] bg-panel-surface">
         <div className="panel-ambient pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="pointer-events-none absolute -top-24 end-[-60px] h-56 w-56 rounded-full bg-[#FF6A00]/15 blur-3xl" aria-hidden="true" />
 
-        <div className="relative grid gap-4 p-3 sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)]">
-          <CarHeroGallery
-            images={car.images}
+        <div className="relative grid gap-4 p-3 sm:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+          <CarMediaSlider
+            media={media}
             alt={`${car.brandName} ${car.name}`}
-            className="h-44 sm:h-full sm:min-h-[11.5rem]"
+            className="aspect-[16/11] sm:aspect-auto sm:h-full sm:min-h-[13rem]"
             fallback={
               <div className="relative flex h-full w-full items-center justify-center">
                 <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
@@ -134,6 +142,8 @@ export default async function PriceListCarPage({ params }: PageProps) {
             )}
           </div>
         </div>
+
+        {car.descriptionHtml && <CarSpecsDisclosure html={car.descriptionHtml} carName={car.name} />}
       </section>
 
       {offers.length === 0 ? (
@@ -169,7 +179,7 @@ export default async function PriceListCarPage({ params }: PageProps) {
           <p className="text-[11px] leading-6 text-panel-faint">
             قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال، رنگ و واحد قیمت است و
             «—» یعنی فروشنده برای آن سال و رنگ قیمتی ثبت نکرده است. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده است. با انتخاب سال فقط قیمت‌های همان سال نمایش داده
-            می‌شود و با زدن عنوان هر ستون، فروشندگان بر اساس قیمت همان ستون مرتب می‌شوند. تاریخ زیر کد هر فروشنده، آخرین به‌روزرسانی قیمت‌های اوست.
+            می‌شود، با دکمه ترتیب قیمت فروشندگان از ارزان‌ترین یا گران‌ترین مرتب می‌شوند و با زدن عنوان هر ستون، مرتب‌سازی بر اساس قیمت همان ستون انجام می‌شود. تاریخ زیر کد هر فروشنده، آخرین به‌روزرسانی قیمت‌های اوست.
           </p>
         </>
       )}

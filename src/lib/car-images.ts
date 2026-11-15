@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CarImage } from "@prisma/client";
+import type { CarImage, CarVideo } from "@prisma/client";
 
 export interface CarImageRecord {
   id: string;
@@ -17,5 +17,23 @@ export function carImageToRecord(image: CarImage): CarImageRecord {
     imageUrl: image.imageUrl,
     createdAt: image.createdAt.toISOString(),
     updatedAt: image.updatedAt.toISOString(),
+  };
+}
+
+export interface CarVideoRecord {
+  id: string;
+  carId: string;
+  videoUrl: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export function carVideoToRecord(video: CarVideo): CarVideoRecord {
+  return {
+    id: video.id.toString(),
+    carId: video.carId.toString(),
+    videoUrl: video.videoUrl,
+    sizeBytes: video.sizeBytes,
+    createdAt: video.createdAt.toISOString(),
   };
 }

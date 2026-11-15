@@ -30,6 +30,11 @@ export const SYSTEM_SETTING_KEYS = {
   enabledPriceFields: "price_fields_enabled",
   /** "1" lets unknown phone numbers create an account at sign-in; "0" (default) allows sign-in only. */
   registrationOpen: "registration_open",
+  /**
+   * Provinces offered in the guest purchase-request form, comma-separated ids
+   * (at least one once saved). Never saved = every province.
+   */
+  activeProvinceIds: "purchase_request_provinces",
 } as const;
 
 export type SystemSettingField = keyof typeof SYSTEM_SETTING_KEYS;
@@ -59,6 +64,11 @@ export interface SystemSettings {
   enabledPriceFields: PriceTablePriceField[];
   /** New customers may sign up from the panel's sign-in screen. */
   registrationOpen: boolean;
+  /**
+   * Provinces a guest may pick in the purchase-request form (ad page and car
+   * price list); null = every province (the setting was never saved).
+   */
+  activeProvinceIds: number[] | null;
 }
 
 export const DEFAULT_USER_CODE_ROTATION_MINUTES = 30;
@@ -83,7 +93,18 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   contactLocation: "",
   enabledPriceFields: ["instantPrice"],
   registrationOpen: false,
+  activeProvinceIds: null,
 };
+
+/** Province ids from a stored comma list or form values: positive integers, de-duplicated, ascending. */
+export function parseProvinceIdList(values: Iterable<string>): number[] {
+  const ids = new Set<number>();
+  for (const value of Array.from(values)) {
+    const id = Number(value.trim());
+    if (Number.isInteger(id) && id > 0 && id < 2 ** 32) ids.add(id);
+  }
+  return Array.from(ids).sort((a, b) => a - b);
+}
 
 /**
  * Read a list of price fields (stored comma list or form values): known keys

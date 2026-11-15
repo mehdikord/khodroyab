@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useId, useState, useTransition } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import React, { useEffect, useId, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
+import { AlertCircle, FileText, Loader2 } from "lucide-react";
 
 import { Modal } from "@/components/admin/ui/Modal";
-import { createCarAction, updateCarAction } from "@/app/admin/(panel)/cars/actions";
+import { createCarAction, getCarDescriptionAction, updateCarAction } from "@/app/admin/(panel)/cars/actions";
 import type { CarRecord } from "@/lib/cars";
 import type { BrandRecord } from "@/lib/brands";
 import type { CarTypeRecord } from "@/lib/car-types";
@@ -19,6 +20,17 @@ interface CarFormModalProps {
   onSuccess: (record: CarRecord) => void;
   onError: (message: string) => void;
 }
+
+// The editor (TipTap) is only downloaded when the form opens.
+const RichTextEditor = dynamic(() => import("@/components/admin/ui/RichTextEditor").then((mod) => mod.RichTextEditor), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[264px] items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-[#07090C] text-xs text-[#8B93A1]">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      در حال آماده‌سازی ویرایشگر…
+    </div>
+  ),
+});
 
 const inputClassName = (hasError: boolean) =>
   cn(
@@ -42,12 +54,29 @@ export function CarFormModal({
   const brandIdId = useId();
   const carTypeIdId = useId();
   const modelId = useId();
+  const descriptionId = useId();
 
   const [name, setName] = useState(car?.name ?? "");
   const [slug, setSlug] = useState(car?.slug ?? "");
   const [brandId, setBrandId] = useState(car?.brandId ?? (brands[0]?.id || ""));
   const [carTypeId, setCarTypeId] = useState(car?.carTypeId ?? (carTypes[0]?.id || ""));
   const [model, setModel] = useState(car?.model ?? "");
+  // Edit: the description is loaded when the form opens (not part of the cars list).
+  const [description, setDescription] = useState<string | null>(isEdit ? null : "");
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isEdit || !car) return;
+    let cancelled = false;
+    void getCarDescriptionAction(car.id).then((result) => {
+      if (cancelled) return;
+      if (result.ok) setDescription(result.description);
+      else setDescriptionError(result.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, car]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -64,6 +93,8 @@ export function CarFormModal({
     formData.set("brandId", brandId);
     formData.set("carTypeId", carTypeId);
     formData.set("model", model);
+    // Not sent while it is still loading (or failed), so a stored description is never wiped.
+    if (description !== null) formData.set("description", description);
 
     startTransition(async () => {
       const result = isEdit
@@ -92,7 +123,7 @@ export function CarFormModal({
           ? `به‌روزرسانی مشخصات خودرو «${name}»`
           : "مشخصات خودرو جدید را جهت افزودن به سیستم وارد کنید"
       }
-      size="md"
+      size="lg"
       footer={
         <>
           <button
@@ -222,6 +253,37 @@ export function CarFormModal({
             placeholder="در صورت خالی بودن خودکار تولید می‌شود"
             className={inputClassName(Boolean(fieldErrors.slug))}
           />
+        </div>
+
+        <div className="space-y-2">
+          <p id={descriptionId} className="flex items-center gap-1.5 text-xs font-bold text-[#D2D7DF]">
+            <FileText className="h-3.5 w-3.5 text-[#FF8A2A]" />
+            توضیحات و مشخصات خودرو (اختیاری)
+          </p>
+          <p className="text-[11px] leading-5 text-[#8B93A1]">
+            در صفحه لیست قیمت این خودرو، زیر بخش «مشخصات خودرو» نمایش داده می‌شود. می‌توانید متن را قالب‌بندی کنید، فهرست و جدول بسازید.
+          </p>
+          {description === null ? (
+            <div className="flex h-[264px] items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-[#07090C] text-xs text-[#8B93A1]">
+              {descriptionError ? (
+                <span className="text-red-300">{descriptionError}</span>
+              ) : (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال بارگذاری توضیحات…
+                </>
+              )}
+            </div>
+          ) : (
+            <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              disabled={isPending}
+              labelledBy={descriptionId}
+              placeholder="مثلاً معرفی خودرو، مشخصات فنی، امکانات و جدول مقایسه نسخه‌ها…"
+            />
+          )}
+          {fieldErrors.description && <p className="text-xs font-semibold text-red-400">{fieldErrors.description}</p>}
         </div>
       </form>
     </Modal>

@@ -7,6 +7,7 @@ import {
   MAX_CONTACT_ADDRESS_LENGTH,
   parseGeoPoint,
   parsePriceFieldList,
+  parseProvinceIdList,
   MAX_AD_PAGE_NOTICE_LENGTH,
   MAX_USER_CODE_ROTATION_MINUTES,
   MIN_USER_CODE_ROTATION_MINUTES,
@@ -126,6 +127,10 @@ const schema = z.object({
     .transform((values) => parsePriceFieldList(values))
     .refine((fields) => fields.length > 0, "حداقل یکی از انواع قیمت باید فعال باشد"),
   registrationOpen: z.boolean(),
+  activeProvinceIds: z
+    .array(z.string())
+    .transform((values) => parseProvinceIdList(values))
+    .refine((ids) => ids.length > 0, "حداقل یک استان باید فعال باشد"),
 });
 
 export type SystemSettingsParseResult =
@@ -151,6 +156,7 @@ export function parseSystemSettingsForm(formData: FormData): SystemSettingsParse
     contactLocation: raw("contactLocation"),
     enabledPriceFields: formData.getAll("enabledPriceFields").filter((value): value is string => typeof value === "string"),
     registrationOpen: raw("registrationOpen") === "1",
+    activeProvinceIds: formData.getAll("activeProvinceIds").filter((value): value is string => typeof value === "string"),
   });
   if (result.success) return { success: true, data: result.data };
 

@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { renderRichText } from "@/lib/rich-text";
 import { getActiveUserCodes } from "@/lib/user-codes";
 import {
   ALL_PRICE_FIELD_KEYS,
@@ -34,9 +35,14 @@ export interface PriceListCarInfo {
   brandImage: string | null;
 }
 
-/** The car's catalogue photos (uploaded by the admin), oldest first; detail page only. */
+/** The car's catalogue media and introduction (uploaded by the admin); detail page only. */
 export interface PriceListCarDetailInfo extends PriceListCarInfo {
+  /** Photos, oldest first (the first is the cover). */
   images: string[];
+  /** Videos (MP4/WebM), oldest first. */
+  videos: string[];
+  /** Sanitised rich-text description, ready to render; null when empty. */
+  descriptionHtml: string | null;
 }
 
 /** Prices keyed by price column (`"<year>:<colorId>"`); a missing key means "not priced". */
@@ -325,6 +331,8 @@ export async function getPriceListCarDetail(
     select: {
       ...carInfoSelect,
       carImages: { select: { imageUrl: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+      carVideos: { select: { videoUrl: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+      description: true,
       priceTableEntries: {
         where: pricedEntryWhere,
         select: {
@@ -360,6 +368,8 @@ export async function getPriceListCarDetail(
     car: {
       ...toCarInfo(car),
       images: car.carImages.map((image) => image.imageUrl).filter(Boolean),
+      videos: car.carVideos.map((video) => video.videoUrl).filter(Boolean),
+      descriptionHtml: renderRichText(car.description),
     },
     offers,
     lowest: Object.fromEntries(

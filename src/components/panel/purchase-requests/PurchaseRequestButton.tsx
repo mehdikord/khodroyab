@@ -21,6 +21,7 @@ import {
 
 import { SafeImage } from "@/components/panel/SafeImage";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
+import { PriceTag } from "@/components/panel/price-list/price-list-ui";
 import { loadPurchaseRequestLocationsAction, submitPurchaseRequestAction } from "@/app/panel/purchase-request-actions";
 import type { ProvinceOption } from "@/lib/branches";
 import {
@@ -115,7 +116,7 @@ function PurchaseRequestDialog({
   onClose: () => void;
 }) {
   const titleId = useId();
-  const ids = { name: useId(), phone: useId(), province: useId(), city: useId(), description: useId() };
+  const ids = { name: useId(), phone: useId(), province: useId(), city: useId(), description: useId(), tier: useId() };
   const panelRef = useRef<HTMLDivElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -127,7 +128,9 @@ function PurchaseRequestDialog({
   const [provinceId, setProvinceId] = useState("");
   const [cityId, setCityId] = useState("");
   const [description, setDescription] = useState("");
-  const [tierKey, setTierKey] = useState("");
+  // The requester must pick a (year, colour); a single option is picked for them.
+  const [tierKey, setTierKey] = useState(target.source === "price_list" && target.tiers.length === 1 ? target.tiers[0].key : "");
+  const tierRef = useRef<HTMLFieldSetElement>(null);
 
   const isGuest = !viewer.signedIn;
   const cities = useMemo(() => provinces?.find((p) => String(p.id) === provinceId)?.cities ?? [], [provinces, provinceId]);
@@ -141,7 +144,10 @@ function PurchaseRequestDialog({
     if (!isGuest) return;
     let cancelled = false;
     void loadPurchaseRequestLocationsAction().then((list) => {
-      if (!cancelled) setProvinces(list);
+      if (cancelled) return;
+      setProvinces(list);
+      // Only one active province (settings): nothing to choose.
+      if (list.length === 1) setProvinceId(String(list[0].id));
     });
     return () => {
       cancelled = true;
@@ -180,6 +186,11 @@ function PurchaseRequestDialog({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (target.source === "price_list" && !tierKey) {
+      setFieldErrors((prev) => ({ ...prev, tierKey: "سال و رنگ مورد نظر را انتخاب کنید" }));
+      tierRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     formData.set("source", target.source);
     if (target.source === "sale_ad") formData.set("adId", target.adId);
@@ -405,37 +416,78 @@ function PurchaseRequestDialog({
                 </div>
               )}
 
-              {target.source === "price_list" && target.tiers.length > 0 && (
-                <fieldset>
+              {target.source === "price_list" && (
+                <fieldset ref={tierRef} aria-describedby={`${ids.tier}-error`}>
                   <legend className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-panel-text-2">
                     <Car className="h-3.5 w-3.5 text-panel-accent" />
                     سال و رنگ مورد نظر
-                    <span className="text-[10px] font-semibold text-panel-faint">(اختیاری)</span>
+                    <span className="text-panel-accent">*</span>
                   </legend>
-                  <div className="flex flex-wrap gap-1.5" role="radiogroup">
-                    {[{ key: "", label: "فرقی ندارد", colorCode: "" }, ...target.tiers].map((tier) => {
+                  <div
+                    role="radiogroup"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrors.tierKey)}
+                    className={cn(
+                      "panel-scrollbar grid max-h-[17rem] grid-cols-1 gap-2 overflow-y-auto rounded-2xl p-0.5 sm:grid-cols-2",
+                      fieldErrors.tierKey && "ring-1 ring-red-500/50"
+                    )}
+                  >
+                    {target.tiers.map((tier) => {
                       const active = tierKey === tier.key;
                       return (
                         <button
-                          key={tier.key || "any"}
+                          key={tier.key}
                           type="button"
                           role="radio"
                           aria-checked={active}
-                          onClick={() => setTierKey(tier.key)}
+                          onClick={() => {
+                            setTierKey(tier.key);
+                            clearError("tierKey");
+                          }}
                           disabled={isPending}
                           className={cn(
-                            "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-bold transition-all",
+                            "relative rounded-2xl border p-3 text-start transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/50",
                             active
-                              ? "border-[#FF6A00]/60 bg-gradient-to-l from-[#FF6A00]/25 to-[#FF6A00]/5 text-panel-text"
-                              : "border-panel-line/[0.1] bg-panel-bg text-panel-muted hover:border-panel-line/25 hover:text-panel-text"
+                              ? "border-[#FF6A00]/70 bg-gradient-to-l from-[#FF6A00]/20 to-[#FF6A00]/[0.04] shadow-[0_0_24px_-10px_rgba(255,106,0,0.7)]"
+                              : "border-panel-line/[0.1] bg-panel-bg hover:border-panel-line/25"
                           )}
                         >
-                          {tier.colorCode && <ColorSwatch code={tier.colorCode} className="h-3 w-3" />}
-                          {toPersianDigits(tier.label)}
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="flex min-w-0 items-center gap-1.5 text-xs font-extrabold text-panel-text">
+                              <ColorSwatch code={tier.colorCode} className="h-3.5 w-3.5 shrink-0" />
+                              <span className="font-mono">{toPersianDigits(tier.year)}</span>
+                              <span className="text-panel-faint">·</span>
+                              <span className="truncate">{tier.colorName}</span>
+                            </span>
+                            <span
+                              className={cn(
+                                "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+                                active ? "border-[#FF6A00] bg-[#FF6A00]" : "border-panel-line/30"
+                              )}
+                              aria-hidden="true"
+                            >
+                              {active && <span className="h-1.5 w-1.5 rounded-full bg-[#07090C]" />}
+                            </span>
+                          </span>
+                          <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                            {tier.prices.length === 0 ? (
+                              <span className="text-[11px] text-panel-faint">بدون قیمت</span>
+                            ) : (
+                              tier.prices.map((line) => (
+                                <span key={`${line.label}:${line.partner ? "p" : ""}`} className="inline-flex items-center gap-1">
+                                  {line.label && (
+                                    <span className={cn("text-[10px] font-bold", line.partner ? "text-sky-500/90" : "text-panel-muted")}>{line.label}</span>
+                                  )}
+                                  <PriceTag price={line.price} currency={tier.currency} partner={line.partner} size="sm" />
+                                </span>
+                              ))
+                            )}
+                          </span>
                         </button>
                       );
                     })}
                   </div>
+                  <FieldError id={`${ids.tier}-error`} message={fieldErrors.tierKey} />
                 </fieldset>
               )}
 

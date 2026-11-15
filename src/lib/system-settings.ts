@@ -9,6 +9,7 @@ import {
   MIN_USER_CODE_ROTATION_MINUTES,
   SYSTEM_SETTING_KEYS,
   parsePriceFieldList,
+  parseProvinceIdList,
   type SystemSettings,
 } from "@/lib/system-settings-shared";
 
@@ -43,8 +44,20 @@ export const getSystemSettings = cache(async (): Promise<SystemSettings> => {
     contactLocation: text(SYSTEM_SETTING_KEYS.contactLocation),
     enabledPriceFields: parseEnabledPriceFields(byKey.get(SYSTEM_SETTING_KEYS.enabledPriceFields)),
     registrationOpen: byKey.get(SYSTEM_SETTING_KEYS.registrationOpen) === "1",
+    activeProvinceIds: parseActiveProvinceIds(byKey.get(SYSTEM_SETTING_KEYS.activeProvinceIds)),
   };
 });
+
+function parseActiveProvinceIds(value: string | undefined): number[] | null {
+  if (value === undefined) return DEFAULT_SYSTEM_SETTINGS.activeProvinceIds;
+  const ids = parseProvinceIdList(value.split(","));
+  return ids.length > 0 ? ids : DEFAULT_SYSTEM_SETTINGS.activeProvinceIds;
+}
+
+/** Provinces offered in the guest purchase-request form; null = every province. */
+export async function getActiveProvinceIds(): Promise<number[] | null> {
+  return (await getSystemSettings()).activeProvinceIds;
+}
 
 function parseEnabledPriceFields(value: string | undefined): SystemSettings["enabledPriceFields"] {
   if (value === undefined) return DEFAULT_SYSTEM_SETTINGS.enabledPriceFields;
@@ -74,6 +87,8 @@ export async function saveSystemSettings(settings: SystemSettings): Promise<void
     [SYSTEM_SETTING_KEYS.enabledPriceFields, settings.enabledPriceFields.join(",")],
     [SYSTEM_SETTING_KEYS.registrationOpen, settings.registrationOpen ? "1" : "0"],
   ];
+  // Untouched until the administrator saves a selection (null = every province).
+  if (settings.activeProvinceIds) entries.push([SYSTEM_SETTING_KEYS.activeProvinceIds, settings.activeProvinceIds.join(",")]);
   await prisma.$transaction(
     entries.map(([key, value]) =>
       prisma.systemSetting.upsert({ where: { key }, create: { key, value }, update: { value } })
