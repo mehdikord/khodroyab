@@ -8,6 +8,8 @@ import { AdGallery } from "@/components/panel/ads/AdGallery";
 import { AdPriceHistory } from "@/components/panel/ads/AdPriceHistory";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { CopyCodeButton } from "@/components/panel/search/CopyCodeButton";
+import { PurchaseRequestButton } from "@/components/panel/purchase-requests/PurchaseRequestButton";
+import type { PurchaseRequestViewer } from "@/lib/purchase-requests-shared";
 import type { AdDetailRecord } from "@/lib/panel-search-shared";
 import { cn, formatMileage, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 import { convertPrice, currencyLabel, type PriceCurrency, type UsdRateInfo } from "@/lib/currency";
@@ -60,11 +62,15 @@ interface AdDetailViewProps {
   ad: AdDetailRecord;
   /** Open-market USD rate (the dashboard's cached quote) for price equivalents; null hides them. */
   usdRate?: UsdRateInfo | null;
+  /** Who is looking: drives the purchase-request form (guests also give name, mobile and city). */
+  viewer: PurchaseRequestViewer;
 }
 
 /** Everything about one ad: photos, specs, features, sale terms, price history and the seller's code. */
-export function AdDetailView({ ad, usdRate = null }: AdDetailViewProps) {
+export function AdDetailView({ ad, usdRate = null, viewer }: AdDetailViewProps) {
   const title = `${ad.brandName} ${ad.carName}`;
+  // Requests go to public ads of other sellers only.
+  const canRequest = !ad.isOwner && ad.status === "approved" && ad.isActive && Boolean(ad.sellerCode);
 
   return (
     <div className="space-y-5">
@@ -213,6 +219,23 @@ export function AdDetailView({ ad, usdRate = null }: AdDetailViewProps) {
           <section className={cardClass}>
             <SellerCodeBadge code={ad.sellerCode} size="lg" mine={ad.isOwner} />
             <p className="mt-2.5 text-[11px] leading-5 text-panel-faint">برای کپی، روی کد فروشنده بزنید.</p>
+            {canRequest && (
+              <div className="mt-4 border-t border-panel-line/[0.07] pt-4">
+                <PurchaseRequestButton
+                  viewer={viewer}
+                  target={{
+                    source: "sale_ad",
+                    adId: ad.id,
+                    carLabel: `${title} - مدل ${toPersianDigits(ad.carModel)}`,
+                    sellerCode: ad.sellerCode,
+                    adCode: ad.code,
+                    imageUrl: ad.galleryUrls[0] ?? ad.imageUrl,
+                    details: [toPersianDigits(ad.carYear), ad.colorName].filter(Boolean).join(" · ") || null,
+                  }}
+                />
+                <p className="mt-2 text-center text-[10px] leading-5 text-panel-faint">ثبت درخواست و هماهنگی خرید توسط کارشناسان خودرو یاب</p>
+              </div>
+            )}
           </section>
         </div>
 

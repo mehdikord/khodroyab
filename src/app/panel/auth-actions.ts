@@ -17,6 +17,7 @@ import {
 import type { FieldErrors } from "@/lib/validation/admin";
 import { parseOtpRequestForm, parseOtpVerifyForm } from "@/lib/validation/user";
 import { toPersianDigits } from "@/lib/utils";
+import { getSystemSettings } from "@/lib/system-settings";
 
 /** Best-effort client IP for throttling. */
 function getClientIp(): string {
@@ -28,6 +29,8 @@ function getClientIp(): string {
 
 const INVALID_REQUEST = "درخواست نامعتبر است. لطفاً دوباره تلاش کنید.";
 const GENERIC_FAILURE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
+/** Shown to an unknown number while sign-up is closed (system settings). */
+const REGISTRATION_CLOSED = "حسابی با این شماره وجود ندارد. ثبت‌نام فعلاً بسته است؛ برای ساخت حساب با پشتیبانی تماس بگیرید.";
 
 function minutes(seconds: number): string {
   return toPersianDigits(Math.max(1, Math.ceil(seconds / 60)));
@@ -78,6 +81,9 @@ export async function requestOtpAction(formData: FormData): Promise<RequestOtpAc
     });
     if (user && !user.isActive) {
       return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };
+    }
+    if (!user && !(await getSystemSettings()).registrationOpen) {
+      return { ok: false, message: REGISTRATION_CLOSED, fieldErrors: { phone: "حسابی با این شماره وجود ندارد" } };
     }
 
     const sent = await requestOtp(phone);
@@ -146,6 +152,10 @@ export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActi
 
     if (existing && !existing.isActive) {
       return { ok: false, message: "حساب کاربری شما غیرفعال شده است. برای پیگیری با پشتیبانی تماس بگیرید." };
+    }
+    // Sign-up may have been closed between the two steps; never create an account then.
+    if (!existing && !(await getSystemSettings()).registrationOpen) {
+      return { ok: false, message: REGISTRATION_CLOSED };
     }
 
     const check = await verifyOtp(phone, parsed.data.code);

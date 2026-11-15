@@ -34,6 +34,9 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
   const postalCode = formData.get("postalCode") as string;
   const address = formData.get("address") as string;
   const imageFile = formData.get("imageFile") as File;
+  const collabrate = formData.get("collabrate") === "true";
+  // Identity verification only applies to collaborators.
+  const authenticaed = collabrate && formData.get("authenticaed") === "true";
 
   // Basic validation
   const fieldErrors: Record<string, string> = {};
@@ -83,9 +86,9 @@ export async function createUserAction(formData: FormData): Promise<{ ok: true; 
         image,
         isActive: true,
         approvedAt: new Date(),
-        // Collaborator mode is switched on separately, from the users table.
-        collabrate: false,
-        authenticaed: false,
+        // Chosen by the admin in the create form; later changed from the users table / profile.
+        collabrate,
+        authenticaed,
       },
       include: userRecordInclude,
     });

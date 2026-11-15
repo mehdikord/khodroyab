@@ -9,6 +9,7 @@ import { userRecordInclude, userToRecord } from "@/lib/users";
 import { userCarInclude, userCarToRecord } from "@/lib/user-cars";
 import { getUserVerification } from "@/lib/verification";
 import { listRecentUserPriceTableEntries } from "@/lib/price-table";
+import { getEnabledPriceFields } from "@/lib/system-settings";
 import { UserProfile } from "@/components/admin/users/UserProfile";
 import { getActiveUserCode } from "@/lib/user-codes";
 
@@ -55,7 +56,9 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
         })
       : Promise.resolve([]),
     access.manageUser ? getUserVerification(userId) : Promise.resolve(null),
-    access.priceTable ? listRecentUserPriceTableEntries(userId, 3) : Promise.resolve({ total: 0, entries: [] }),
+    access.priceTable
+      ? getEnabledPriceFields().then((fields) => listRecentUserPriceTableEntries(userId, 3, fields))
+      : Promise.resolve({ total: 0, entries: [] }),
     getActiveUserCode(userId),
   ]);
 

@@ -57,6 +57,8 @@ function FormAlert({ message }: { message: string | null }) {
 interface UserAuthCardProps {
   /** Validated panel path to open after signing in (defaults to the dashboard). */
   next?: string | null;
+  /** Sign-up is open (system settings); when closed only existing accounts may sign in. */
+  registrationOpen?: boolean;
 }
 
 /**
@@ -64,7 +66,7 @@ interface UserAuthCardProps {
  * the mobile number gets a code; a number without an account is also asked for
  * the customer's name, and the account is created when the code is confirmed.
  */
-export const UserAuthCard: React.FC<UserAuthCardProps> = ({ next }) => {
+export const UserAuthCard: React.FC<UserAuthCardProps> = ({ next, registrationOpen = false }) => {
   const router = useRouter();
   const phoneId = useId();
   const nameId = useId();
@@ -179,7 +181,9 @@ export const UserAuthCard: React.FC<UserAuthCardProps> = ({ next }) => {
             </p>
           ) : (
             <p id={`${phoneId}-hint`} className="text-[11px] leading-5 text-panel-faint">
-              کد تایید به این شماره پیامک می‌شود. اگر حساب ندارید، با همین شماره ثبت‌نام می‌شوید.
+              {registrationOpen
+                ? "کد تایید به این شماره پیامک می‌شود. اگر حساب ندارید، با همین شماره ثبت‌نام می‌شوید."
+                : "کد تایید به شماره ثبت‌شده حساب شما پیامک می‌شود."}
             </p>
           )}
         </div>
@@ -201,7 +205,7 @@ export const UserAuthCard: React.FC<UserAuthCardProps> = ({ next }) => {
 
         <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-panel-faint">
           <ShieldCheck className="h-3.5 w-3.5 text-panel-accent" />
-          <span>ورود و ثبت‌نام با رمز یکبارمصرف پیامکی</span>
+          <span>{registrationOpen ? "ورود و ثبت‌نام با رمز یکبارمصرف پیامکی" : "ورود با رمز یکبارمصرف پیامکی"}</span>
         </div>
       </form>
     );

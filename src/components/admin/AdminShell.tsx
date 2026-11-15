@@ -12,11 +12,12 @@ import {
   X,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn, toPersianDigits } from "@/lib/utils";
 import { AdminLogo } from "@/components/admin/AdminLogo";
 import {
   findActiveNavItem,
   getVisibleNavGroups,
+  type AdminNavBadges,
   type AdminNavItem,
 } from "@/components/admin/admin-nav";
 import type { AdminAccess } from "@/lib/auth/permissions";
@@ -33,7 +34,28 @@ export interface AdminShellUser {
 
 interface AdminShellProps {
   user: AdminShellUser;
+  /** Blinking counters next to nav items (e.g. unseen purchase requests). */
+  badges?: AdminNavBadges;
   children: React.ReactNode;
+}
+
+/** Blinking count pill used in the sidebar. */
+function NavBadge({ count, label }: { count: number | undefined; label: string }) {
+  if (!count) return null;
+  return (
+    <span
+      className="admin-blink inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#FF6A00] px-1.5 font-mono text-[10px] font-black text-[#07090C] shadow-[0_0_12px_rgba(255,106,0,0.7)]"
+      aria-label={`${toPersianDigits(count)} ${label}`}
+    >
+      {toPersianDigits(count > 99 ? "99+" : count)}
+    </span>
+  );
+}
+
+function badgeFor(item: AdminNavItem, badges: AdminNavBadges | undefined): number {
+  if (!badges) return 0;
+  if (badges[item.key] !== undefined) return badges[item.key] ?? 0;
+  return (item.children ?? []).reduce((sum, child) => sum + (badges[child.key] ?? 0), 0);
 }
 
 /** Derive up-to-two-letter initials for the avatar. */
@@ -50,8 +72,9 @@ function getInitials(name: string): string {
 const NavCollapsibleItem: React.FC<{
   item: AdminNavItem;
   pathname: string;
+  badges?: AdminNavBadges;
   onNavigate?: () => void;
-}> = ({ item, pathname, onNavigate }) => {
+}> = ({ item, pathname, badges, onNavigate }) => {
   // Resolve the single best-matching nav entry so sibling routes that share a
   // prefix (e.g. /admin/ads and /admin/ads/pending) never highlight together.
   const activeHref = findActiveNavItem(pathname)?.href;
@@ -91,6 +114,7 @@ const NavCollapsibleItem: React.FC<{
           )}
         />
         <span className="flex-1 text-start">{item.label}</span>
+        {!isOpen && <NavBadge count={badgeFor(item, badges)} label="مورد جدید" />}
         <ChevronDown
           className={cn(
             "h-4 w-4 shrink-0 text-[#5E6672] transition-transform duration-200",
@@ -125,7 +149,8 @@ const NavCollapsibleItem: React.FC<{
                     )}
                   />
                   <span className="flex-1">{child.label}</span>
-                  {child.enLabel && (
+                  <NavBadge count={badges?.[child.key]} label="مورد جدید" />
+                  {child.enLabel && !badges?.[child.key] && (
                     <span
                       className={cn(
                         "font-mono text-[8px] tracking-widest transition-opacity",
@@ -150,8 +175,9 @@ const NavCollapsibleItem: React.FC<{
 const SidebarContent: React.FC<{
   pathname: string;
   user: AdminShellUser;
+  badges?: AdminNavBadges;
   onNavigate?: () => void;
-}> = ({ pathname, user, onNavigate }) => {
+}> = ({ pathname, user, badges, onNavigate }) => {
   return (
     <div className="flex h-full flex-col">
       {/* Brand */}
@@ -177,6 +203,7 @@ const SidebarContent: React.FC<{
                       key={item.key}
                       item={item}
                       pathname={pathname}
+                      badges={badges}
                       onNavigate={onNavigate}
                     />
                   );
@@ -263,7 +290,7 @@ const SidebarContent: React.FC<{
   );
 };
 
-export const AdminShell: React.FC<AdminShellProps> = ({ user, children }) => {
+export const AdminShell: React.FC<AdminShellProps> = ({ user, badges, children }) => {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -312,7 +339,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({ user, children }) => {
     <div className="admin-root min-h-screen">
       {/* Desktop sidebar (right-aligned in RTL) */}
       <aside className="fixed inset-y-0 start-0 z-40 hidden w-72 border-e border-white/[0.07] bg-[#0D1117] lg:block">
-        <SidebarContent pathname={pathname} user={user} />
+        <SidebarContent pathname={pathname} user={user} badges={badges} />
       </aside>
 
       {/* Mobile drawer */}
@@ -334,6 +361,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({ user, children }) => {
               <X className="h-4 w-4" />
             </button>
             <SidebarContent
+              badges={badges}
               pathname={pathname}
               user={user}
               onNavigate={() => setMobileOpen(false)}

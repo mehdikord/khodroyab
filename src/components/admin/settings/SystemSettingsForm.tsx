@@ -4,6 +4,7 @@ import React, { useId, useRef, useState, useTransition } from "react";
 import {
   AlertCircle,
   AlertTriangle,
+  BadgeDollarSign,
   ExternalLink,
   Headset,
   Info,
@@ -17,10 +18,13 @@ import {
   Save,
   Send,
   Settings,
+  UserPlus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
+import { Toggle } from "@/components/admin/ui/Toggle";
+import { PRICE_TABLE_PRICE_FIELDS, type PriceTablePriceField } from "@/lib/price-table-shared";
 import { saveSystemSettingsAction } from "@/app/admin/(panel)/settings/actions";
 import {
   MAX_ABOUT_TEXT_LENGTH,
@@ -160,6 +164,8 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
   const [notice, setNotice] = useState(initialSettings.adPageNotice);
   const [about, setAbout] = useState(initialSettings.aboutText);
   const [contact, setContact] = useState<ContactValues>(() => pickContact(initialSettings));
+  const [priceFields, setPriceFields] = useState<PriceTablePriceField[]>(initialSettings.enabledPriceFields);
+  const [registrationOpen, setRegistrationOpen] = useState(initialSettings.registrationOpen);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -205,6 +211,8 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
         setNotice(result.settings.adPageNotice);
         setAbout(result.settings.aboutText);
         setContact(pickContact(result.settings));
+        setPriceFields(result.settings.enabledPriceFields);
+        setRegistrationOpen(result.settings.registrationOpen);
         showToast("success", "تنظیمات سیستم ذخیره شد.");
       } else {
         setFieldErrors(result.fieldErrors ?? {});
@@ -214,6 +222,15 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
   }
 
   const noticeTrimmed = notice.trim();
+
+  /** Switch one price type on or off; the last active one cannot be switched off. */
+  function togglePriceField(key: PriceTablePriceField, on: boolean) {
+    setPriceFields((current) => {
+      if (on) return PRICE_TABLE_PRICE_FIELDS.map((field) => field.key).filter((k) => k === key || current.includes(k));
+      return current.length > 1 ? current.filter((k) => k !== key) : current;
+    });
+    clearError("enabledPriceFields");
+  }
 
   return (
     <div className="space-y-6">
@@ -271,6 +288,60 @@ export function SystemSettingsForm({ initialSettings }: SystemSettingsFormProps)
               بین {toPersianDigits(MIN_USER_CODE_ROTATION_MINUTES)} تا {toPersianDigits(MAX_USER_CODE_ROTATION_MINUTES)} دقیقه. پیش‌فرض: ۳۰ دقیقه.
             </p>
           )}
+        </SettingCard>
+
+        <SettingCard
+          icon={BadgeDollarSign}
+          title="تنظیمات قیمت‌دهی"
+          description="انواع قیمتی که همکاران در «جدول من» وارد می‌کنند و در لیست قیمت نمایش داده می‌شوند. نوع غیرفعال در هیچ صفحه‌ای (پنل کاربران، لیست قیمت و پنل مدیریت) نمایش داده نمی‌شود، ولی مقادیر ثبت‌شده آن حذف نمی‌شوند و با فعال کردن دوباره برمی‌گردند. حداقل یک نوع قیمت باید فعال باشد."
+        >
+          {priceFields.map((key) => (
+            <input key={key} type="hidden" name="enabledPriceFields" value={key} />
+          ))}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {PRICE_TABLE_PRICE_FIELDS.map((field) => {
+              const on = priceFields.includes(field.key);
+              const locked = on && priceFields.length === 1;
+              return (
+                <div
+                  key={field.key}
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors",
+                    on ? "border-[#FF6A00]/35 bg-[#FF6A00]/[0.06]" : "border-white/[0.08] bg-[#07090C]"
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className={cn("text-sm font-bold", on ? "text-[#F5F5F5]" : "text-[#8B93A1]")}>{field.label}</p>
+                    <p className="mt-0.5 text-[11px] text-[#5E6672]">{locked ? "تنها نوع فعال" : on ? "فعال" : "غیرفعال"}</p>
+                  </div>
+                  <Toggle
+                    checked={on}
+                    onCheckedChange={(value) => togglePriceField(field.key, value)}
+                    label={field.label}
+                    disabled={isPending || locked}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {fieldErrors.enabledPriceFields && <p className="mt-2 text-xs text-red-400">{fieldErrors.enabledPriceFields}</p>}
+        </SettingCard>
+
+        <SettingCard
+          icon={UserPlus}
+          title="ثبت‌نام کاربران جدید"
+          description="وقتی خاموش است، فقط کاربرانی که مدیر در بخش «کاربران» ساخته است می‌توانند وارد پنل شوند و شماره‌های ناشناس پیام «حسابی با این شماره وجود ندارد» می‌گیرند. با روشن کردن، هر شماره جدید هنگام ورود حساب می‌سازد."
+        >
+          <input type="hidden" name="registrationOpen" value={registrationOpen ? "1" : "0"} />
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#07090C] px-4 py-3 sm:max-w-md">
+            <div>
+              <p className="text-sm font-bold text-[#F5F5F5]">ثبت‌نام از صفحه ورود پنل</p>
+              <p className={cn("mt-0.5 text-[11px] font-bold", registrationOpen ? "text-emerald-400" : "text-[#8B93A1]")}>
+                {registrationOpen ? "باز است" : "بسته است؛ فقط ورود"}
+              </p>
+            </div>
+            <Toggle checked={registrationOpen} onCheckedChange={setRegistrationOpen} label="ثبت‌نام کاربران جدید" disabled={isPending} />
+          </div>
         </SettingCard>
 
         <SettingCard

@@ -6,11 +6,13 @@ import { ArrowRight, CalendarDays, Crown, UsersRound } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { getPriceListCarDetail } from "@/lib/price-list";
-import { PRICE_TABLE_PRICE_FIELDS } from "@/lib/price-table-shared";
-import { toPersianDigits } from "@/lib/utils";
+import { priceFieldsFor } from "@/lib/price-table-shared";
+import { getEnabledPriceFields } from "@/lib/system-settings";
+import { cn, toPersianDigits } from "@/lib/utils";
 import { CURRENCY_LABELS, PRICE_CURRENCIES } from "@/lib/currency";
 import { BrandLogo, PriceTag } from "@/components/panel/price-list/price-list-ui";
 import { CarOffersView } from "@/components/panel/price-list/CarOffersView";
+import { CarHeroGallery } from "@/components/panel/price-list/CarHeroGallery";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   // Only the car's name is used here, so collaborator prices are never needed.
-  const detail = await getPriceListCarDetail(params.carId, false, null);
+  const detail = await getPriceListCarDetail(params.carId, false, null, { withSellerCodes: false });
   return {
     title: detail
       ? `لیست قیمت‌های ${detail.car.name} - ${detail.car.brandName} | خودرو یاب`
@@ -28,16 +30,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-/** Every seller's raw, clearance and instant price for one price-list car (open to guests, public prices only). */
+/** Every seller's prices (enabled types only) for one price-list car (open to guests, public prices only). */
 export default async function PriceListCarPage({ params }: PageProps) {
   const user = await getCurrentUser();
   const isPartner = user?.isPartner ?? false;
+  const priceFields = await getEnabledPriceFields();
 
-  const detail = await getPriceListCarDetail(params.carId, isPartner, user?.id ?? null);
+  const detail = await getPriceListCarDetail(params.carId, isPartner, user?.id ?? null, { enabled: priceFields });
   if (!detail) notFound();
   const { car, offers, lowest, lowestByColumn, columns } = detail;
-  const years = Array.from(new Set(columns.map((column) => column.year)));
+  const fields = priceFieldsFor(priceFields);
+  const years = Array.from(new Set(columns.map((column) => column.year))).sort((a, b) => Number(b) - Number(a));
   const sellerCount = offers.length;
+  const currencies = PRICE_CURRENCIES.filter((currency) => lowest[currency]);
 
   return (
     <div className="space-y-5">
@@ -49,20 +54,33 @@ export default async function PriceListCarPage({ params }: PageProps) {
         بازگشت به لیست قیمت
       </Link>
 
-      {/* Car hero */}
-      <section className="panel-card-in relative overflow-hidden rounded-[32px] border border-panel-line/[0.1] bg-panel-surface">
+      {/* Car hero: photos (start) · name, facts and best prices */}
+      <section className="panel-card-in relative overflow-hidden rounded-[28px] border border-panel-line/[0.1] bg-panel-surface">
         <div className="panel-ambient pointer-events-none absolute inset-0" aria-hidden="true" />
-        <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
-        <div className="pointer-events-none absolute -top-24 end-[-60px] h-64 w-64 rounded-full bg-[#FF6A00]/20 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-24 end-[-60px] h-56 w-56 rounded-full bg-[#FF6A00]/15 blur-3xl" aria-hidden="true" />
 
-        <div className="relative flex flex-col gap-6 px-5 py-6 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <BrandLogo name={car.brandName} image={car.brandImage} className="h-20 w-20 rounded-[24px] p-2.5 sm:h-24 sm:w-24" />
+        <div className="relative grid gap-4 p-3 sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)]">
+          <CarHeroGallery
+            images={car.images}
+            alt={`${car.brandName} ${car.name}`}
+            className="h-44 sm:h-full sm:min-h-[11.5rem]"
+            fallback={
+              <div className="relative flex h-full w-full items-center justify-center">
+                <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+                <BrandLogo name={car.brandName} image={car.brandImage} className="relative h-20 w-20 rounded-[22px] p-2.5" />
+              </div>
+            }
+          />
+
+          <div className="flex min-w-0 flex-col justify-center gap-3 px-1 pb-1 sm:py-1">
             <div className="min-w-0">
-              <p className="text-xs font-bold text-panel-muted">لیست قیمت‌های</p>
-              <h1 className="mt-0.5 break-words text-xl font-black leading-8 text-panel-text sm:text-2xl">
-                {car.name} <span className="text-panel-muted">-</span> {car.brandName}
-              </h1>
+              <p className="flex items-center gap-1.5 text-xs font-bold text-panel-muted">
+                <BrandLogo name={car.brandName} image={car.brandImage} className="h-6 w-6 rounded-lg p-0.5" />
+                {car.brandName}
+                <span className="text-panel-faint">·</span>
+                <span className="font-semibold">لیست قیمت</span>
+              </p>
+              <h1 className="mt-1.5 break-words text-xl font-black leading-8 text-panel-text sm:text-2xl">{car.name}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span className="rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">مدل {toPersianDigits(car.model)}</span>
                 <span className="inline-flex items-center gap-1 rounded-lg bg-[#FF6A00]/10 px-2 py-1 font-bold text-panel-accent">
@@ -72,46 +90,48 @@ export default async function PriceListCarPage({ params }: PageProps) {
                 {years.length > 0 && (
                   <span className="inline-flex items-center gap-1 rounded-lg bg-panel-line/[0.06] px-2 py-1 font-semibold text-panel-text-2">
                     <CalendarDays className="h-3.5 w-3.5 text-panel-accent" />
-                    قیمت برای {years.map((year) => toPersianDigits(year)).join("، ")}
+                    {years.map((year) => toPersianDigits(year)).join("، ")}
                   </span>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Best prices, one block per currency in use */}
-          <div className="space-y-3 lg:min-w-[440px]">
-            {PRICE_CURRENCIES.filter((currency) => lowest[currency]).map((currency) => {
-              const best = lowest[currency]!;
-              return (
-                <div key={currency}>
-                  {Object.keys(lowest).length > 1 && (
-                    <p className="mb-1.5 text-[10px] font-extrabold text-panel-muted">قیمت‌های {CURRENCY_LABELS[currency]}ی</p>
-                  )}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    {PRICE_TABLE_PRICE_FIELDS.map((field) => (
-                      <div key={field.key} className="rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-2 py-3 text-center backdrop-blur">
-                        <p className="flex items-center justify-center gap-1 text-[10px] font-bold text-panel-muted">
-                          <Crown className="h-3 w-3 text-panel-success" />
-                          کمترین {field.label.replace("قیمت ", "")}
-                        </p>
-                        <div className="mt-2 flex justify-center">
-                          <PriceTag price={best[field.key]} currency={currency} best={Boolean(best[field.key])} />
-                        </div>
-                        {isPartner && (
-                          <div className="mt-2 border-t border-panel-line/[0.06] pt-2">
-                            <p className="text-[9px] font-bold text-panel-muted">همکار</p>
-                            <div className="mt-1 flex justify-center">
-                              <PriceTag price={best[field.partnerKey]} currency={currency} partner size="sm" />
-                            </div>
+            {/* Best prices: one compact strip per currency in use */}
+            {currencies.length > 0 && (
+              <div className="space-y-2">
+                {currencies.map((currency) => {
+                  const best = lowest[currency]!;
+                  return (
+                    <div
+                      key={currency}
+                      className={cn(
+                        "grid gap-px overflow-hidden rounded-2xl border border-panel-line/[0.08] bg-panel-line/[0.08]",
+                        fields.length === 1 ? "grid-cols-1" : fields.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                      )}
+                    >
+                      {fields.map((field) => (
+                        <div key={field.key} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 bg-panel-bg/70 px-3 py-2.5 backdrop-blur">
+                          <p className="flex items-center gap-1 text-[10px] font-bold text-panel-muted">
+                            <Crown className="h-3 w-3 text-panel-success" />
+                            کمترین {field.label.replace("قیمت ", "")}
+                            {currencies.length > 1 && <span className="text-panel-faint">({CURRENCY_LABELS[currency]})</span>}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <PriceTag price={best[field.key]} currency={currency} best={Boolean(best[field.key])} />
+                            {isPartner && best[field.partnerKey] && (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="text-[9px] font-bold text-sky-500/90">همکار</span>
+                                <PriceTag price={best[field.partnerKey]} currency={currency} partner size="sm" />
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -142,11 +162,14 @@ export default async function PriceListCarPage({ params }: PageProps) {
             lowestByColumn={lowestByColumn}
             columns={columns}
             showPartner={isPartner}
+            priceFields={priceFields}
+            viewer={{ signedIn: Boolean(user), name: user?.name ?? null, phone: user?.phone ?? null }}
+            carImage={car.images[0] ?? null}
           />
           <p className="text-[11px] leading-6 text-panel-faint">
             قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) و توسط فروشندگان در جدول قیمتشان برای هر سال ساخت و رنگ جداگانه ثبت شده‌اند؛ هر ستون یک سال، رنگ و واحد قیمت است و
-            «—» یعنی فروشنده برای آن سال و رنگ قیمتی ثبت نکرده است. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده و با زدن عنوان هر ستون،
-            فروشندگان بر اساس قیمت همان ستون مرتب می‌شوند.
+            «—» یعنی فروشنده برای آن سال و رنگ قیمتی ثبت نکرده است. کمترین قیمت هر ستون با نشان تاج سبز مشخص شده است. با انتخاب سال فقط قیمت‌های همان سال نمایش داده
+            می‌شود و با زدن عنوان هر ستون، فروشندگان بر اساس قیمت همان ستون مرتب می‌شوند. تاریخ زیر کد هر فروشنده، آخرین به‌روزرسانی قیمت‌های اوست.
           </p>
         </>
       )}

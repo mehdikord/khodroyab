@@ -3,6 +3,8 @@
  * The loaders live in `system-settings.ts`; validation in `validation/system-settings.ts`.
  */
 
+import { PRICE_TABLE_PRICE_FIELDS, type PriceTablePriceField } from "@/lib/price-table-shared";
+
 export const SYSTEM_SETTING_KEYS = {
   /** Minutes a user's public code stays valid before a new one is generated. */
   userCodeRotationMinutes: "user_code_rotation_minutes",
@@ -24,6 +26,10 @@ export const SYSTEM_SETTING_KEYS = {
   contactInstagram: "contact_instagram",
   /** Contact page: office location as "lat,lng". */
   contactLocation: "contact_location",
+  /** Pricing settings: the price-table prices in use, comma-separated field keys (at least one). */
+  enabledPriceFields: "price_fields_enabled",
+  /** "1" lets unknown phone numbers create an account at sign-in; "0" (default) allows sign-in only. */
+  registrationOpen: "registration_open",
 } as const;
 
 export type SystemSettingField = keyof typeof SYSTEM_SETTING_KEYS;
@@ -45,6 +51,14 @@ export interface SystemSettings {
   contactInstagram: string;
   /** "lat,lng" or empty. */
   contactLocation: string;
+  /**
+   * Price-table prices (raw / clearance / instant) in use, in display order;
+   * never empty. Disabled prices stay stored but are hidden everywhere and
+   * cannot be entered.
+   */
+  enabledPriceFields: PriceTablePriceField[];
+  /** New customers may sign up from the panel's sign-in screen. */
+  registrationOpen: boolean;
 }
 
 export const DEFAULT_USER_CODE_ROTATION_MINUTES = 30;
@@ -67,7 +81,18 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   contactWhatsapp: "",
   contactInstagram: "",
   contactLocation: "",
+  enabledPriceFields: ["instantPrice"],
+  registrationOpen: false,
 };
+
+/**
+ * Read a list of price fields (stored comma list or form values): known keys
+ * only, in display order, de-duplicated. Empty when none is valid.
+ */
+export function parsePriceFieldList(values: Iterable<string>): PriceTablePriceField[] {
+  const wanted = new Set(Array.from(values, (value) => value.trim()));
+  return PRICE_TABLE_PRICE_FIELDS.map((field) => field.key).filter((key) => wanted.has(key));
+}
 
 export interface GeoPoint {
   lat: number;

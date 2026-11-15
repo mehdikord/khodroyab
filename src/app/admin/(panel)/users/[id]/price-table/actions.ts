@@ -7,6 +7,7 @@ import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { replaceUserPriceTable, type SavePriceTableResult } from "@/lib/price-table";
 import { parsePriceTableForm } from "@/lib/validation/price-table";
+import { getEnabledPriceFields } from "@/lib/system-settings";
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
@@ -35,10 +36,11 @@ export async function saveUserPriceTableAction(userIdRaw: string, formData: Form
   if (!user) return { ok: false, message: "کاربر یافت نشد" };
   if (!user.collabrate) return { ok: false, message: "جدول قیمت فقط برای کاربران همکار قابل ثبت است." };
 
-  const parsed = parsePriceTableForm(formData);
+  const enabled = await getEnabledPriceFields();
+  const parsed = parsePriceTableForm(formData, enabled);
   if (!parsed.success) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
 
-  const result = await replaceUserPriceTable(userId, parsed.entries);
+  const result = await replaceUserPriceTable(userId, parsed.entries, enabled);
   if (result.ok) {
     revalidatePath(`/admin/users/${userId.toString()}`);
     revalidatePath(`/admin/users/${userId.toString()}/price-table`);

@@ -48,6 +48,38 @@ export function withVisiblePrices<T extends Record<PriceTableAnyPriceField, stri
   return copy;
 }
 
+/** Every price type, for callers that do not filter by the pricing settings. */
+export const ALL_PRICE_FIELD_KEYS: readonly PriceTablePriceField[] = PRICE_TABLE_PRICE_FIELDS.map((field) => field.key);
+
+/** The price fields (with labels) of the given enabled keys, in display order. */
+export function priceFieldsFor(enabled: readonly PriceTablePriceField[]) {
+  return PRICE_TABLE_PRICE_FIELDS.filter((field) => enabled.includes(field.key));
+}
+
+/** Public and collaborator keys of the enabled price types. */
+export function priceKeysFor(enabled: readonly PriceTablePriceField[]): PriceTableAnyPriceField[] {
+  return priceFieldsFor(enabled).flatMap((field) => [field.key, field.partnerKey]);
+}
+
+/**
+ * Copy of a row's prices with the price types disabled in the pricing
+ * settings blanked (public and collaborator alike). Applied on the server
+ * before prices leave for the browser, so disabled types never show anywhere.
+ */
+export function withEnabledPrices<T extends Record<PriceTableAnyPriceField, string | null>>(
+  prices: T,
+  enabled: readonly PriceTablePriceField[]
+): T {
+  if (enabled.length === PRICE_TABLE_PRICE_FIELDS.length) return prices;
+  const copy = { ...prices };
+  for (const field of PRICE_TABLE_PRICE_FIELDS) {
+    if (enabled.includes(field.key)) continue;
+    copy[field.key] = null as T[typeof field.key];
+    copy[field.partnerKey] = null as T[typeof field.partnerKey];
+  }
+  return copy;
+}
+
 /** True when at least one of the given row's prices is set. */
 export function hasAnyPrice(prices: Record<PriceTableAnyPriceField, string | null>): boolean {
   return PRICE_TABLE_ALL_PRICE_KEYS.some((key) => Boolean(prices[key]));

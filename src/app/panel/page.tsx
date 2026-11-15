@@ -7,14 +7,15 @@ import { ArrowRight } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { PANEL_HOME, safePanelNext } from "@/lib/auth/public-panel";
 import { listActiveSponsors } from "@/lib/sponsors";
+import { getSystemSettings } from "@/lib/system-settings";
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
 import { SponsorsMarquee } from "@/components/panel/SponsorsMarquee";
 import { UserAuthCard } from "@/components/panel/UserAuthCard";
 
 export const metadata: Metadata = {
-  title: "ورود یا ثبت‌نام همکاران | خودرو یاب",
-  description: "ورود یا ثبت‌نام همکاران خودرو یاب برای مدیریت آگهی‌ها و جدول قیمت",
+  title: "ورود همکاران | خودرو یاب",
+  description: "ورود همکاران خودرو یاب برای مدیریت آگهی‌ها و جدول قیمت",
   robots: "noindex, nofollow",
 };
 
@@ -37,7 +38,8 @@ export default async function PanelLoginPage({ searchParams }: PageProps) {
     redirect(next ?? PANEL_HOME);
   }
 
-  const sponsors = await listActiveSponsors();
+  const [sponsors, settings] = await Promise.all([listActiveSponsors(), getSystemSettings()]);
+  const { registrationOpen } = settings;
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden">
@@ -70,11 +72,13 @@ export default async function PanelLoginPage({ searchParams }: PageProps) {
         <div className="admin-animate-in flex flex-col items-center text-center">
           <PanelLogo markOnly size="lg" />
           <h1 className="mt-5 text-2xl font-black tracking-tight text-panel-text sm:text-3xl">
-            ورود یا ثبت‌نام
+            {registrationOpen ? "ورود یا ثبت‌نام" : "ورود"}
             <span className="bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] bg-clip-text text-transparent"> همکاران</span>
           </h1>
           <p className="mt-2 max-w-xs text-sm leading-7 text-panel-muted">
-            با شماره موبایل و کد تایید پیامکی وارد شوید؛ اگر حساب ندارید، همین‌جا ساخته می‌شود.
+            {registrationOpen
+              ? "با شماره موبایل و کد تایید پیامکی وارد شوید؛ اگر حساب ندارید، همین‌جا ساخته می‌شود."
+              : "با شماره موبایل ثبت‌شده و کد تایید پیامکی وارد شوید. برای ساخت حساب با پشتیبانی خودرو یاب تماس بگیرید."}
           </p>
         </div>
 
@@ -83,7 +87,7 @@ export default async function PanelLoginPage({ searchParams }: PageProps) {
           className="admin-animate-in mt-8 rounded-3xl border border-panel-line/[0.1] bg-panel-surface/95 p-5 shadow-[0_40px_80px_rgba(0,0,0,0.9),0_0_60px_rgba(255,106,0,0.07)] backdrop-blur-2xl sm:p-7"
           style={{ animationDelay: "80ms" }}
         >
-          <UserAuthCard next={next} />
+          <UserAuthCard next={next} registrationOpen={registrationOpen} />
         </div>
       </div>
 

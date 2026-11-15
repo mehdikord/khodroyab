@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Search, SearchX, Tags, UsersRound, X } from "lucide-react";
 
 import type { PriceListRow } from "@/lib/price-list";
-import { digitsOnly, mergePriceColumns } from "@/lib/price-table-shared";
+import { ALL_PRICE_FIELD_KEYS, digitsOnly, mergePriceColumns, type PriceTablePriceField } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
 import { BrandLogo, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
@@ -17,6 +17,8 @@ interface PriceListBrowserProps {
   showPartner: boolean;
   /** Open-market rial per dollar for the converted-price hints; null hides them. */
   rialPerUsd?: number | null;
+  /** Price types in use (pricing settings). */
+  priceFields?: readonly PriceTablePriceField[];
 }
 
 const headClass = "whitespace-nowrap px-3 py-3.5 text-right text-[11px] font-extrabold uppercase tracking-wider text-panel-muted";
@@ -31,15 +33,15 @@ function hasAnyPrice(row: PriceListRow): boolean {
 
 /**
  * Market-wide price list: every price-table car with, for each (production
- * year, colour), the lowest raw / clearance / instant price across all
- * sellers. There is one column per (year, colour) that appears among the
+ * year, colour), the lowest price of each enabled type across all sellers,
+ * with the code of the seller who entered it. There is one column per (year, colour) that appears among the
  * visible cars (oldest year first); a car without prices for a column shows
  * "—". Rows open the car's page.
  *
  * Desktop: a table whose car column stays pinned while the year columns
  * scroll horizontally. Below `lg`: cards with a scrollable strip of years.
  */
-export function PriceListBrowser({ rows, showPartner, rialPerUsd = null }: PriceListBrowserProps) {
+export function PriceListBrowser({ rows, showPartner, rialPerUsd = null, priceFields = ALL_PRICE_FIELD_KEYS }: PriceListBrowserProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState<string | null>(null);
@@ -279,7 +281,7 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null }: Price
                       <td className="whitespace-nowrap px-3 py-3.5 text-panel-text-2">{toPersianDigits(row.model)}</td>
                       {priceColumns.length === 0 ? (
                         <td className="px-3 py-3.5">
-                          <YearPrices prices={undefined} currency="usd" className="min-h-0 justify-start" />
+                          <YearPrices prices={undefined} currency="usd" fields={priceFields} className="min-h-0 justify-start" />
                         </td>
                       ) : (
                         priceColumns.map((column, index) => (
@@ -287,7 +289,14 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null }: Price
                             key={column.key}
                             className={cn("border-s border-panel-line/[0.06] px-3 py-3", index % 2 === 1 && "bg-panel-line/[0.02]")}
                           >
-                            <YearPrices prices={row.byColumn[column.key]} currency={column.currency} showPartner={showPartner} rialPerUsd={rialPerUsd} />
+                            <YearPrices
+                              prices={row.byColumn[column.key]}
+                              currency={column.currency}
+                              showPartner={showPartner}
+                              rialPerUsd={rialPerUsd}
+                              fields={priceFields}
+                              sellers={row.sellersByColumn[column.key]}
+                            />
                           </td>
                         ))
                       )}
@@ -342,7 +351,14 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null }: Price
                             <p className="mb-1.5 border-b border-panel-line/[0.06] pb-1.5 text-[11px] font-bold text-panel-muted">
                               <ColumnHeading column={column} active={Boolean(row.byColumn[column.key])} />
                             </p>
-                            <YearPrices prices={row.byColumn[column.key]} currency={column.currency} showPartner={showPartner} rialPerUsd={rialPerUsd} className="min-h-[70px]" />
+                            <YearPrices
+                              prices={row.byColumn[column.key]}
+                              currency={column.currency}
+                              showPartner={showPartner}
+                              rialPerUsd={rialPerUsd}
+                              fields={priceFields}
+                              sellers={row.sellersByColumn[column.key]}
+                            />
                           </div>
                         ))}
                       </div>

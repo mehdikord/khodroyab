@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useId, useRef, useState, useTransition } from "react";
-import { AlertCircle, ImagePlus, Loader2, UserPlus, Trash2 } from "lucide-react";
+import { AlertCircle, BadgeCheck, Handshake, ImagePlus, Loader2, UserPlus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/admin/ui/Modal";
+import { Toggle } from "@/components/admin/ui/Toggle";
 import { createUserAction, updateUserAction } from "@/app/admin/(panel)/users/actions";
 import { type UserRecord } from "@/lib/users";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,9 @@ export function UserFormModal({ user, onClose, onSuccess, onError }: UserFormMod
   const [isPending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // New accounts only: the users table and profile page manage these afterwards.
+  const [collabrate, setCollabrate] = useState(false);
+  const [authenticaed, setAuthenticaed] = useState(false);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -41,6 +45,10 @@ export function UserFormModal({ user, onClose, onSuccess, onError }: UserFormMod
     setFieldErrors({});
     const formData = new FormData(event.currentTarget);
     if (selectedFile) formData.set("imageFile", selectedFile);
+    if (!isEdit) {
+      formData.set("collabrate", collabrate ? "true" : "false");
+      formData.set("authenticaed", collabrate && authenticaed ? "true" : "false");
+    }
 
     startTransition(async () => {
       const result = isEdit ? await updateUserAction(user.id, formData) : await createUserAction(formData);
@@ -108,6 +116,43 @@ export function UserFormModal({ user, onClose, onSuccess, onError }: UserFormMod
             <textarea name="address" defaultValue={user?.address || ""} className={cn(inputClassName(false), "h-24 py-2")} />
           </div>
         </div>
+
+        {!isEdit && (
+          <div className="space-y-3 rounded-2xl border border-white/[0.08] bg-[#07090C] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <Handshake className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
+                <div>
+                  <p className="text-sm font-semibold text-[#F5F5F5]">کاربر همکار</p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-[#5E6672]">همکار می‌تواند آگهی و جدول قیمت ثبت کند.</p>
+                </div>
+              </div>
+              <Toggle
+                checked={collabrate}
+                onCheckedChange={(value) => {
+                  setCollabrate(value);
+                  if (!value) setAuthenticaed(false);
+                }}
+                label="کاربر همکار"
+                disabled={isPending}
+              />
+            </div>
+            <div className={cn("flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3", !collabrate && "opacity-50")}>
+              <div className="flex min-w-0 items-start gap-2.5">
+                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                <div>
+                  <p className="text-sm font-semibold text-[#F5F5F5]">احراز هویت شده</p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-[#5E6672]">
+                    {collabrate
+                      ? "اگر روشن باشد، نیازی به ارسال مدارک نیست و قیمت‌های همکار در لیست قیمت نمایش داده می‌شود."
+                      : "فقط برای کاربران همکار."}
+                  </p>
+                </div>
+              </div>
+              <Toggle checked={authenticaed} onCheckedChange={setAuthenticaed} label="احراز هویت شده" disabled={isPending || !collabrate} />
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-[#F5F5F5]">تصویر</label>

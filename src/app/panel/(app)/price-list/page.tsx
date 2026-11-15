@@ -6,7 +6,9 @@ import type { LucideIcon } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { countPriceListSellers, listPriceListRows } from "@/lib/price-list";
 import { getConversionRates } from "@/lib/market-rates";
-import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { getEnabledPriceFields } from "@/lib/system-settings";
+import { priceFieldsFor } from "@/lib/price-table-shared";
+import { formatPersianNumber, joinFa, toPersianDigits } from "@/lib/utils";
 import { LiveClock } from "@/components/panel/search/LiveClock";
 import { PriceListBrowser } from "@/components/panel/price-list/PriceListBrowser";
 
@@ -32,14 +34,21 @@ function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
 
 /**
  * Market-wide price list: every car the admin allowed in price tables with the
- * lowest raw, clearance and instant price any seller has entered.
+ * lowest price of each enabled type any seller has entered, with that seller's code.
  */
 export default async function PanelPriceListPage() {
   const user = await getCurrentUser();
   const isPartner = user?.isPartner ?? false;
 
+  const priceFields = await getEnabledPriceFields();
+  // "خام، ترخیصی و فوری" — whichever price types are in use.
+  const fieldNames = joinFa(priceFieldsFor(priceFields).map((field) => field.label.replace("قیمت ", "")));
   // Same cached open-market quote as the dashboard and ads; never a fresh request per view.
-  const [rows, sellerCount, rates] = await Promise.all([listPriceListRows(isPartner), countPriceListSellers(), getConversionRates()]);
+  const [rows, sellerCount, rates] = await Promise.all([
+    listPriceListRows(isPartner, priceFields),
+    countPriceListSellers(priceFields),
+    getConversionRates(),
+  ]);
   const rialPerUsd = rates?.usd?.priceRial ?? null;
   // "1405/08/20 14:30:12" → "۱۴۰۵/۰۸/۲۰ ۱۴:۳۰"
   const rateUpdatedAt = rates?.usd?.updatedAtJalali ? toPersianDigits(rates.usd.updatedAtJalali.slice(0, 16)) : null;
@@ -62,7 +71,7 @@ export default async function PanelPriceListPage() {
               </h1>
               <p className="mt-1.5 flex items-center gap-1.5 text-xs leading-6 text-panel-muted sm:text-sm">
                 <Sparkles className="h-3.5 w-3.5 shrink-0 text-panel-accent" />
-                کمترین قیمت خام، ترخیصی و فوری هر خودرو به تفکیک سال ساخت و رنگ، از بین جدول قیمت همه فروشندگان
+                کمترین قیمت {fieldNames} هر خودرو به تفکیک سال ساخت و رنگ، از بین جدول قیمت همه فروشندگان
               </p>
             </div>
             <LiveClock className="self-start" />
@@ -89,10 +98,10 @@ export default async function PanelPriceListPage() {
         </div>
       ) : (
         <>
-          <PriceListBrowser rows={rows} showPartner={isPartner} rialPerUsd={rialPerUsd} />
+          <PriceListBrowser rows={rows} showPartner={isPartner} rialPerUsd={rialPerUsd} priceFields={priceFields} />
           <p className="text-[11px] leading-6 text-panel-faint">
-            قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) هستند. هر ستون یک سال ساخت، رنگ و واحد قیمت است و کمترین قیمت خام، ترخیصی و فوری آن را از بین جدول قیمت فروشندگان
-            نشان می‌دهد؛ «—» یعنی برای آن سال و رنگ قیمتی ثبت نشده است. برای دیدن قیمت همه فروشندگان روی هر ردیف بزنید.
+            قیمت‌ها به دلار یا ریال (به انتخاب فروشنده) هستند. هر ستون یک سال ساخت، رنگ و واحد قیمت است و کمترین قیمت {fieldNames} آن را از بین جدول قیمت فروشندگان،
+            همراه با کد فروشنده‌ای که آن قیمت را ثبت کرده، نشان می‌دهد؛ «—» یعنی برای آن سال و رنگ قیمتی ثبت نشده است. برای دیدن قیمت همه فروشندگان روی هر ردیف بزنید.
             {rialPerUsd && (
               <>
                 {" "}

@@ -8,6 +8,7 @@ import {
   MAX_USER_CODE_ROTATION_MINUTES,
   MIN_USER_CODE_ROTATION_MINUTES,
   SYSTEM_SETTING_KEYS,
+  parsePriceFieldList,
   type SystemSettings,
 } from "@/lib/system-settings-shared";
 
@@ -40,8 +41,21 @@ export const getSystemSettings = cache(async (): Promise<SystemSettings> => {
     contactWhatsapp: text(SYSTEM_SETTING_KEYS.contactWhatsapp),
     contactInstagram: text(SYSTEM_SETTING_KEYS.contactInstagram),
     contactLocation: text(SYSTEM_SETTING_KEYS.contactLocation),
+    enabledPriceFields: parseEnabledPriceFields(byKey.get(SYSTEM_SETTING_KEYS.enabledPriceFields)),
+    registrationOpen: byKey.get(SYSTEM_SETTING_KEYS.registrationOpen) === "1",
   };
 });
+
+function parseEnabledPriceFields(value: string | undefined): SystemSettings["enabledPriceFields"] {
+  if (value === undefined) return DEFAULT_SYSTEM_SETTINGS.enabledPriceFields;
+  const fields = parsePriceFieldList(value.split(","));
+  return fields.length > 0 ? fields : DEFAULT_SYSTEM_SETTINGS.enabledPriceFields;
+}
+
+/** The price-table prices in use (pricing settings), in display order; never empty. */
+export async function getEnabledPriceFields(): Promise<SystemSettings["enabledPriceFields"]> {
+  return (await getSystemSettings()).enabledPriceFields;
+}
 
 /** Save every setting in one transaction. Values must already be validated. */
 export async function saveSystemSettings(settings: SystemSettings): Promise<void> {
@@ -57,6 +71,8 @@ export async function saveSystemSettings(settings: SystemSettings): Promise<void
     [SYSTEM_SETTING_KEYS.contactWhatsapp, settings.contactWhatsapp],
     [SYSTEM_SETTING_KEYS.contactInstagram, settings.contactInstagram],
     [SYSTEM_SETTING_KEYS.contactLocation, settings.contactLocation],
+    [SYSTEM_SETTING_KEYS.enabledPriceFields, settings.enabledPriceFields.join(",")],
+    [SYSTEM_SETTING_KEYS.registrationOpen, settings.registrationOpen ? "1" : "0"],
   ];
   await prisma.$transaction(
     entries.map(([key, value]) =>

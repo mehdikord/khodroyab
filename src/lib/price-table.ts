@@ -4,10 +4,14 @@ import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import {
+  ALL_PRICE_FIELD_KEYS,
   PRICE_TABLE_ALL_PRICE_KEYS,
   hasAnyPrice,
+  priceKeysFor,
+  withEnabledPrices,
   withVisiblePrices,
   type PriceTableAnyPriceField,
+  type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import type { PriceTableEntryInput } from "@/lib/validation/price-table";
 import type { PriceCurrency } from "@/lib/currency";
@@ -96,8 +100,13 @@ export async function listPriceTableCars(): Promise<PriceTableCarRecord[]> {
  * The customer's saved entries, restricted to cars that are still eligible.
  * Pass `showPartner = false` for viewers who may not see collaborator prices:
  * those are blanked, and tiers left without any visible price are dropped.
+ * `enabled` (pricing settings) blanks the disabled price types the same way.
  */
-export async function listUserPriceTableEntries(userId: bigint, showPartner = true): Promise<PriceTableEntryRecord[]> {
+export async function listUserPriceTableEntries(
+  userId: bigint,
+  showPartner = true,
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
+): Promise<PriceTableEntryRecord[]> {
   const entries = await prisma.userPriceTableEntry.findMany({
     where: { userId, car: { priceTable: true } },
     select: {
@@ -126,7 +135,7 @@ export async function listUserPriceTableEntries(userId: bigint, showPartner = tr
       currency: entry.currency,
       tiers: entry.prices
         .map(({ color, colorId, ...tier }) => ({
-          ...withVisiblePrices(tier, showPartner),
+          ...withEnabledPrices(withVisiblePrices(tier, showPartner), enabled),
           colorId: colorId.toString(),
           colorName: color.name,
           colorCode: color.code,
@@ -156,11 +165,13 @@ const faDate = new Intl.DateTimeFormat("fa-IR", { year: "numeric", month: "long"
 
 /**
  * The user's most recently saved rows (eligible cars only), newest first, plus
- * how many rows they have in total. Every price is included (admin view).
+ * how many rows they have in total. Every price of the `enabled` types is
+ * included (admin view).
  */
 export async function listRecentUserPriceTableEntries(
   userId: bigint,
-  take: number
+  take: number,
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
 ): Promise<{ total: number; entries: RecentPriceTableEntryRecord[] }> {
   const where = { userId, car: { priceTable: true }, prices: { some: {} } } satisfies Prisma.UserPriceTableEntryWhereInput;
   const [total, rows] = await Promise.all([
@@ -195,12 +206,14 @@ export async function listRecentUserPriceTableEntries(
     entries: rows.map((row) => ({
       car: toCarRecord(row.car),
       currency: row.currency,
-      tiers: row.prices.map(({ color, colorId, ...tier }) => ({
-        ...tier,
-        colorId: colorId.toString(),
-        colorName: color.name,
-        colorCode: color.code,
-      })),
+      tiers: row.prices
+        .map(({ color, colorId, ...tier }) => ({
+          ...withEnabledPrices(tier, enabled),
+          colorId: colorId.toString(),
+          colorName: color.name,
+          colorCode: color.code,
+        }))
+        .filter(hasAnyPrice),
       updatedAtLabel: faDate.format(row.updatedAt),
     })),
   };
@@ -225,6 +238,59 @@ function entrySignature(tiers: TierSignatureInput[]): string {
   );
 }
 
+type StoredTier = Pick<PriceTableEntryInput["tiers"][number], "year" | PriceTableAnyPriceField> & { colorId: bigint };
+
+/**
+ * Fold the stored prices of disabled price types back into the submission
+ * (see `replaceUserPriceTable`). Stored rows that were not submitted but hold
+ * tiers with only disabled prices are re-submitted with just those tiers.
+ */
+function mergeDisabledPrices(
+  submitted: PriceTableEntryInput[],
+  existing: { carId: bigint; currency: PriceCurrency; prices: StoredTier[] }[],
+  enabled: readonly PriceTablePriceField[]
+): PriceTableEntryInput[] {
+  const enabledKeys = priceKeysFor(enabled);
+  const disabledKeys = PRICE_TABLE_ALL_PRICE_KEYS.filter((key) => !enabledKeys.includes(key));
+  if (disabledKeys.length === 0) return submitted;
+
+  const comboOf = (tier: { year: string; colorId: string | bigint }) => `${tier.year}:${tier.colorId.toString()}`;
+  const hiddenOnly = (tier: StoredTier) => enabledKeys.every((key) => !tier[key]) && disabledKeys.some((key) => tier[key]);
+  const toInput = (tier: StoredTier): PriceTableEntryInput["tiers"][number] => ({
+    ...(Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((key) => [key, tier[key]])) as Record<PriceTableAnyPriceField, string | null>),
+    year: tier.year,
+    colorId: tier.colorId.toString(),
+  });
+
+  const storedByCar = new Map(existing.map((entry) => [entry.carId.toString(), entry]));
+  const submittedIds = new Set(submitted.map((entry) => entry.carId));
+  const rows: PriceTableEntryInput[] = [
+    ...submitted,
+    ...existing
+      .filter((entry) => !submittedIds.has(entry.carId.toString()) && entry.prices.some(hiddenOnly))
+      .map((entry) => ({ carId: entry.carId.toString(), currency: entry.currency, tiers: [] })),
+  ];
+
+  return rows.map((entry) => {
+    const stored = storedByCar.get(entry.carId);
+    if (!stored) return entry;
+    const storedByCombo = new Map(stored.prices.map((tier) => [comboOf(tier), tier]));
+    const combos = new Set<string>();
+    const tiers = entry.tiers.map((tier) => {
+      combos.add(comboOf(tier));
+      const old = storedByCombo.get(comboOf(tier));
+      if (!old) return tier;
+      const merged = { ...tier };
+      for (const key of disabledKeys) merged[key] = old[key];
+      return merged;
+    });
+    for (const old of stored.prices) {
+      if (!combos.has(comboOf(old)) && hiddenOnly(old)) tiers.push(toInput(old));
+    }
+    return { ...entry, tiers };
+  });
+}
+
 /**
  * Replace a user's price table with the validated rows. Shared by the
  * customer's own editor and the admin's editor; callers authorise and
@@ -236,15 +302,23 @@ function entrySignature(tiers: TierSignatureInput[]): string {
  *   they reappear if the admin re-enables the car later.
  * - Each submitted row's (year, colour) tiers replace the stored ones; rows
  *   whose tiers are unchanged are not rewritten.
+ * - Price types disabled in the pricing settings (not in `enabled`) are never
+ *   taken from the submission: a submitted tier keeps the stored values of
+ *   those types, and stored tiers holding only disabled prices (invisible in
+ *   the editor) are kept as they are, so re-enabling a type brings them back.
  */
-export async function replaceUserPriceTable(userId: bigint, entries: PriceTableEntryInput[]): Promise<SavePriceTableResult> {
+export async function replaceUserPriceTable(
+  userId: bigint,
+  submitted: PriceTableEntryInput[],
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
+): Promise<SavePriceTableResult> {
   try {
     const eligible = await prisma.car.findMany({ where: { priceTable: true }, select: { id: true } });
     const eligibleIds = eligible.map((car) => car.id);
     const eligibleSet = new Set(eligibleIds.map((id) => id.toString()));
 
     const fieldErrors: Record<string, string> = {};
-    for (const entry of entries) {
+    for (const entry of submitted) {
       if (!eligibleSet.has(entry.carId)) {
         fieldErrors[`${entry.carId}.tiers`] = "این خودرو دیگر برای جدول قیمت مجاز نیست";
       }
@@ -258,12 +332,12 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
     }
 
     const colorIds = Array.from(
-      new Set(entries.flatMap((entry) => entry.tiers.map((tier) => tier.colorId))),
+      new Set(submitted.flatMap((entry) => entry.tiers.map((tier) => tier.colorId))),
       (id) => BigInt(id)
     );
     const existingColors = await prisma.color.findMany({ where: { id: { in: colorIds } }, select: { id: true } });
     const colorSet = new Set(existingColors.map((color) => color.id.toString()));
-    for (const entry of entries) {
+    for (const entry of submitted) {
       entry.tiers.forEach((tier, index) => {
         if (!colorSet.has(tier.colorId)) {
           fieldErrors[`${entry.carId}.${index}.colorId`] = "این رنگ دیگر وجود ندارد؛ رنگ دیگری انتخاب کنید";
@@ -274,10 +348,8 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
       return { ok: false, message: "برخی از رنگ‌های انتخاب‌شده حذف شده‌اند؛ صفحه را به‌روزرسانی کنید", fieldErrors };
     }
 
-    const submittedIds = entries.map((entry) => BigInt(entry.carId));
-
     const existing = await prisma.userPriceTableEntry.findMany({
-      where: { userId, carId: { in: submittedIds } },
+      where: { userId, carId: { in: eligibleIds } },
       select: {
         carId: true,
         currency: true,
@@ -296,6 +368,9 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
         },
       },
     });
+    const entries = mergeDisabledPrices(submitted, existing, enabled);
+    const submittedIds = entries.map((entry) => BigInt(entry.carId));
+
     const existingSignature = new Map(
       existing.map((entry) => [entry.carId.toString(), `${entry.currency}|${entrySignature(entry.prices)}`])
     );
@@ -332,7 +407,7 @@ export async function replaceUserPriceTable(userId: bigint, entries: PriceTableE
       { timeout: 30_000 }
     );
 
-    return { ok: true, entries: await listUserPriceTableEntries(userId) };
+    return { ok: true, entries: await listUserPriceTableEntries(userId, true, enabled) };
   } catch (error) {
     console.error("[price-table:save] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };

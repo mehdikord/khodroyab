@@ -54,8 +54,25 @@ export const PANEL_NAV_ITEMS: PanelNavItem[] = [
 /** Informational pages listed in the mobile side drawer. */
 export const PANEL_SECONDARY_ITEMS: PanelNavItem[] = PANEL_NAV_ITEMS.filter((item) => item.secondary);
 
-/** The dock items a user sees: non-collaborators cannot publish, so their publishing items are hidden. */
-export function panelNavItemsFor(collabrate: boolean): PanelNavItem[] {
+/**
+ * Dock of a guest (not signed in), in this order on every screen size: price
+ * list, ads (opens the sale-ad search), contact, about.
+ */
+const GUEST_NAV_KEYS = ["price-list", "search", "contact", "about"] as const;
+const GUEST_SHORT_LABELS: Partial<Record<string, string>> = { search: "آگهی‌ها و خرید" };
+
+export const PANEL_GUEST_NAV_ITEMS: PanelNavItem[] = GUEST_NAV_KEYS.map((key) => {
+  const item = PANEL_NAV_ITEMS.find((candidate) => candidate.key === key)!;
+  // Always in the dock for guests, also on small screens.
+  return { ...item, secondary: false, shortLabel: GUEST_SHORT_LABELS[key] ?? item.shortLabel };
+});
+
+/**
+ * The dock items a visitor sees: guests get the short public menu; signed-in
+ * non-collaborators cannot publish, so their publishing items are hidden.
+ */
+export function panelNavItemsFor(collabrate: boolean, guest = false): PanelNavItem[] {
+  if (guest) return PANEL_GUEST_NAV_ITEMS;
   return collabrate ? PANEL_NAV_ITEMS : PANEL_NAV_ITEMS.filter((item) => !item.collaboratorOnly);
 }
 

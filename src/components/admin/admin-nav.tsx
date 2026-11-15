@@ -1,4 +1,19 @@
-import { LayoutDashboard, Tag, Car, Users, HandCoins, Megaphone, Table2, Crown, HeartHandshake, MapPinned, ShieldCheck, KeyRound, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  Tag,
+  Car,
+  Users,
+  HandCoins,
+  Megaphone,
+  Table2,
+  Crown,
+  HeartHandshake,
+  MapPinned,
+  ShieldCheck,
+  KeyRound,
+  Settings,
+  ShoppingBag,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { USER_DIRECTORY_ACCESS, canAccess, type AccessRequirement, type AdminAccess } from "@/lib/auth/permissions";
@@ -10,6 +25,12 @@ export interface AdminSubNavItem {
   href: string;
   icon?: LucideIcon;
 }
+
+/**
+ * Live counters shown as blinking badges in the sidebar, keyed by nav item
+ * key (a parent's badge is the sum of its children's unless given itself).
+ */
+export type AdminNavBadges = Partial<Record<string, number>>;
 
 export interface AdminNavItem {
   key: string;
@@ -89,6 +110,33 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/branches",
         icon: MapPinned,
         requirement: "branches",
+      },
+    ],
+  },
+  {
+    key: "requests",
+    label: "درخواست‌ها",
+    items: [
+      {
+        key: "purchase_requests",
+        label: "درخواست‌های خرید",
+        enLabel: "REQUESTS",
+        icon: ShoppingBag,
+        requirement: "root",
+        children: [
+          {
+            key: "purchase_requests_public",
+            label: "درخواست‌های عمومی",
+            enLabel: "PUBLIC",
+            href: "/admin/purchase-requests/public",
+          },
+          {
+            key: "purchase_requests_members",
+            label: "درخواست‌های همکاران",
+            enLabel: "MEMBERS",
+            href: "/admin/purchase-requests/members",
+          },
+        ],
       },
     ],
   },

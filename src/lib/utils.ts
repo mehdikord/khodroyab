@@ -30,3 +30,8 @@ export function formatMileage(km: number | null | undefined): string {
   if (!km) return "صفر کیلومتر";
   return `${formatPersianNumber(km)} کیلومتر`;
 }
+
+/** Persian list: "الف، ب و ج". */
+export function joinFa(items: string[]): string {
+  return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join("، ")} و ${items[items.length - 1]}`;
+}

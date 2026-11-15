@@ -25,16 +25,17 @@ import type { PriceTableCarRecord, PriceTableEntryRecord } from "@/lib/price-tab
 import {
   PRICE_TABLE_ALL_PRICE_KEYS,
   PRICE_TABLE_MAX_TIERS,
-  PRICE_TABLE_PRICE_FIELDS,
+  ALL_PRICE_FIELD_KEYS,
   PRICE_TYPE_LABELS,
   digitsOnly,
   isValidTierYear,
   normalizeUsdPrice,
   normalizeYear,
+  priceFieldsFor,
   type PriceTableAnyPriceField,
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
-import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { cn, formatPersianNumber, joinFa, toPersianDigits } from "@/lib/utils";
 import { CURRENCY_LABELS, DEFAULT_PRICE_TABLE_CURRENCY, type PriceCurrency } from "@/lib/currency";
 import { CurrencyToggle } from "@/components/ads/CurrencyToggle";
 
@@ -44,6 +45,8 @@ interface MyPriceTableManagerProps {
   initialEntries: PriceTableEntryRecord[];
   /** Saves the whole table; defaults to the signed-in customer's own table. */
   saveAction?: (formData: FormData) => Promise<SavePriceTableResult>;
+  /** Price types in use (pricing settings); only these get inputs. Defaults to all three. */
+  priceFields?: readonly PriceTablePriceField[];
   /** Page heading; defaults to «جدول من». */
   title?: string;
   successMessage?: string;
@@ -168,8 +171,22 @@ const inputBase = cn(
 
 const borderFor = (hasError: boolean) => (hasError ? "border-red-500/60" : "border-panel-line/[0.12] hover:border-panel-line/25");
 
-/** Tier grid on `md+`: year | colour | raw | clearance | instant | remove (header and every tier row). */
-const tierGridClass = "md:grid md:grid-cols-[6.5rem_minmax(8.5rem,10rem)_repeat(3,minmax(0,1fr))_2.5rem] md:items-start md:gap-2";
+/**
+ * Tier grid on `md+`: year | colour | one column per enabled price | remove
+ * (header and every tier row). Literal class names so Tailwind keeps them.
+ */
+const TIER_GRID_CLASSES: Record<number, string> = {
+  1: "md:grid md:grid-cols-[6.5rem_minmax(8.5rem,12rem)_minmax(0,1fr)_2.5rem] md:items-start md:gap-2",
+  2: "md:grid md:grid-cols-[6.5rem_minmax(8.5rem,10rem)_repeat(2,minmax(0,1fr))_2.5rem] md:items-start md:gap-2",
+  3: "md:grid md:grid-cols-[6.5rem_minmax(8.5rem,10rem)_repeat(3,minmax(0,1fr))_2.5rem] md:items-start md:gap-2",
+};
+
+/** Price inputs on phones: one column per enabled price. */
+const PHONE_PRICE_GRID_CLASSES: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
 
 const FILTERS: { key: RowFilter; label: string }[] = [
   { key: "all", label: "همه" },
@@ -195,9 +212,12 @@ export function MyPriceTableManager({
   colors,
   initialEntries,
   saveAction = saveMyPriceTableAction,
+  priceFields = ALL_PRICE_FIELD_KEYS,
   title = "جدول من",
   successMessage = "جدول قیمت شما ذخیره شد",
 }: MyPriceTableManagerProps) {
+  const fields = useMemo(() => priceFieldsFor(priceFields), [priceFields]);
+  const tierGridClass = TIER_GRID_CLASSES[fields.length] ?? TIER_GRID_CLASSES[3];
   const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries));
   const [drafts, setDrafts] = useState<Drafts>(saved);
   const [query, setQuery] = useState("");
@@ -283,7 +303,7 @@ export function MyPriceTableManager({
   function appendTier(car: PriceTableCarRecord, tier: TierDraft) {
     if (draftOf(car).tiers.length >= PRICE_TABLE_MAX_TIERS) return;
     updateDraft(car.id, (current) => ({ ...current, tiers: [...current.tiers, tier] }));
-    const focusField = !tier.year ? "year" : !tier.colorId ? "colorId" : "priceUsd";
+    const focusField = !tier.year ? "year" : !tier.colorId ? "colorId" : (fields[0]?.key ?? "instantPrice");
     window.requestAnimationFrame(() => document.getElementById(`${tier.key}-${focusField}`)?.focus());
   }
 
@@ -407,7 +427,14 @@ export function MyPriceTableManager({
       <ol className="admin-animate-in grid grid-cols-1 gap-2 sm:grid-cols-3" style={{ animationDelay: "40ms" }}>
         {[
           { icon: CalendarDays, title: "سال و رنگ را انتخاب کنید", text: "سال پیش‌فرض، سال ساخت خودرو است و هر دو قابل تغییرند." },
-          { icon: Table2, title: "قیمت‌ها را وارد کنید", text: "خام، ترخیصی و فوری به دلار یا ریال، هر کدام عمومی و همکار؛ یکی کافی است." },
+          {
+            icon: Table2,
+            title: fields.length > 1 ? "قیمت‌ها را وارد کنید" : `${fields[0]?.label ?? "قیمت"} را وارد کنید`,
+            text:
+              fields.length > 1
+                ? `${joinFa(fields.map((field) => SHORT_PRICE_LABELS[field.key]))} به دلار یا ریال، هر کدام عمومی و همکار؛ یکی کافی است.`
+                : "به دلار یا ریال، عمومی و همکار؛ یکی کافی است.",
+          },
           { icon: Layers, title: "ردیف‌های بیشتر اضافه کنید", text: "سال جدید، یا همان سال با رنگ دیگر؛ هر سال و رنگ فقط یک بار." },
         ].map((step, index) => {
           const Icon = step.icon;
@@ -588,7 +615,7 @@ export function MyPriceTableManager({
                     <div className={cn(tierGridClass, "hidden px-2 text-[10px] font-extrabold text-panel-muted md:grid")} aria-hidden="true">
                       <span>سال ساخت</span>
                       <span>رنگ</span>
-                      {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                      {fields.map((field) => (
                         <span key={field.key}>
                           {field.label} ({CURRENCY_LABELS[draft.currency]})
                           <span className="mt-0.5 block text-[9px] font-bold text-panel-faint">
@@ -705,9 +732,9 @@ export function MyPriceTableManager({
                               {removeButton("mt-[18px] md:hidden")}
                             </div>
 
-                            {/* Prices: 3 columns on phones too */}
-                            <div className="mt-2 grid grid-cols-3 gap-1.5 md:contents">
-                              {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+                            {/* Prices: one column each on phones too */}
+                            <div className={cn("mt-2 grid gap-1.5 md:contents", PHONE_PRICE_GRID_CLASSES[fields.length] ?? "grid-cols-3")}>
+                              {fields.map((field) => (
                                 <div key={field.key} className="min-w-0 space-y-1">
                                   <p className="mb-1 block truncate text-[10px] font-bold text-panel-muted md:sr-only">{SHORT_PRICE_LABELS[field.key]}</p>
                                   {(

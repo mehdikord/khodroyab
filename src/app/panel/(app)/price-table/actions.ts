@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/user-auth";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { replaceUserPriceTable, type SavePriceTableResult } from "@/lib/price-table";
 import { parsePriceTableForm } from "@/lib/validation/price-table";
+import { getEnabledPriceFields } from "@/lib/system-settings";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
@@ -40,10 +41,11 @@ export async function saveMyPriceTableAction(formData: FormData): Promise<SavePr
   if (!guard.ok) return guard;
   const { userId } = guard;
 
-  const parsed = parsePriceTableForm(formData);
+  const enabled = await getEnabledPriceFields();
+  const parsed = parsePriceTableForm(formData, enabled);
   if (!parsed.success) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
 
-  const result = await replaceUserPriceTable(userId, parsed.entries);
+  const result = await replaceUserPriceTable(userId, parsed.entries, enabled);
   if (result.ok) {
     revalidatePath("/panel/price-table");
     revalidatePath("/panel/price-list", "layout");

@@ -6,6 +6,7 @@ import {
   MAX_ABOUT_TEXT_LENGTH,
   MAX_CONTACT_ADDRESS_LENGTH,
   parseGeoPoint,
+  parsePriceFieldList,
   MAX_AD_PAGE_NOTICE_LENGTH,
   MAX_USER_CODE_ROTATION_MINUTES,
   MIN_USER_CODE_ROTATION_MINUTES,
@@ -120,6 +121,11 @@ const schema = z.object({
     const point = parseGeoPoint(value);
     return point ? formatGeoPoint(point) : null;
   }, "مختصات معتبر نیست؛ مثلاً: 35.6997, 51.3380"),
+  enabledPriceFields: z
+    .array(z.string())
+    .transform((values) => parsePriceFieldList(values))
+    .refine((fields) => fields.length > 0, "حداقل یکی از انواع قیمت باید فعال باشد"),
+  registrationOpen: z.boolean(),
 });
 
 export type SystemSettingsParseResult =
@@ -143,6 +149,8 @@ export function parseSystemSettingsForm(formData: FormData): SystemSettingsParse
     contactWhatsapp: raw("contactWhatsapp"),
     contactInstagram: raw("contactInstagram"),
     contactLocation: raw("contactLocation"),
+    enabledPriceFields: formData.getAll("enabledPriceFields").filter((value): value is string => typeof value === "string"),
+    registrationOpen: raw("registrationOpen") === "1",
   });
   if (result.success) return { success: true, data: result.data };
 

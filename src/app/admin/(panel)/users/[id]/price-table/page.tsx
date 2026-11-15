@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { requireAdminAccess } from "@/lib/auth/guards";
 import { listColors } from "@/lib/colors";
 import { listPriceTableCars, listUserPriceTableEntries } from "@/lib/price-table";
+import { getEnabledPriceFields } from "@/lib/system-settings";
 import { MyPriceTableManager } from "@/components/panel/price-table/MyPriceTableManager";
 import { saveUserPriceTableAction } from "./actions";
 
@@ -70,9 +71,10 @@ export default async function AdminUserPriceTablePage({ params }: PageProps) {
     );
   }
 
+  const priceFields = await getEnabledPriceFields();
   const [cars, entries, colors] = await Promise.all([
     listPriceTableCars(),
-    listUserPriceTableEntries(userId),
+    listUserPriceTableEntries(userId, true, priceFields),
     listColors(),
   ]);
 
@@ -96,6 +98,7 @@ export default async function AdminUserPriceTablePage({ params }: PageProps) {
         cars={cars}
         colors={colors}
         initialEntries={entries}
+        priceFields={priceFields}
         saveAction={saveUserPriceTableAction.bind(null, user.id.toString())}
         title={`جدول قیمت ${user.companyName || user.name}`}
         successMessage="جدول قیمت کاربر ذخیره شد"

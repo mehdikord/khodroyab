@@ -37,5 +37,11 @@ export default async function AdDetailPage({ params }: { params: { id: string } 
       }
     : null;
 
-  return <AdDetailView ad={ad} usdRate={usdRate} />;
+  return (
+    <AdDetailView
+      ad={ad}
+      usdRate={usdRate}
+      viewer={{ signedIn: Boolean(user), name: user?.name ?? null, phone: user?.phone ?? null }}
+    />
+  );
 }

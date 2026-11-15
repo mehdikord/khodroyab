@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, ShieldCheck, ShoppingBag } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
@@ -14,6 +14,7 @@ import { VerificationNotice } from "@/components/panel/verification/Verification
 import { ConsultationFab } from "@/components/panel/ConsultationFab";
 import { PanelNotice } from "@/components/panel/PanelNotice";
 import { PanelDrawer } from "@/components/panel/PanelDrawer";
+import { DollarTicker } from "@/components/panel/DollarTicker";
 import type { PanelTheme } from "@/lib/panel-theme";
 import { panelLoginHref } from "@/lib/auth/public-panel";
 
@@ -34,7 +35,7 @@ interface PanelShellProps {
   theme: PanelTheme;
   /** Free-consultation phone number (system settings); empty hides the floating button. */
   consultationPhone?: string;
-  /** Warning text from the system settings, shown at the top of every panel page; empty hides it. */
+  /** Warning text from the system settings, shown to signed-in users at the top of every panel page; empty hides it. */
   notice?: string;
   children: React.ReactNode;
 }
@@ -72,10 +73,10 @@ function Dock({ pathname, collabrate, guest }: { pathname: string; collabrate: b
       <div
         className={cn(
           "panel-dock-glass pointer-events-auto mx-auto flex max-w-md items-center gap-1 rounded-[22px] p-1.5",
-          collabrate ? "md:max-w-3xl" : "md:max-w-2xl"
+          guest ? "md:max-w-xl" : collabrate ? "md:max-w-3xl" : "md:max-w-2xl"
         )}
       >
-        {panelNavItemsFor(collabrate).map((item) => {
+        {panelNavItemsFor(collabrate, guest).map((item) => {
           const Icon = item.icon;
           const isActive = active?.key === item.key;
           // Guests reach account-only items (profile) through the sign-in screen.
@@ -143,7 +144,11 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
   const menuRef = useRef<HTMLDivElement>(null);
 
   const activeItem = findActivePanelItem(pathname);
-  const pageTitle = pathname.startsWith("/panel/verification") ? "احراز هویت" : activeItem?.label ?? "پنل کاربری";
+  const pageTitle = pathname.startsWith("/panel/verification")
+    ? "احراز هویت"
+    : pathname.startsWith("/panel/requests")
+      ? "درخواست‌های خرید من"
+      : activeItem?.label ?? "پنل کاربری";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -218,6 +223,14 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
                     </div>
                   </div>
                   <div className="p-1.5">
+                    <Link
+                      href="/panel/requests"
+                      role="menuitem"
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
+                    >
+                      <ShoppingBag className="h-4 w-4 text-panel-accent" />
+                      <span>درخواست‌های خرید من</span>
+                    </Link>
                     {user.collabrate && (
                       <Link
                         href="/panel/verification"
@@ -260,7 +273,9 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
         // Leave room under the last row for the floating consultation button.
         style={consultationPhone ? { paddingBottom: "calc(var(--panel-dock-space) + 4.5rem)" } : undefined}
       >
-        {notice && <PanelNotice text={notice} />}
+        <DollarTicker />
+        {/* The warning is for signed-in users only; guests never see it. */}
+        {user && notice && <PanelNotice text={notice} />}
         {user?.collabrate && !user.authenticaed && !pathname.startsWith("/panel/verification") && <VerificationNotice />}
         {children}
       </div>

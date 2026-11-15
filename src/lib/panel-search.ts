@@ -48,7 +48,7 @@ function toBigIntOrNull(value: string): bigint | null {
 export const PUBLIC_SELLER_WHERE = { collabrate: true, authenticaed: true } satisfies Prisma.UserWhereInput;
 
 /** Only approved, active ads of verified collaborators are ever visible to customers. */
-const PUBLIC_AD_WHERE = { status: "approved", isActive: true, user: PUBLIC_SELLER_WHERE } satisfies Prisma.UserCarWhereInput;
+export const PUBLIC_AD_WHERE = { status: "approved", isActive: true, user: PUBLIC_SELLER_WHERE } satisfies Prisma.UserCarWhereInput;
 
 function buildWhere(filters: SearchFilterValues): Prisma.UserCarWhereInput {
   const and: Prisma.UserCarWhereInput[] = [];

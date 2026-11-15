@@ -1,11 +1,12 @@
 import React from "react";
-import { CalendarDays, Crown } from "lucide-react";
+import { CalendarDays, Crown, Fingerprint } from "lucide-react";
 
 import { SafeImage } from "@/components/panel/SafeImage";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import {
+  ALL_PRICE_FIELD_KEYS,
   PRICE_TABLE_EMPTY,
-  PRICE_TABLE_PRICE_FIELDS,
+  priceFieldsFor,
   type PriceColumn,
   type PriceTableAnyPriceField,
   type PriceTablePriceField,
@@ -132,6 +133,24 @@ export const SHORT_PRICE_LABELS: Record<PriceTablePriceField, string> = {
   instantPrice: "فوری",
 };
 
+/** Tiny "کد ۱۲۳۴ ۵۶۷۸" line naming the seller behind a (lowest) price. */
+export function SellerCodeHint({ code, className }: { code: string | undefined; className?: string }) {
+  if (!code) return null;
+  const grouped = code.length === 8 ? `${code.slice(0, 4)} ${code.slice(4)}` : code;
+  return (
+    <span
+      className={cn("inline-flex items-center gap-0.5 whitespace-nowrap text-[9px] font-bold leading-4 text-panel-muted-2", className)}
+      title="کد فروشنده"
+    >
+      <Fingerprint className="h-2.5 w-2.5 text-panel-accent/70" aria-hidden="true" />
+      <span className="sr-only">کد فروشنده</span>
+      <span dir="ltr" className="font-mono tracking-wider">
+        {toPersianDigits(grouped)}
+      </span>
+    </span>
+  );
+}
+
 /** Header of a price column: "۲۰۲۵" over the colour swatch + name. */
 export function ColumnHeading({ column, active = false, className }: { column: PriceColumn; active?: boolean; className?: string }) {
   return (
@@ -152,9 +171,9 @@ export function ColumnHeading({ column, active = false, className }: { column: P
 }
 
 /**
- * Content of one price cell: the raw, clearance and instant prices stacked
- * with short labels, or a single dash when nothing was priced for that
- * (year, colour). `best` marks fields that equal the column's lowest price.
+ * Content of one price cell: the enabled prices (raw, clearance, instant)
+ * stacked with short labels, or a single dash when nothing was priced for that
+ * (year, colour). With `sellers` each price names the seller who entered it. `best` marks fields that equal the column's lowest price.
  * With `showPartner` (verified collaborators) each price is followed by its
  * collaborator price. With `rialPerUsd` each price also shows its small
  * equivalent in the other currency.
@@ -166,9 +185,15 @@ export function YearPrices({
   highlight,
   showPartner = false,
   rialPerUsd = null,
+  fields: enabled = ALL_PRICE_FIELD_KEYS,
+  sellers,
   className,
 }: {
   prices: Record<PriceTableAnyPriceField, string | null> | undefined;
+  /** Price types in use (pricing settings); only these are listed. */
+  fields?: readonly PriceTablePriceField[];
+  /** Public code of the seller behind each price (market-wide lowest prices). */
+  sellers?: Partial<Record<PriceTableAnyPriceField, string>>;
   /** Currency of the column the prices belong to. */
   currency: PriceCurrency;
   best?: Partial<Record<PriceTableAnyPriceField, boolean>>;
@@ -179,24 +204,36 @@ export function YearPrices({
   rialPerUsd?: number | null;
   className?: string;
 }) {
+  const fields = priceFieldsFor(enabled);
+  // Rough height of a filled cell, so empty cells line up with their row.
+  const emptyHeight = fields.length > 1 ? "min-h-[78px]" : showPartner ? "min-h-[64px]" : "min-h-[40px]";
   if (!prices) {
     return (
-      <span className={cn("flex min-h-[78px] items-center justify-center text-lg font-black text-panel-faint", className)} aria-label="بدون قیمت">
+      <span className={cn("flex items-center justify-center text-lg font-black text-panel-faint", emptyHeight, className)} aria-label="بدون قیمت">
         —
       </span>
     );
   }
+  // With a single price type the column heading already names it.
+  const single = fields.length === 1;
   return (
     <dl className={cn(showPartner ? "space-y-1.5" : "space-y-1", className)}>
-      {PRICE_TABLE_PRICE_FIELDS.map((field) => (
+      {fields.map((field) => (
         <div key={field.key} className={cn(showPartner && "rounded-lg bg-panel-line/[0.025] p-1")}>
           <div className="flex items-center justify-between gap-2">
-            <dt className={cn("text-[10px] font-bold", highlight === field.key ? "text-panel-accent" : "text-panel-muted")}>
-              {SHORT_PRICE_LABELS[field.key]}
+            <dt
+              className={cn(
+                "text-[10px] font-bold",
+                single && !showPartner && "sr-only",
+                highlight === field.key && !single ? "text-panel-accent" : "text-panel-muted"
+              )}
+            >
+              {single && showPartner ? "عمومی" : SHORT_PRICE_LABELS[field.key]}
             </dt>
-            <dd className="flex flex-col items-end">
+            <dd className={cn("flex flex-col items-end", single && !showPartner && "w-full")}>
               <PriceTag price={prices[field.key]} currency={currency} best={Boolean(best?.[field.key])} size="sm" />
               <PriceEquivalent price={prices[field.key]} currency={currency} rialPerUsd={rialPerUsd} className="mt-0.5" />
+              <SellerCodeHint code={prices[field.key] ? sellers?.[field.key] : undefined} className="mt-0.5" />
             </dd>
           </div>
           {showPartner && (
@@ -205,6 +242,7 @@ export function YearPrices({
               <dd className="flex flex-col items-end">
                 <PriceTag price={prices[field.partnerKey]} currency={currency} best={Boolean(best?.[field.partnerKey])} partner size="sm" />
                 <PriceEquivalent price={prices[field.partnerKey]} currency={currency} rialPerUsd={rialPerUsd} className="mt-0.5 text-sky-500/70" />
+                <SellerCodeHint code={prices[field.partnerKey] ? sellers?.[field.partnerKey] : undefined} className="mt-0.5" />
               </dd>
             </div>
           )}

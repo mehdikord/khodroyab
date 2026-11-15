@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { requireCollaborator } from "@/lib/auth/user-auth";
 import { listColors } from "@/lib/colors";
 import { listPriceTableCars, listUserPriceTableEntries } from "@/lib/price-table";
+import { getEnabledPriceFields } from "@/lib/system-settings";
 import { MyPriceTableManager } from "@/components/panel/price-table/MyPriceTableManager";
 import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
@@ -23,11 +24,12 @@ export default async function PanelPriceTablePage() {
   if (!user.isPartner) return <VerificationRequired feature="ثبت جدول قیمت" />;
   const userId = BigInt(user.id);
 
+  const priceFields = await getEnabledPriceFields();
   const [cars, entries, colors] = await Promise.all([
     listPriceTableCars(),
-    listUserPriceTableEntries(userId),
+    listUserPriceTableEntries(userId, true, priceFields),
     listColors(),
   ]);
 
-  return <MyPriceTableManager cars={cars} colors={colors} initialEntries={entries} />;
+  return <MyPriceTableManager cars={cars} colors={colors} initialEntries={entries} priceFields={priceFields} />;
 }

@@ -2,6 +2,7 @@ import React from "react";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { countUnseenPurchaseRequests } from "@/lib/purchase-requests";
 
 /**
  * Protected layout for all authenticated admin modules.
@@ -18,6 +19,8 @@ export default async function AdminPanelLayout({
   children: React.ReactNode;
 }) {
   const admin = await requireAdmin();
+  // Purchase requests are a root-only section; others never load the counters.
+  const unseen = admin.isRoot ? await countUnseenPurchaseRequests() : null;
 
   return (
     <AdminShell
@@ -27,6 +30,9 @@ export default async function AdminPanelLayout({
         access: { isRoot: admin.isRoot, permissions: admin.permissions },
         roleLabel: admin.isRoot ? "مدیر کل" : admin.roleName ?? "بدون نقش",
       }}
+      badges={
+        unseen ? { purchase_requests_public: unseen.public, purchase_requests_members: unseen.members } : undefined
+      }
     >
       {children}
     </AdminShell>

@@ -6,9 +6,12 @@ import {
   PRICE_TABLE_PRICE_MAX_DIGITS,
   PRICE_TABLE_YEAR_MAX,
   PRICE_TABLE_YEAR_MIN,
+  ALL_PRICE_FIELD_KEYS,
   digitsOnly,
   isValidTierYear,
+  priceKeysFor,
   type PriceTableAnyPriceField,
+  type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { toPersianDigits } from "@/lib/utils";
 import { DEFAULT_PRICE_TABLE_CURRENCY, PRICE_CURRENCIES, type PriceCurrency } from "@/lib/currency";
@@ -85,8 +88,13 @@ function isBlankTier(tier: z.infer<typeof rawTierSchema>): boolean {
  * - Every priced tier needs a valid 4-digit year, a colour and at least one
  *   price; its (year, colour) pair must be unique within the row — the same
  *   year may repeat with a different colour.
+ * - Prices of types not in `enabled` (pricing settings) are ignored as if
+ *   blank; `replaceUserPriceTable` keeps their stored values.
  */
-export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
+export function parsePriceTableForm(
+  formData: FormData,
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
+): ParsedPriceTableForm {
   const raw = formData.get("entries");
   if (typeof raw !== "string") return { success: false, message: "اطلاعات جدول قیمت نامعتبر است" };
 
@@ -115,6 +123,11 @@ export function parsePriceTableForm(formData: FormData): ParsedPriceTableForm {
   const fieldErrors: Record<string, string> = {};
   const entries: PriceTableEntryInput[] = [];
   const seen = new Set<string>();
+  const enabledKeys = new Set(priceKeysFor(enabled));
+  const disabledKeys = PRICE_TABLE_ALL_PRICE_KEYS.filter((key) => !enabledKeys.has(key));
+  for (const row of parsed.data) {
+    for (const tier of row.tiers) for (const key of disabledKeys) tier[key] = "";
+  }
 
   for (const row of parsed.data) {
     if (seen.has(row.carId)) continue;
