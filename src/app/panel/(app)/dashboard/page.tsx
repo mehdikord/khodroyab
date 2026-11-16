@@ -1,7 +1,9 @@
 import React from "react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
+import { DASHBOARD_ENABLED, PANEL_HOME } from "@/lib/auth/public-panel";
 import { getMarketRates } from "@/lib/market-rates";
 import { countPublicSaleAds } from "@/lib/panel-search";
 import { CurrencyRates } from "@/components/panel/dashboard/CurrencyRates";
@@ -19,6 +21,9 @@ export const dynamic = "force-dynamic";
  * the server, then refreshed by the client every 30 seconds).
  */
 export default async function PanelDashboardPage() {
+  // Switched off for now: everything that pointed here goes to the sellers page.
+  if (!DASHBOARD_ENABLED) redirect(PANEL_HOME);
+
   const [user, rates, saleCount] = await Promise.all([getCurrentUser(), getMarketRates(), countPublicSaleAds()]);
   const firstName = user ? user.name.trim().split(/\s+/)[0] || user.name : null;
 

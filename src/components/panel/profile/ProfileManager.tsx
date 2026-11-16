@@ -26,6 +26,7 @@ import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { ProfileSheet } from "@/components/panel/profile/ProfileSheet";
 import { ProfileEditForm } from "@/components/panel/profile/ProfileEditForm";
 import { CollaboratorShortcuts } from "@/components/panel/profile/CollaboratorShortcuts";
+import { ShopLinkCard } from "@/components/panel/profile/ShopLinkCard";
 import type { PriceMarket } from "@/lib/price-market";
 import { displayNationalCode, profileCompletion, type ProfileAdStats, type ProfileRecord } from "@/lib/profile";
 import { AD_STATUS_LABELS } from "@/lib/ad-status";
@@ -395,6 +396,7 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode, pr
 
       {/* Collaborator workspaces: my ads, my price list */}
       {collabrate && <CollaboratorShortcuts stats={stats} priceListCounts={priceListCounts} verified={verified} />}
+      {collabrate && <ShopLinkCard code={userCode.code} verified={verified} />}
 
       {/* Public code */}
       <section

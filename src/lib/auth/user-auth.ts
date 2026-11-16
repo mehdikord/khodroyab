@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import prisma from "@/lib/prisma";
 import { readUserSessionFromCookies, type SessionUser } from "@/lib/auth/user-session";
+import { PANEL_HOME } from "@/lib/auth/public-panel";
 
 /** Full profile of the signed-in customer, re-validated against the database. */
 export interface CurrentUser extends SessionUser {
@@ -74,7 +75,7 @@ export async function requireUser(): Promise<CurrentUser> {
 export async function requireCollaborator(): Promise<CurrentUser> {
   const user = await requireUser();
   if (!user.collabrate) {
-    redirect("/panel/dashboard");
+    redirect(PANEL_HOME);
   }
   return user;
 }

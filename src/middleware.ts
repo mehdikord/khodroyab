@@ -21,8 +21,8 @@ import { isPublicPanelPath } from "@/lib/auth/public-panel";
  * authorization mechanism.
  */
 
-/** The site's home: the customer panel's dashboard, open to everyone. */
-const HOME_PATH = "/panel/dashboard";
+/** The site's home: the customer panel's sellers page, open to everyone (keep in sync with `PANEL_HOME`). */
+const HOME_PATH = "/panel/sellers";
 
 interface ProtectedArea {
   /** Path prefix of the area, e.g. `/admin`. */
@@ -49,7 +49,7 @@ const AREAS: ProtectedArea[] = [
 
 /**
  * Path prefixes that keep working as-is. Everything else (the site root and
- * any old marketing URL) goes to the dashboard: the customer panel *is* the
+ * any old marketing URL) goes to the home page (sellers): the customer panel *is* the
  * website.
  */
 const PASSTHROUGH_PREFIXES = ["/admin", "/panel", "/uploads", "/api", "/_next"];
@@ -82,7 +82,7 @@ function redirectTo(request: NextRequest, pathname: string, params?: Record<stri
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // The site root and any non-panel URL open the dashboard.
+  // The site root and any non-panel URL open the home page (sellers).
   if (!isPassthrough(pathname)) {
     return redirectTo(request, HOME_PATH);
   }

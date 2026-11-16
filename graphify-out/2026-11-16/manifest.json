@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/profile/page.tsx": {
-    "mtime": 1794217770.4499454,
-    "seen": 1794217987.850839,
-    "ast_hash": "3627a3a85c504dcd13d2fb42bdaeb2c9",
+    "mtime": 1794832091.523369,
+    "seen": 1794832175.7279298,
+    "ast_hash": "d3a4a60156dab8746baa2333ea51975e",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/search/page.tsx": {
@@ -1086,9 +1086,9 @@
     "semantic_hash": "236e0ee8e636af84c42ce7bce3bbb737"
   },
   "src/components/panel/profile/ProfileManager.tsx": {
-    "mtime": 1794407142.9315555,
-    "seen": 1794407710.3189857,
-    "ast_hash": "9ce64252a99f2e93d6b950eaf05426ea",
+    "mtime": 1794832128.1536677,
+    "seen": 1794832175.7323751,
+    "ast_hash": "2e7a5daaea1f0a01aa8523aa1fe510b7",
     "semantic_hash": ""
   },
   "src/components/panel/profile/ProfileSheet.tsx": {
@@ -2229,6 +2229,12 @@
     "mtime": 1794831687.037717,
     "seen": 1794831730.8424387,
     "ast_hash": "c7d59912eb2c74942c21d6d2ffced657",
+    "semantic_hash": ""
+  },
+  "src/components/panel/profile/CollaboratorShortcuts.tsx": {
+    "mtime": 1794832113.9758651,
+    "seen": 1794832175.732345,
+    "ast_hash": "74470eab7169c0818b7e838b110a9889",
     "semantic_hash": ""
   }
 }

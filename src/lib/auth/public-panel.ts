@@ -27,7 +27,14 @@ export function isPublicPanelPath(pathname: string): boolean {
 }
 
 /** Where a signed-in visitor lands when no (valid) return path was given. */
-export const PANEL_HOME = "/panel/dashboard";
+export const PANEL_HOME = "/panel/sellers";
+
+/**
+ * The dashboard is switched off for now: `/panel/dashboard` redirects to
+ * `PANEL_HOME` (the sellers page), which also replaces it as the home page.
+ * Set to true to bring it back (and point `PANEL_HOME` at it again).
+ */
+export const DASHBOARD_ENABLED = false;
 
 /**
  * Validate the `next` return path of the sign-in screen. Only same-site panel

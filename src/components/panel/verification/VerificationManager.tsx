@@ -457,7 +457,7 @@ export function VerificationManager({ collabrate, authenticaed, initialVerificat
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Link
-              href="/panel/dashboard"
+              href="/panel/profile"
               className="flex h-12 items-center justify-center rounded-xl border border-panel-line/[0.12] px-5 text-sm font-bold text-panel-text-2 transition-colors hover:border-panel-line/25 hover:text-panel-text"
             >
               بازگشت

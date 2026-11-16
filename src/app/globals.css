@@ -347,14 +347,14 @@
 /* Frosted-glass dock surface: translucent dark tint + heavy blur + a soft
    top highlight so it reads as a sheet of glass over the scrolling content. */
 /*
- * Frosted (matte) glass: a dark, mostly opaque tint over a heavy blur that
- * also dims and desaturates what scrolls behind, plus a faint grain, so the
- * content underneath reads only as soft colour, never as legible detail.
+ * Near-opaque frosted glass: a 95% tint over a heavy blur that also dims and
+ * desaturates what scrolls behind, plus a faint grain; the content underneath
+ * is barely perceptible (only a hint of colour), never legible.
  */
 .panel-dock-glass {
   position: relative;
   isolation: isolate;
-  background-color: rgb(var(--p-bg) / 0.86);
+  background-color: rgb(var(--p-bg) / 0.95);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
     linear-gradient(180deg, rgb(var(--p-line) / 0.07) 0%, rgb(var(--p-line) / 0.02) 45%, rgb(var(--p-line) / 0) 100%),
@@ -368,7 +368,7 @@
     0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 .panel-root[data-theme="light"] .panel-dock-glass {
-  background-color: rgb(246 247 250 / 0.9);
+  background-color: rgb(246 247 250 / 0.96);
   -webkit-backdrop-filter: blur(36px) saturate(115%) brightness(1.05);
   backdrop-filter: blur(36px) saturate(115%) brightness(1.05);
   box-shadow:
@@ -389,7 +389,7 @@
 /* Browsers without backdrop-filter get a more opaque fallback. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .panel-dock-glass {
-    background-color: rgb(var(--p-surface) / 0.96);
+    background-color: rgb(var(--p-bg) / 0.98);
   }
 }
 

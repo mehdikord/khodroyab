@@ -15,7 +15,7 @@ import { ConsultationFab } from "@/components/panel/ConsultationFab";
 import { PanelNotice } from "@/components/panel/PanelNotice";
 import { DollarTicker } from "@/components/panel/DollarTicker";
 import type { PanelTheme } from "@/lib/panel-theme";
-import { panelLoginHref } from "@/lib/auth/public-panel";
+import { PANEL_HOME, panelLoginHref } from "@/lib/auth/public-panel";
 
 export interface PanelShellUser {
   name: string;
@@ -173,7 +173,7 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-panel-line/[0.07] bg-panel-bg/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-3 min-[360px]:gap-3 min-[360px]:px-4 sm:px-6">
-          <Link href="/panel/dashboard" className="flex items-center gap-2.5" aria-label="داشبورد پنل کاربری">
+          <Link href={PANEL_HOME} className="flex items-center gap-2.5" aria-label="خودرو یاب، صفحه اصلی">
             <PanelLogo markOnly size="sm" />
             <span className="hidden flex-col leading-tight sm:flex">
               <span className="text-sm font-black text-panel-text">خودرو یاب</span>
