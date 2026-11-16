@@ -13,7 +13,7 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, toPersianDigits } from "@/lib/utils";
-import { BrandLogo, ColumnHeading, SHORT_PRICE_LABELS, YearPrices } from "@/components/panel/price-list/price-list-ui";
+import { BrandLogo, ColumnHeading, YearPrices, purchaseTierOptions } from "@/components/panel/price-list/price-list-ui";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 import { PurchaseRequestButton } from "@/components/panel/purchase-requests/PurchaseRequestButton";
@@ -175,27 +175,7 @@ export function CarOffersView({
 
   /** One seller's priced (year, colour) options for the request form, with their enabled prices. */
   const tierOptions = (offer: PriceListOffer): PurchaseRequestTierOption[] =>
-    orderedColumns
-      .filter((column) => offer.byColumn[column.key])
-      .map((column) => {
-        const prices = offer.byColumn[column.key];
-        const lines: PurchaseRequestTierOption["prices"] = [];
-        for (const field of fields) {
-          const label = fields.length > 1 ? SHORT_PRICE_LABELS[field.key] : "";
-          const price = prices[field.key];
-          if (price) lines.push({ label, price });
-          const partner = showPartner ? prices[field.partnerKey] : null;
-          if (partner) lines.push({ label: label ? `${label} همکار` : "همکار", price: partner, partner: true });
-        }
-        return {
-          key: column.key,
-          year: column.year,
-          colorName: column.colorName,
-          colorCode: column.colorCode,
-          currency: column.currency,
-          prices: lines,
-        };
-      });
+    purchaseTierOptions(orderedColumns, offer.byColumn, fieldKeys, showPartner);
 
   /** Purchase-request target for one seller (never for the viewer's own prices). */
   const requestTarget = (offer: PriceListOffer): PurchaseRequestTarget | null =>

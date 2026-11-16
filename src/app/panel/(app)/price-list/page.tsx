@@ -23,13 +23,14 @@ export const dynamic = "force-dynamic";
 
 function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-3 py-2.5 backdrop-blur">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FF6A00]/10 text-panel-accent">
-        <Icon className="h-[18px] w-[18px]" />
+    // Phones: icon above the number so the label gets the full tile width.
+    <div className="flex min-w-0 flex-col items-start gap-1.5 rounded-2xl border border-panel-line/[0.08] bg-panel-bg/60 px-2.5 py-2.5 backdrop-blur sm:flex-row sm:items-center sm:gap-3 sm:px-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FF6A00]/10 text-panel-accent sm:h-9 sm:w-9">
+        <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
       </span>
       <span className="min-w-0">
         <span className="block text-lg font-black leading-6 text-panel-text">{toPersianDigits(value)}</span>
-        <span className="block truncate text-[10px] font-bold text-panel-muted">{label}</span>
+        <span className="block text-[10px] font-bold leading-4 text-panel-muted">{label}</span>
       </span>
     </div>
   );

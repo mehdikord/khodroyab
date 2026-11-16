@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowRight, BadgeCheck, CarFront, Megaphone } from "lucide-react";
+import { ArrowRight, CarFront } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { getPublicSellerByCode } from "@/lib/sellers";
@@ -11,8 +11,7 @@ import { getConversionRates } from "@/lib/market-rates";
 import { toPersianDigits } from "@/lib/utils";
 import { AdCard } from "@/components/panel/search/AdCard";
 import { SearchPagination } from "@/components/panel/search/SearchPagination";
-import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
-import { SellerMonogram } from "@/components/panel/sellers/seller-ui";
+import { SellerHeader } from "@/components/panel/sellers/SellerHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -54,28 +53,7 @@ export default async function SellerProfilePage({ params, searchParams }: PagePr
         همه فروشندگان
       </Link>
 
-      {/* Profile hero */}
-      <section className="panel-card-in relative isolate overflow-hidden rounded-[32px] border border-panel-line/[0.1] bg-panel-surface">
-        <div className="panel-ambient pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="admin-grid-bg pointer-events-none absolute inset-0 -z-10 opacity-60" aria-hidden="true" />
-        <div className="pointer-events-none absolute -top-24 start-1/2 -z-10 h-64 w-[28rem] -translate-x-1/2 rounded-full bg-[#FF6A00]/20 blur-3xl" aria-hidden="true" />
-
-        <div className="flex flex-col items-center gap-4 px-5 py-7 text-center sm:flex-row sm:items-center sm:gap-6 sm:px-8 sm:text-start">
-          <SellerMonogram name={seller.name} className="h-24 w-24 rounded-[28px] text-3xl shadow-[0_0_60px_-12px_rgba(255,106,0,0.7)] [&>span]:rounded-[26px]" />
-          <div className="min-w-0 flex-1">
-            <p className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-extrabold text-panel-success">
-              <BadgeCheck className="h-3.5 w-3.5" />
-              فروشنده احراز هویت‌شده
-            </p>
-            <h1 className="mt-2 break-words text-2xl font-black leading-9 text-panel-text sm:text-3xl">{seller.name}</h1>
-            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-panel-muted">
-              <Megaphone className="h-3.5 w-3.5 text-panel-accent" />
-              {toPersianDigits(seller.adCount)} آگهی فعال
-            </p>
-          </div>
-          <SellerCodeBadge code={seller.code} size="lg" className="shrink-0" />
-        </div>
-      </section>
+      <SellerHeader name={seller.name} code={seller.code} adCount={seller.adCount} priceListCount={seller.priceListCount} active="ads" />
 
       {/* Ads */}
       <div className="flex items-center justify-between gap-3">

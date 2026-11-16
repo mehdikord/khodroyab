@@ -82,12 +82,13 @@ type Drafts = Record<string, Draft>;
 
 type RowFilter = "all" | "filled" | "empty";
 
+/** Keys of tiers added in the browser (never rendered on the server). */
 let tierSeq = 0;
 const nextTierKey = () => `tier-${++tierSeq}`;
 
-function emptyTier(year: string, colorId: string): TierDraft {
+function emptyTier(year: string, colorId: string, key = nextTierKey()): TierDraft {
   return {
-    key: nextTierKey(),
+    key,
     year,
     colorId,
     ...(Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((field) => [field, ""])) as Record<PriceTableAnyPriceField, string>),
@@ -95,11 +96,16 @@ function emptyTier(year: string, colorId: string): TierDraft {
 }
 
 /** A fresh row: one blank tier for the customer to fill in. */
-function emptyDraft(currency: PriceCurrency): Draft {
-  return { currency, tiers: [emptyTier("", "")] };
+function emptyDraft(currency: PriceCurrency, key?: string): Draft {
+  return { currency, tiers: [emptyTier("", "", key)] };
 }
 
-function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[], currency: PriceCurrency): Drafts {
+/**
+ * Drafts of the saved rows. Tier keys (also used in input ids) are derived
+ * from `keyPrefix`, the car and the position, so the server and the browser
+ * render the same ids, and the two price lists on one page never collide.
+ */
+function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[], currency: PriceCurrency, keyPrefix: string): Drafts {
   const byCar = new Map(entries.map((entry) => [entry.carId, entry]));
   const drafts: Drafts = {};
   for (const car of cars) {
@@ -108,8 +114,8 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[],
       entry && entry.tiers.length > 0
         ? {
             currency: entry.currency,
-            tiers: entry.tiers.map((tier) => ({
-              key: nextTierKey(),
+            tiers: entry.tiers.map((tier, index) => ({
+              key: `${keyPrefix}-${car.id}-${index}`,
               year: tier.year,
               colorId: tier.colorId,
               ...(Object.fromEntries(PRICE_TABLE_ALL_PRICE_KEYS.map((field) => [field, tier[field] ?? ""])) as Record<
@@ -118,7 +124,7 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[],
               >),
             })),
           }
-        : emptyDraft(currency);
+        : emptyDraft(currency, `${keyPrefix}-${car.id}-0`);
   }
   return drafts;
 }
@@ -233,7 +239,7 @@ export function MyPriceTableManager({
   const tierGridClass = TIER_GRID_CLASSES[fields.length] ?? TIER_GRID_CLASSES[3];
   const defaultCurrency = PRICE_MARKET_DEFAULT_CURRENCY[market];
   const saveAction = saveActionProp ?? ((formData: FormData) => saveMyPriceTableAction(market, formData));
-  const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries, defaultCurrency));
+  const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries, defaultCurrency, market));
   const [drafts, setDrafts] = useState<Drafts>(saved);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RowFilter>("all");
@@ -372,7 +378,7 @@ export function MyPriceTableManager({
     startTransition(async () => {
       const result = await saveAction(formData);
       if (result.ok) {
-        const next = toDrafts(cars, result.entries, defaultCurrency);
+        const next = toDrafts(cars, result.entries, defaultCurrency, `${market}-s${++tierSeq}`);
         setSaved(next);
         setDrafts(next);
         showToast("success", successMessage);

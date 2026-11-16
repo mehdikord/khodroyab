@@ -22,6 +22,8 @@ export interface PublicSellerProfile extends PublicSeller {
   userId: bigint;
   /** Number of the seller's public sale ads. */
   adCount: number;
+  /** Cars the seller priced (both price lists together). */
+  priceListCount: number;
 }
 
 const SELLER_WHERE = { ...PUBLIC_SELLER_WHERE, isActive: true };
@@ -51,9 +53,10 @@ export async function getPublicSellerByCode(code: string): Promise<PublicSellerP
     select: { id: true, name: true, companyName: true },
   });
   if (!user) return null;
-  const [active, adCount] = await Promise.all([
+  const [active, adCount, priceListCount] = await Promise.all([
     getActiveUserCode(user.id),
     prisma.userCar.count({ where: { ...PUBLIC_AD_WHERE, userId: user.id } }),
+    prisma.userPriceTableEntry.count({ where: { userId: user.id, car: { priceTable: true }, prices: { some: {} } } }),
   ]);
-  return { userId: user.id, name: displayName(user), code: active.code, adCount };
+  return { userId: user.id, name: displayName(user), code: active.code, adCount, priceListCount };
 }

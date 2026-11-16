@@ -13,7 +13,6 @@ import { ThemeSwitch } from "@/components/panel/ThemeSwitch";
 import { VerificationNotice } from "@/components/panel/verification/VerificationNotice";
 import { ConsultationFab } from "@/components/panel/ConsultationFab";
 import { PanelNotice } from "@/components/panel/PanelNotice";
-import { PanelDrawer } from "@/components/panel/PanelDrawer";
 import { DollarTicker } from "@/components/panel/DollarTicker";
 import type { PanelTheme } from "@/lib/panel-theme";
 import { panelLoginHref } from "@/lib/auth/public-panel";
@@ -106,7 +105,12 @@ function Dock({ pathname, guest }: { pathname: string; guest: boolean }) {
               >
                 <Icon className="h-[19px] w-[19px]" strokeWidth={isActive ? 2.4 : 2} />
               </span>
-              <span className={cn("whitespace-nowrap text-[10px] leading-none", isActive ? "font-extrabold" : "font-semibold")}>
+              <span
+                className={cn(
+                  "line-clamp-2 max-w-full text-center text-[10px] leading-[1.15] [overflow-wrap:anywhere]",
+                  isActive ? "font-extrabold" : "font-semibold"
+                )}
+              >
                 {item.shortLabel}
               </span>
             </Link>
@@ -125,7 +129,8 @@ function GuestSignIn({ pathname }: { pathname: string }) {
       className="group flex h-10 shrink-0 items-center gap-2 rounded-full bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-3.5 text-xs font-extrabold text-[#07090C] shadow-orange-subtle transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/50 active:scale-95 sm:px-4 sm:text-sm"
     >
       <LogIn className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-      <span>ورود همکاران</span>
+      <span className="sm:hidden">ورود</span>
+      <span className="hidden sm:inline">ورود همکاران</span>
     </Link>
   );
 }
@@ -163,11 +168,11 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
   }, [menuOpen]);
 
   return (
-    <div className="panel-root flex min-h-[100dvh] flex-col">
+    // overflow-x: clip (not hidden) so decorative glows never cause sideways scrolling while `sticky` keeps working.
+    <div className="panel-root flex min-h-[100dvh] flex-col overflow-x-clip">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-panel-line/[0.07] bg-panel-bg/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
-          <PanelDrawer pathname={pathname} />
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-3 min-[360px]:gap-3 min-[360px]:px-4 sm:px-6">
           <Link href="/panel/dashboard" className="flex items-center gap-2.5" aria-label="داشبورد پنل کاربری">
             <PanelLogo markOnly size="sm" />
             <span className="hidden flex-col leading-tight sm:flex">
@@ -176,8 +181,8 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
             </span>
           </Link>
 
-          <div className="min-w-0 flex-1 border-s border-panel-line/[0.08] ps-3 sm:ps-4">
-            <p className="truncate text-[15px] font-extrabold text-panel-text sm:text-base">{pageTitle}</p>
+          <div className="min-w-0 flex-1 border-s border-panel-line/[0.08] ps-2.5 min-[360px]:ps-3 sm:ps-4">
+            <p className="truncate text-sm font-extrabold text-panel-text min-[360px]:text-[15px] sm:text-base">{pageTitle}</p>
           </div>
 
           {/* Theme switch */}

@@ -100,7 +100,7 @@ export function PriceTableMarketEditor({
               dirty: dirty[item],
               caption: dirty[item]
                 ? "تغییرات ذخیره‌نشده"
-                : `${toPersianDigits(filled[item])} خودرو قیمت‌گذاری شده`,
+                : `${toPersianDigits(filled[item])} خودرو با قیمت`,
             },
           ])
         )}

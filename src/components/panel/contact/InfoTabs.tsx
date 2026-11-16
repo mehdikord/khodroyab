@@ -20,6 +20,12 @@ const TABS: { key: InfoTab; label: string; icon: typeof Info }[] = [
  */
 export function InfoTabs({ initialTab, contact, about }: { initialTab: InfoTab; contact: React.ReactNode; about: React.ReactNode }) {
   const [tab, setTab] = useState<InfoTab>(initialTab);
+  // A panel mounts the first time it is opened and then stays mounted: the
+  // contact map (Leaflet) cannot measure itself inside a hidden panel.
+  const [opened, setOpened] = useState<Set<InfoTab>>(() => new Set([initialTab]));
+  useEffect(() => {
+    setOpened((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  }, [tab]);
   const baseId = useId();
   const tabRefs = useRef<Record<InfoTab, HTMLButtonElement | null>>({ contact: null, about: null });
 
@@ -103,7 +109,7 @@ export function InfoTabs({ initialTab, contact, about }: { initialTab: InfoTab; 
           hidden={tab !== item.key}
           className={tab === item.key ? "admin-animate-in" : undefined}
         >
-          {item.key === "contact" ? contact : about}
+          {opened.has(item.key) && (item.key === "contact" ? contact : about)}
         </div>
       ))}
     </div>

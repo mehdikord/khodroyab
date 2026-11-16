@@ -443,3 +443,67 @@ export async function getPriceListMarketStats(
   for (const row of sellers) stats[row.market].sellers += 1;
   return stats;
 }
+
+/* ───────────────────────── One seller's price list ───────────────────────── */
+
+/** One car of a seller's price list (seller profile page). */
+export interface SellerPriceListRow {
+  car: PriceListCarInfo & { image: string | null };
+  /** Currency of every price of the row. */
+  currency: PriceCurrency;
+  /** The seller's (year, colour) columns, newest year first. */
+  columns: PriceColumn[];
+  byColumn: PriceListPricesByColumn;
+  /** Jalali date of the seller's last change to this car's prices. */
+  updatedAtLabel: string;
+}
+
+/**
+ * A public seller's prices in one price list (`market`): one row per
+ * eligible car they priced, with the same visibility rules as the market
+ * list (collaborator prices only with `showPartner`, enabled types only).
+ * Also counts the seller's priced cars in each list (for the tabs).
+ */
+export async function listSellerPriceList(
+  userId: bigint,
+  market: PriceMarket,
+  showPartner: boolean,
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
+): Promise<{ rows: SellerPriceListRow[]; countByMarket: Record<PriceMarket, number> }> {
+  const entries = await prisma.userPriceTableEntry.findMany({
+    where: { ...pricedEntryWhere, userId, car: { priceTable: true } },
+    select: {
+      market: true,
+      currency: true,
+      updatedAt: true,
+      car: {
+        select: {
+          ...carInfoSelect,
+          carImages: { select: { imageUrl: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 1 },
+        },
+      },
+      prices: { select: tierSelect, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+    },
+    orderBy: [{ car: { brand: { name: "asc" } } }, { car: { name: "asc" } }, { id: "asc" }],
+  });
+
+  const visibility: Visibility = { showPartner, enabled };
+  const visible = entries
+    .map((entry) => ({ ...entry, tiers: visibleTiers(entry.prices, entry.currency, userId, visibility) }))
+    .filter((entry) => entry.tiers.length > 0);
+
+  const countByMarket = Object.fromEntries(
+    PRICE_MARKETS.map((item) => [item, visible.filter((entry) => entry.market === item).length])
+  ) as Record<PriceMarket, number>;
+
+  const rows = visible
+    .filter((entry) => entry.market === market)
+    .map((entry) => ({
+      car: { ...toCarInfo(entry.car), image: entry.car.carImages[0]?.imageUrl ?? null },
+      currency: entry.currency,
+      columns: mergePriceColumns(entry.tiers.map(tierColumn)).sort((a, b) => Number(b.year) - Number(a.year)),
+      byColumn: Object.fromEntries(entry.tiers.map((tier) => [tierColumn(tier).key, tierPrices(tier)] as const)),
+      updatedAtLabel: jalaliDate.format(entry.updatedAt),
+    }));
+  return { rows, countByMarket };
+}

@@ -49,7 +49,7 @@ export default async function PanelLoginPage({ searchParams }: PageProps) {
       )}
 
       <div className="relative isolate mx-auto flex w-full max-w-md flex-col pb-6 pt-6 sm:pt-10">
-        <div className="panel-ambient pointer-events-none absolute inset-x-[-30%] inset-y-0 -z-10" aria-hidden="true" />
+        <div className="panel-ambient pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
 
         {/* Brand */}
         <div className="admin-animate-in flex flex-col items-center text-center">

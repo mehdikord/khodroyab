@@ -86,7 +86,7 @@ export function PriceMarketTabs({ active, badges, className, label = "نوع ل�
       <>
         <span
           className={cn(
-            "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-300",
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-300 sm:h-10 sm:w-10",
             on ? "border-[#07090C]/15 bg-[#07090C]/15 text-[#07090C]" : "border-panel-line/[0.1] bg-panel-bg/70 text-panel-accent"
           )}
         >
@@ -99,11 +99,12 @@ export function PriceMarketTabs({ active, badges, className, label = "نوع ل�
           )}
         </span>
         <span className="min-w-0 text-start">
-          <span className={cn("block truncate text-sm font-black leading-6", on ? "text-[#07090C]" : "text-panel-text")}>
+          <span className={cn("block truncate text-[13px] font-black leading-6 sm:text-sm", on ? "text-[#07090C]" : "text-panel-text")}>
             {PRICE_MARKET_LABELS[market]}
           </span>
           {badge?.caption && (
-            <span className={cn("block truncate text-[10px] font-bold leading-4", on ? "text-[#07090C]/70" : "text-panel-muted")}>{badge.caption}</span>
+            // Two short lines on narrow phones instead of an ellipsis.
+            <span className={cn("line-clamp-2 block text-[10px] font-bold leading-4", on ? "text-[#07090C]/70" : "text-panel-muted")}>{badge.caption}</span>
           )}
         </span>
       </>
@@ -112,7 +113,7 @@ export function PriceMarketTabs({ active, badges, className, label = "نوع ل�
 
   const tabClass = (market: PriceMarket) =>
     cn(
-      "relative z-[1] flex min-h-[3.5rem] min-w-0 items-center gap-2.5 rounded-2xl px-2.5 py-2 transition-colors duration-300 sm:px-3",
+      "relative z-[1] flex min-h-[3.5rem] min-w-0 items-center gap-2 rounded-2xl px-2 py-2 transition-colors duration-300 sm:gap-2.5 sm:px-3",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/60 active:scale-[0.99]",
       market !== active && "hover:bg-panel-line/[0.04]"
     );

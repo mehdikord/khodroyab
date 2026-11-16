@@ -1,4 +1,4 @@
-import { CarFront, Info, LayoutDashboard, ListOrdered, PhoneCall, Store, UserRound } from "lucide-react";
+import { CarFront, ListOrdered, PhoneCall, Store, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface PanelNavItem {
@@ -10,8 +10,6 @@ export interface PanelNavItem {
   icon: LucideIcon;
   /** Needs an account: for a guest the dock item opens the sign-in screen instead. */
   requiresAccount?: boolean;
-  /** One-line description shown in the side drawer. */
-  description?: string;
 }
 
 /**
@@ -25,27 +23,7 @@ export const PANEL_NAV_ITEMS: PanelNavItem[] = [
   { key: "price-list", label: "لیست قیمت", shortLabel: "لیست قیمت", href: "/panel/price-list", icon: ListOrdered },
   { key: "search", label: "خودرو کارکرده", shortLabel: "خودرو کارکرده", href: "/panel/search", icon: CarFront },
   { key: "contact", label: "تماس با ما", shortLabel: "تماس با ما", href: "/panel/contact", icon: PhoneCall },
-  { key: "profile", label: "پروفایل", shortLabel: "پروفایل", href: "/panel/profile", icon: UserRound, requiresAccount: true },
-];
-
-/** Extra pages listed in the mobile side drawer (opened from the header). */
-export const PANEL_DRAWER_ITEMS: PanelNavItem[] = [
-  {
-    key: "dashboard",
-    label: "داشبورد",
-    shortLabel: "داشبورد",
-    href: "/panel/dashboard",
-    icon: LayoutDashboard,
-    description: "نمای کلی بازار، آگهی‌ها و قیمت دلار",
-  },
-  {
-    key: "about",
-    label: "درباره خودرویاب",
-    shortLabel: "درباره ما",
-    href: "/panel/contact?tab=about",
-    icon: Info,
-    description: "داستان، ارزش‌ها و مسیر خودرویاب",
-  },
+  { key: "profile", label: "پروفایل همکاران", shortLabel: "پروفایل همکاران", href: "/panel/profile", icon: UserRound, requiresAccount: true },
 ];
 
 const startsWith = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -72,7 +50,7 @@ const PAGE_TITLES: [prefix: string, title: string][] = [
   ["/panel/price-list", "لیست قیمت"],
   ["/panel/price-table", "لیست قیمت من"],
   ["/panel/search", "خودرو کارکرده"],
-  ["/panel/contact", "تماس با ما و درباره خودرویاب"],
+  ["/panel/contact", "تماس با ما"],
   ["/panel/about", "درباره خودرویاب"],
   ["/panel/profile", "پروفایل"],
   ["/panel/requests", "درخواست‌های خرید من"],

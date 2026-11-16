@@ -2,6 +2,7 @@ import React from "react";
 import { CalendarDays, Crown, Fingerprint } from "lucide-react";
 
 import { SafeImage } from "@/components/panel/SafeImage";
+import type { PurchaseRequestTierOption } from "@/lib/purchase-requests-shared";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import {
   ALL_PRICE_FIELD_KEYS,
@@ -250,4 +251,31 @@ export function YearPrices({
       ))}
     </dl>
   );
+}
+
+/**
+ * The (year, colour) options of one seller's prices for the purchase-request
+ * form, each with its enabled prices (collaborator ones only with `showPartner`).
+ */
+export function purchaseTierOptions(
+  columns: PriceColumn[],
+  byColumn: Record<string, Record<PriceTableAnyPriceField, string | null>>,
+  enabled: readonly PriceTablePriceField[],
+  showPartner: boolean
+): PurchaseRequestTierOption[] {
+  const fields = priceFieldsFor(enabled);
+  return columns
+    .filter((column) => byColumn[column.key])
+    .map((column) => {
+      const prices = byColumn[column.key];
+      const lines: PurchaseRequestTierOption["prices"] = [];
+      for (const field of fields) {
+        const label = fields.length > 1 ? SHORT_PRICE_LABELS[field.key] : "";
+        const price = prices[field.key];
+        if (price) lines.push({ label, price });
+        const partner = showPartner ? prices[field.partnerKey] : null;
+        if (partner) lines.push({ label: label ? `${label} همکار` : "همکار", price: partner, partner: true });
+      }
+      return { key: column.key, year: column.year, colorName: column.colorName, colorCode: column.colorCode, currency: column.currency, prices: lines };
+    });
 }

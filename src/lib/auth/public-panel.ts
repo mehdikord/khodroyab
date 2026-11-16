@@ -19,6 +19,7 @@ const PUBLIC_PANEL_PATTERNS: RegExp[] = [
   /^\/panel\/contact$/,
   /^\/panel\/sellers$/,
   /^\/panel\/sellers\/\d{8}$/,
+  /^\/panel\/sellers\/\d{8}\/price-list$/,
 ];
 
 export function isPublicPanelPath(pathname: string): boolean {
