@@ -1,17 +1,17 @@
 # Graph Report - khodroyab  (2026-11-16)
 
 ## Corpus Check
-- 379 files · ~212,131 words
+- 380 files · ~212,786 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 7 file(s) not represented in the graph (top: .example 1, (none) 1, .toml 1)
 
 ## Summary
-- 2637 nodes · 8929 edges · 108 communities (101 shown, 7 thin omitted)
+- 2642 nodes · 8963 edges · 103 communities (96 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 94 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7ba3f2e8`
+- Built from commit: `3973cc4b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,116 +19,111 @@
 - subscriptions/actions.ts
 - ProfileManager.tsx
 - UserProfile.tsx
-- cars/actions.ts
+- car-types/actions.ts
 - admin-buy-ads.ts
-- currency.ts
+- toPersianDigits
 - prisma.ts
-- admins/actions.ts
+- roles/actions.ts
 - AdminVerificationForm.tsx
 - Admin authentication flow
-- BranchFormModal.tsx
-- BuyAdDetailView.tsx
+- contact/page.tsx
+- cn
 - colors/actions.ts
-- BuyAdDetailManager.tsx
+- adminActionDenied
 - panel-search.ts
-- car-form/actions.ts
-- ads/[id]/edit/page.tsx
+- react
+- isTrustedOrigin
 - panel/auth-actions.ts
 - PurchaseRequestDetailManager.tsx
 - lib/price-table.ts
-- lib/system-settings.ts
+- SystemSettingsForm.tsx
 - MyPriceTableManager.tsx
 - lib/buy-ads.ts
 - admin/auth-actions.ts
 - buy/actions.ts
 - app/layout.tsx
-- toPersianDigits
-- normalizeDigits
+- BuyAdOffersPanel.tsx
+- admins/actions.ts
 - MyAdForm.tsx
-- price-table-shared.ts
-- price-market.ts
-- user-auth.ts
+- currency.ts
+- [code]/price-list/page.tsx
+- getCurrentUser
 - lib/cars.ts
 - price-list.ts
-- sale-terms/actions.ts
+- Modal
 - PanelShell.tsx
 - guards.ts
 - ContactView.tsx
 - session.ts
 - buy-ads-shared.ts
-- cn
+- price-list/[carId]/page.tsx
 - sponsors/actions.ts
-- brands/actions.ts
+- Toggle
 - lib/purchase-requests.ts
 - otp.ts
 - compilerOptions
 - Luxury Performance Car Branding
 - package.json
 - sale-ads/actions.ts
-- Modal
+- BranchFormModal.tsx
 - (app)/page.tsx
 - dependencies
 - scripts
-- search/buy/page.tsx
-- UsersManager.tsx
-- BuyAdForm.tsx
+- branches/actions.ts
+- purchase-requests/actions.ts
+- AdminsManager.tsx
 - verification-submission.ts
 - SystemSettingsForm
-- server-only
-- panel-search-shared.ts
+- user-codes.ts
+- BranchesManager.tsx
 - RichTextEditor.tsx
 - devDependencies
 - market-rates.ts
 - UserAuthCard.tsx
-- verification/actions.ts
-- CarRecord
+- verification-actions.ts
+- permissions.ts
 - graphify knowledge graph (graphify-out/)
 - next.config.mjs
 - postcss.config.mjs
-- [id]/route.ts
+- seed-locations.mjs
 - UPLOAD_DIR env
 - BranchesMap.tsx
-- validation/system-settings.ts
-- (panel)/dashboard/page.tsx
+- [id]/route.ts
+- lucide-react
 - middleware.ts
 - purchase-requests-shared.ts
 - UrlFilterBar.tsx
-- isTrustedOrigin
+- purchase-request-actions.ts
 - VerificationManager.tsx
-- admin.ts
+- normalizeDigits
 - search/page.tsx
-- [id]/price-table/actions.ts
+- lib/admins.ts
 - next
-- Toggle
-- SellersDirectory.tsx
-- adminActionDenied
-- BrandsManager
-- PurchaseRequestButton.tsx
+- PriceTableManager.tsx
+- AdKindTabs.tsx
+- ConfirmDialog
+- validation/admins.ts
 - tailwindcss
 - [audience]/[id]/page.tsx
 - SaleAdFormModal.tsx
-- validation/sponsors.ts
+- zod
 - ThemeSwitch.tsx
-- lib/user-cars.ts
-- [audience]/page.tsx
-- settings/actions.ts
+- AdminShell.tsx
+- lib/system-settings.ts
 - requests/page.tsx
-- uploads.ts
 - AdminVerificationForm
 - CarImagesManager.tsx
-- AdCard.tsx
-- formatPersianNumber
-- [...path]/route.ts
 - utils.ts
+- [...path]/route.ts
+- Toast
 - CarMediaSlider.tsx
-- react
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 318 edges
-2. `toPersianDigits()` - 265 edges
-3. `react` - 216 edges
+1. `cn()` - 321 edges
+2. `toPersianDigits()` - 268 edges
+3. `react` - 217 edges
 4. `next` - 163 edges
-5. `lucide-react` - 155 edges
+5. `lucide-react` - 156 edges
 6. `formatPersianNumber()` - 85 edges
 7. `prisma` - 72 edges
 8. `isTrustedOrigin()` - 63 edges
@@ -140,12 +135,12 @@
   .claude/CLAUDE.md → CLAUDE.md
 - `Persian RTL admin panel` --conceptually_related_to--> `Vazirmatn Persian font`  [INFERRED]
   README.md → src/fonts/Vazirmatn-OFL.txt
+- `AdminAdminsPage()` --indirect_call--> `adminToRecord()`  [INFERRED]
+  src/app/admin/(panel)/admins/page.tsx → src/lib/admins.ts
 - `AdminAllAdsPage()` --indirect_call--> `carToRecord()`  [INFERRED]
   src/app/admin/(panel)/ads/page.tsx → src/lib/cars.ts
 - `AdminAllAdsPage()` --indirect_call--> `optionToRecord()`  [INFERRED]
   src/app/admin/(panel)/ads/page.tsx → src/lib/options.ts
-- `AdminAllAdsPage()` --indirect_call--> `saleTermToRecord()`  [INFERRED]
-  src/app/admin/(panel)/ads/page.tsx → src/lib/sale-terms.ts
 
 ## Import Cycles
 - None detected.
@@ -154,183 +149,183 @@
 - **Admin auth defense-in-depth layers** — readme_requireadmin, readme_middleware, readme_rate_limit, readme_origin_check, readme_generic_login_error [EXTRACTED 1.00]
 - **Prisma/MySQL data layer** — readme_prisma_schema, readme_init_migration, readme_seed, readme_prisma_singleton, readme_mysql [INFERRED 0.85]
 
-## Communities (108 total, 7 thin omitted)
+## Communities (103 total, 7 thin omitted)
 
 ### Community 0 - "subscriptions/actions.ts"
 Cohesion: 0.08
-Nodes (59): cancelUserSubscriptionAction(), createSubscriptionPlanAction(), deleteSubscriptionPlanAction(), grantUserSubscriptionAction(), guardRequest(), parseId(), revalidateSubscriptionViews(), SubscriptionPlanActionResult (+51 more)
+Nodes (60): cancelUserSubscriptionAction(), createSubscriptionPlanAction(), deleteSubscriptionPlanAction(), grantUserSubscriptionAction(), guardRequest(), parseId(), revalidateSubscriptionViews(), SubscriptionPlanActionResult (+52 more)
 
 ### Community 1 - "ProfileManager.tsx"
-Cohesion: 0.08
-Nodes (42): guardRequest(), ProfileActionResult, revalidateProfilePages(), updateProfileAction(), dynamic, faTime, metadata, PanelProfilePage() (+34 more)
+Cohesion: 0.07
+Nodes (39): react-dom, dynamic, faTime, metadata, PanelProfilePage(), CollaboratorShortcuts(), Shortcut(), FieldError() (+31 more)
 
 ### Community 2 - "UserProfile.tsx"
-Cohesion: 0.20
-Nodes (19): CountPill(), ProfileSection(), ProfileSectionProps, SectionEmpty(), headlinePrice(), UserPriceTablePreview(), ContactChip(), daysSince() (+11 more)
+Cohesion: 0.16
+Nodes (24): revalidateVerificationPages(), reviewVerificationAction(), CountPill(), ProfileSection(), ProfileSectionProps, SectionEmpty(), headlinePrice(), UserPriceTablePreview() (+16 more)
 
-### Community 3 - "cars/actions.ts"
-Cohesion: 0.05
-Nodes (65): sanitize-html, CarTypeActionResult, CarTypeSimpleActionResult, createCarTypeAction(), deleteCarTypeAction(), guardRequest(), isPrismaCode(), updateCarTypeAction() (+57 more)
+### Community 3 - "car-types/actions.ts"
+Cohesion: 0.09
+Nodes (38): CarTypeActionResult, CarTypeSimpleActionResult, createCarTypeAction(), deleteCarTypeAction(), guardRequest(), isPrismaCode(), updateCarTypeAction(), CarTypeFormModal() (+30 more)
 
 ### Community 4 - "admin-buy-ads.ts"
 Cohesion: 0.06
-Nodes (55): AdminBuyAdActionResult, deleteAdminBuyAdAction(), deleteAdminBuyAdOfferAction(), guardRequest(), parseBigInt(), revalidateBuyAdPages(), setAdminBuyAdActiveAction(), setAdminBuyAdBiddingAction() (+47 more)
+Nodes (74): AdminBuyAdActionResult, deleteAdminBuyAdAction(), deleteAdminBuyAdOfferAction(), guardRequest(), parseBigInt(), revalidateBuyAdPages(), setAdminBuyAdActiveAction(), setAdminBuyAdBiddingAction() (+66 more)
 
-### Community 5 - "currency.ts"
-Cohesion: 0.13
-Nodes (26): AdDetailPage(), dynamic, metadata, BuyAdsTable(), CurrencyTag(), AdDetailView(), AdDetailViewProps, PriceEquivalent() (+18 more)
+### Community 5 - "toPersianDigits"
+Cohesion: 0.12
+Nodes (28): AdsTable(), AdStatusBadge(), RankMedal(), BuyAdsFilters(), Segmented(), BuyAdsTable(), Chip(), PurchaseRequestsFilters() (+20 more)
 
 ### Community 6 - "prisma.ts"
-Cohesion: 0.13
-Nodes (19): @prisma/client, AdminAllAdsPage(), dynamic, metadata, PageProps, SearchParams, single(), toBigIntOrNull() (+11 more)
+Cohesion: 0.10
+Nodes (34): @prisma/client, server-only, AdminAllAdsPage(), dynamic, metadata, PageProps, SearchParams, single() (+26 more)
 
-### Community 7 - "admins/actions.ts"
-Cohesion: 0.05
-Nodes (81): ActionError, AdminActionResult, AdminSimpleActionResult, createAdminAction(), deleteAdminAction(), DUPLICATE_PHONE, guardRequest(), isLastActiveRoot() (+73 more)
+### Community 7 - "roles/actions.ts"
+Cohesion: 0.20
+Nodes (19): createRoleAction(), deleteRoleAction(), DUPLICATE_NAME, guardRequest(), isUniqueViolation(), parseId(), revalidate(), RoleActionResult (+11 more)
 
 ### Community 8 - "AdminVerificationForm.tsx"
-Cohesion: 0.16
-Nodes (19): AdminVerificationFormProps, DocDraft, IdentityDraft, PERSON_TYPE_ICONS, UserVerificationSectionProps, VerificationStatusBadge(), VerificationStatusBadgeProps, VerificationManagerProps (+11 more)
+Cohesion: 0.14
+Nodes (21): AdminVerificationFormProps, DocDraft, IdentityDraft, PERSON_TYPE_ICONS, UserVerificationSectionProps, VerificationStatusBadgeProps, VerificationManagerProps, VERIFICATION_DOC_HINTS (+13 more)
 
 ### Community 9 - "Admin authentication flow"
 Cohesion: 0.05
 Nodes (30): Persian RTL admin panel, AdminShell component, admins table, admin/auth-actions.ts login/logout Server Actions, AUTH_SECRET env, AUTH_SESSION_TTL_SECONDS env (default 28800), bcryptjs password hashing, /admin/dashboard (empty content area) (+22 more)
 
-### Community 10 - "BranchFormModal.tsx"
-Cohesion: 0.05
-Nodes (69): BranchActionResult, BranchReorderResult, BranchSimpleActionResult, createBranchAction(), deleteBranchAction(), guardRequest(), parseId(), placeError() (+61 more)
+### Community 10 - "contact/page.tsx"
+Cohesion: 0.13
+Nodes (18): metadata, PageProps, PanelContactPage(), AboutHeroScene(), Building, Car(), SKYLINE, SPOKES (+10 more)
 
-### Community 11 - "BuyAdDetailView.tsx"
-Cohesion: 0.14
-Nodes (27): AdGallery(), NoImage(), BuyAdNoImage(), BuyRequestBadge(), BuySpecTiles(), BuySpecTilesProps, BuyAdCard(), BuyAdCardProps (+19 more)
+### Community 11 - "cn"
+Cohesion: 0.08
+Nodes (54): RequestRow(), ColorSwatch(), ColorSwatchProps, AdDetailView(), PriceEquivalent(), SectionTitle(), Spec(), AdGallery() (+46 more)
 
 ### Community 12 - "colors/actions.ts"
-Cohesion: 0.14
-Nodes (24): ColorActionResult, ColorSimpleActionResult, createColorAction(), deleteColorAction(), DUPLICATE_NAME_RESULT, guardRequest(), isPrismaCode(), revalidateColorPages() (+16 more)
+Cohesion: 0.15
+Nodes (23): ColorActionResult, ColorSimpleActionResult, createColorAction(), deleteColorAction(), DUPLICATE_NAME_RESULT, guardRequest(), isPrismaCode(), revalidateColorPages() (+15 more)
 
-### Community 13 - "BuyAdDetailManager.tsx"
-Cohesion: 0.19
-Nodes (19): Confirm, PersonAvatar(), PersonCell(), BuyAdsFiltersProps, BuyAdsManagerProps, BuyAdsTableProps, ADMIN_BUY_AD_FILTER_DEFAULTS, ADMIN_BUY_AD_PARAM_KEYS (+11 more)
+### Community 13 - "adminActionDenied"
+Cohesion: 0.15
+Nodes (24): sanitize-html, CarActionResult, CarSimpleActionResult, createCarAction(), deleteCarAction(), getCarDescriptionAction(), guardRequest(), isPrismaCode() (+16 more)
 
 ### Community 14 - "panel-search.ts"
-Cohesion: 0.16
-Nodes (21): adDetailInclude, AdViewer, buildOrderBy(), buildWhere(), faDate, faShortDate, faTime, getAdDetail() (+13 more)
+Cohesion: 0.10
+Nodes (36): PriceHistoryChartProps, DEFAULTS, SearchFiltersProps, SORTS, adDetailInclude, AdViewer, buildOrderBy(), buildWhere() (+28 more)
 
-### Community 15 - "car-form/actions.ts"
-Cohesion: 0.13
-Nodes (24): createOptionAction(), deleteOptionAction(), guardRequest(), isPrismaCode(), OptionActionResult, OptionSimpleActionResult, revalidateOptionPages(), toggleOptionActiveAction() (+16 more)
+### Community 15 - "react"
+Cohesion: 0.08
+Nodes (34): react, createOptionAction(), deleteOptionAction(), guardRequest(), isPrismaCode(), OptionActionResult, OptionSimpleActionResult, revalidateOptionPages() (+26 more)
 
-### Community 16 - "ads/[id]/edit/page.tsx"
+### Community 16 - "isTrustedOrigin"
 Cohesion: 0.14
-Nodes (18): AdminCarFormPage(), dynamic, metadata, AdminSaleTermsPage(), dynamic, metadata, dynamic, EditAdPage() (+10 more)
+Nodes (17): guardRequest(), ProfileActionResult, revalidateProfilePages(), updateProfileAction(), isTrustedOrigin(), toProfileRecord(), isManagedUpload(), ALLOWED_IMAGE_MIME_TYPES (+9 more)
 
 ### Community 17 - "panel/auth-actions.ts"
-Cohesion: 0.15
-Nodes (22): getClientIp(), logoutUserAction(), minutes(), requestOtpAction(), RequestOtpActionResult, verifyOtpAction(), VerifyOtpActionResult, verifyOtp() (+14 more)
+Cohesion: 0.18
+Nodes (17): getClientIp(), logoutUserAction(), minutes(), requestOtpAction(), RequestOtpActionResult, verifyOtpAction(), VerifyOtpActionResult, verifyOtp() (+9 more)
 
 ### Community 18 - "PurchaseRequestDetailManager.tsx"
-Cohesion: 0.17
-Nodes (22): setPurchaseRequestStatusAction(), CardTitle(), CodeChip(), groupCode(), PersonFlags(), PurchaseRequestDetailManager(), changeStatus(), saveNote() (+14 more)
+Cohesion: 0.22
+Nodes (15): CardTitle(), CodeChip(), groupCode(), PersonFlags(), PurchaseRequestDetailManager(), changeStatus(), saveNote(), showToast() (+7 more)
 
 ### Community 19 - "lib/price-table.ts"
-Cohesion: 0.12
-Nodes (23): AdminUserPriceTablePage(), dynamic, metadata, PageProps, dynamic, metadata, PageProps, PanelPriceTablePage() (+15 more)
+Cohesion: 0.10
+Nodes (36): parseBigInt(), saveUserPriceTableAction(), AdminUserPriceTablePage(), dynamic, metadata, PageProps, guardRequest(), parseBigInt() (+28 more)
 
-### Community 20 - "lib/system-settings.ts"
-Cohesion: 0.16
-Nodes (19): ContactField, ContactValues, SettingsProvinceOption, SystemSettingsFormProps, PRICE_TABLE_PRICE_FIELDS, parseActiveProvinceIds(), parseEnabledPriceFields(), DEFAULT_SYSTEM_SETTINGS (+11 more)
+### Community 20 - "SystemSettingsForm.tsx"
+Cohesion: 0.13
+Nodes (25): ContactField, ContactValues, SettingsProvinceOption, SystemSettingsFormProps, PRICE_TABLE_PRICE_FIELDS, DEFAULT_SYSTEM_SETTINGS, DEFAULT_USER_CODE_ROTATION_MINUTES, formatGeoPoint() (+17 more)
 
 ### Community 21 - "MyPriceTableManager.tsx"
 Cohesion: 0.10
-Nodes (31): borderFor(), Draft, Drafts, duplicateTierKeys(), emptyDraft(), emptyTier(), ErrorText(), FILTERS (+23 more)
+Nodes (31): borderFor(), Drafts, duplicateTierKeys(), emptyDraft(), emptyTier(), ErrorText(), FILTERS, inputBase (+23 more)
 
 ### Community 22 - "lib/buy-ads.ts"
-Cohesion: 0.16
-Nodes (20): BuyAdDetailPage(), dynamic, metadata, buildOrderBy(), buildWhere(), BUY_AD_PAGE_SIZE, buyAdDetailInclude, BuyAdRow (+12 more)
+Cohesion: 0.10
+Nodes (35): dynamic, GET(), BuyAdDetailPage(), dynamic, metadata, BuyAdsSearchPage(), dynamic, metadata (+27 more)
 
 ### Community 23 - "admin/auth-actions.ts"
-Cohesion: 0.21
-Nodes (13): getClientIp(), LoginActionResult, loginAdminAction(), logoutAdminAction(), LoginForm(), handleSubmit(), authenticateAdmin(), PASSWORD_HASH_ROUNDS (+5 more)
+Cohesion: 0.20
+Nodes (14): getClientIp(), LoginActionResult, loginAdminAction(), logoutAdminAction(), LoginForm(), handleSubmit(), authenticateAdmin(), CurrentAdmin (+6 more)
 
 ### Community 24 - "buy/actions.ts"
-Cohesion: 0.12
-Nodes (29): BuyAdActionResult, BuyAdOffersResult, BuyAdSimpleResult, createBuyAdAction(), deleteBuyAdAction(), findBiddableAd(), guardRequest(), offersFailure() (+21 more)
+Cohesion: 0.16
+Nodes (23): BuyAdActionResult, BuyAdSimpleResult, createBuyAdAction(), deleteBuyAdAction(), findBiddableAd(), guardRequest(), offersFailure(), parseBigInt() (+15 more)
 
 ### Community 25 - "app/layout.tsx"
 Cohesion: 0.33
 Nodes (3): jetbrainsMono, metadata, vazirmatn
 
-### Community 26 - "toPersianDigits"
-Cohesion: 0.12
-Nodes (27): RankMedal(), BuyAdsFilters(), Segmented(), Chip(), PurchaseRequestsFilters(), apply(), applyPeriod(), Segmented() (+19 more)
+### Community 26 - "BuyAdOffersPanel.tsx"
+Cohesion: 0.14
+Nodes (24): BuyAdOffersResult, BestOfferHero(), BuyAdOffersPanel(), handleResult(), submitOffer(), toggleBidding(), withdraw(), BuyAdOffersPanelProps (+16 more)
 
-### Community 27 - "normalizeDigits"
-Cohesion: 0.15
-Nodes (19): BUY_AD_DESCRIPTION_MAX, BUY_AD_OFFER_MAX_DIGITS, MILEAGE_MAX, isValidTierYear(), normalizeYear(), normalizeDigits(), BuyAdInput, buyAdSchema (+11 more)
+### Community 27 - "admins/actions.ts"
+Cohesion: 0.29
+Nodes (17): ActionError, AdminActionResult, AdminSimpleActionResult, createAdminAction(), deleteAdminAction(), DUPLICATE_PHONE, guardRequest(), isLastActiveRoot() (+9 more)
 
 ### Community 28 - "MyAdForm.tsx"
-Cohesion: 0.10
-Nodes (21): AdExtraFieldsProps, AdFieldTheme, AdImagesField(), AdSpecFields(), fieldClass(), mileageHint(), OptionField(), THEMES (+13 more)
+Cohesion: 0.07
+Nodes (38): normalize(), SearchableSelect(), commit(), onSearchKeyDown(), SearchableSelectOption, SearchableSelectProps, AdExtraFieldsProps, AdFieldTheme (+30 more)
 
-### Community 29 - "price-table-shared.ts"
-Cohesion: 0.11
-Nodes (23): DEFAULT_PRICE_TABLE_CURRENCY, comparePriceColumns(), digitsOnly(), normalizeUsdPrice(), PRICE_TABLE_ALL_PRICE_KEYS, PRICE_TABLE_EMPTY, PRICE_TABLE_MAX_TIERS, PRICE_TABLE_PARTNER_KEYS (+15 more)
+### Community 29 - "currency.ts"
+Cohesion: 0.09
+Nodes (33): CurrencyToggleProps, AdDetailViewProps, Draft, CURRENCY_LABELS, DEFAULT_PRICE_TABLE_CURRENCY, PRICE_CURRENCIES, PriceCurrency, UsdRateInfo (+25 more)
 
-### Community 30 - "price-market.ts"
-Cohesion: 0.19
-Nodes (18): UserPriceTablePreviewProps, UserProfileProps, PlateGlyph(), PriceMarketIcon(), PriceMarketTabsProps, TabBadge, MyPriceTableManagerProps, PriceTableMarketEditorProps (+10 more)
+### Community 30 - "[code]/price-list/page.tsx"
+Cohesion: 0.18
+Nodes (20): dynamic, PageProps, UserPriceTablePreviewProps, UserProfileProps, PlateGlyph(), PriceMarketIcon(), PriceMarketTabsProps, TabBadge (+12 more)
 
-### Community 31 - "user-auth.ts"
-Cohesion: 0.13
-Nodes (30): dynamic, GET(), dynamic, PageProps, PriceListCarPage(), dynamic, metadata, PageProps (+22 more)
+### Community 31 - "getCurrentUser"
+Cohesion: 0.20
+Nodes (13): AdDetailPage(), dynamic, metadata, dynamic, metadata, PageProps, PanelPriceListPage(), StatTile() (+5 more)
 
 ### Community 32 - "lib/cars.ts"
-Cohesion: 0.22
-Nodes (16): guardRequest(), parseBigInt(), PriceTableBulkResult, PriceTableToggleResult, revalidatePriceTablePages(), setCarsPriceTableAction(), toggleCarPriceTableAction(), AdminPriceTablePage() (+8 more)
+Cohesion: 0.19
+Nodes (18): dynamic, metadata, guardRequest(), parseBigInt(), PriceTableBulkResult, PriceTableToggleResult, revalidatePriceTablePages(), setCarsPriceTableAction() (+10 more)
 
 ### Community 33 - "price-list.ts"
 Cohesion: 0.15
-Nodes (28): generateMetadata(), CarInfoRow, carInfoSelect, compareDigitPrices(), compareOffers(), countPriceListSellers(), getPriceListCarDetail(), getPriceListMarketStats() (+20 more)
+Nodes (24): CarInfoRow, carInfoSelect, compareDigitPrices(), compareOffers(), countPriceListSellers(), getPriceListMarketStats(), groupByColumn(), jalaliDate (+16 more)
 
-### Community 34 - "sale-terms/actions.ts"
-Cohesion: 0.19
-Nodes (19): createSaleTermAction(), deleteSaleTermAction(), guardRequest(), parseId(), SaleTermActionResult, SaleTermSimpleActionResult, toggleSaleTermActiveAction(), updateSaleTermAction() (+11 more)
+### Community 34 - "Modal"
+Cohesion: 0.15
+Nodes (21): createSaleTermAction(), deleteSaleTermAction(), guardRequest(), parseId(), SaleTermActionResult, SaleTermSimpleActionResult, toggleSaleTermActiveAction(), updateSaleTermAction() (+13 more)
 
 ### Community 35 - "PanelShell.tsx"
-Cohesion: 0.14
-Nodes (17): DollarTicker(), activeDockKey(), PAGE_TITLES, PANEL_NAV_ITEMS, PanelNavItem, panelPageTitle(), startsWith(), PanelNotice() (+9 more)
+Cohesion: 0.11
+Nodes (20): ConsultationFab(), ConsultationFabProps, DollarTicker(), activeDockKey(), PAGE_TITLES, PANEL_NAV_ITEMS, PanelNavItem, panelPageTitle() (+12 more)
 
 ### Community 36 - "guards.ts"
-Cohesion: 0.08
-Nodes (30): AdminPendingAdsPage(), dynamic, metadata, AdminBrandsPage(), dynamic, metadata, AdminCarTypesPage(), dynamic (+22 more)
+Cohesion: 0.07
+Nodes (36): AdminPendingAdsPage(), dynamic, metadata, AdminBranchesPage(), dynamic, metadata, AdminBrandsPage(), dynamic (+28 more)
 
 ### Community 37 - "ContactView.tsx"
 Cohesion: 0.11
-Nodes (28): BranchMapPoint, ConsultationFab(), ConsultationFabProps, BranchCard(), BranchesMap, BranchesSection(), pad2(), useIsRailLayout() (+20 more)
+Nodes (28): BranchMapPoint, BranchCard(), BranchesMap, BranchesSection(), pad2(), useIsRailLayout(), base, IconProps (+20 more)
 
 ### Community 38 - "session.ts"
-Cohesion: 0.20
-Nodes (17): jose, ADMIN_SESSION_COOKIE, DEFAULT_SESSION_TTL_SECONDS, getSessionTtlSeconds(), USER_SESSION_COOKIE, AdminSessionPayload, audienceMatches(), createSessionToken() (+9 more)
+Cohesion: 0.21
+Nodes (16): ADMIN_SESSION_COOKIE, DEFAULT_SESSION_TTL_SECONDS, getSessionTtlSeconds(), PASSWORD_HASH_ROUNDS, USER_SESSION_COOKIE, AdminSessionPayload, audienceMatches(), createSessionToken() (+8 more)
 
 ### Community 39 - "buy-ads-shared.ts"
 Cohesion: 0.16
-Nodes (16): BuyAdFiltersProps, MILEAGE_OPTIONS, SORTS, OfferRowProps, BUY_AD_FILTER_DEFAULTS, BUY_AD_MILEAGE_STEPS, BUY_AD_OFFER_POLL_MS, BUY_AD_SORT_LABELS (+8 more)
+Nodes (16): BuyAdFiltersProps, MILEAGE_OPTIONS, SORTS, BUY_AD_DESCRIPTION_MAX, BUY_AD_FILTER_DEFAULTS, BUY_AD_MILEAGE_STEPS, BUY_AD_OFFER_MAX_DIGITS, BUY_AD_SORT_LABELS (+8 more)
 
-### Community 40 - "cn"
-Cohesion: 0.14
-Nodes (32): CarOffersView(), CarOffersViewProps, compareDigits(), PriceOrder, sortOffers(), sortValue(), UpdatedAt(), HorizontalScroller() (+24 more)
+### Community 40 - "price-list/[carId]/page.tsx"
+Cohesion: 0.08
+Nodes (47): dynamic, generateMetadata(), PageProps, PriceListCarPage(), SellerPriceListPage(), CarOffersView(), CarOffersViewProps, compareDigits() (+39 more)
 
 ### Community 41 - "sponsors/actions.ts"
-Cohesion: 0.14
-Nodes (31): createSponsorAction(), deleteSponsorAction(), guardRequest(), nextSortOrder(), parseId(), reorderSponsorsAction(), revalidateSponsorPages(), SponsorActionResult (+23 more)
+Cohesion: 0.13
+Nodes (34): createSponsorAction(), deleteSponsorAction(), guardRequest(), nextSortOrder(), parseId(), reorderSponsorsAction(), revalidateSponsorPages(), SponsorActionResult (+26 more)
 
-### Community 42 - "brands/actions.ts"
-Cohesion: 0.16
-Nodes (18): BrandActionResult, BrandSimpleActionResult, createBrandAction(), guardRequest(), updateBrandAction(), BrandFormModal(), handleSubmit(), inputClassName() (+10 more)
+### Community 42 - "Toggle"
+Cohesion: 0.13
+Nodes (29): BrandActionResult, BrandSimpleActionResult, createBrandAction(), deleteBrandAction(), guardRequest(), isPrismaCode(), toggleBrandActiveAction(), updateBrandAction() (+21 more)
 
 ### Community 43 - "lib/purchase-requests.ts"
-Cohesion: 0.10
-Nodes (30): div(), jalaliToGregorian(), parseJalaliDate(), priceColumnKey(), withVisiblePrices(), ADMIN_PURCHASE_REQUEST_PAGE_SIZE, buildWhere(), carLabelOf() (+22 more)
+Cohesion: 0.08
+Nodes (35): AdminPurchaseRequestsPage(), dynamic, generateMetadata(), PageProps, toAudience(), div(), jalaliToGregorian(), parseJalaliDate() (+27 more)
 
 ### Community 44 - "otp.ts"
 Cohesion: 0.19
@@ -342,19 +337,19 @@ Nodes (17): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModu
 
 ### Community 47 - "package.json"
 Cohesion: 0.11
-Nodes (17): name, prisma, seed, private, version, autoprefixer, clsx, postcss (+9 more)
+Nodes (18): name, prisma, seed, private, version, autoprefixer, clsx, jose (+10 more)
 
 ### Community 48 - "sale-ads/actions.ts"
 Cohesion: 0.08
-Nodes (60): createUserCarAction(), deleteUserCarAction(), guardRequest(), isPrismaCode(), parseBigInt(), PRICE_CHANGE_SOURCE, revalidateUserPages(), toggleUserCarActiveAction() (+52 more)
+Nodes (61): createUserCarAction(), deleteUserCarAction(), guardRequest(), isPrismaCode(), parseBigInt(), PRICE_CHANGE_SOURCE, revalidateUserPages(), toggleUserCarActiveAction() (+53 more)
 
-### Community 49 - "Modal"
-Cohesion: 0.24
-Nodes (8): revalidateVerificationPages(), reviewVerificationAction(), Modal(), ModalProps, SIZE_CLASSES, UserVerificationSection(), review(), showToast()
+### Community 49 - "BranchFormModal.tsx"
+Cohesion: 0.17
+Nodes (15): BranchFormModal(), FieldError(), FieldLabel(), inputClassName(), LocationPicker, asciiDigits(), BRANCH_ADDRESS_MAX_LENGTH, BRANCH_MANAGER_MAX_LENGTH (+7 more)
 
 ### Community 50 - "(app)/page.tsx"
-Cohesion: 0.20
-Nodes (12): metadata, PageProps, PanelLoginPage(), PanelLogo(), PanelLogoProps, SIZES, SponsorCard(), SponsorsMarquee() (+4 more)
+Cohesion: 0.18
+Nodes (11): metadata, PageProps, PanelLoginPage(), PanelLogo(), PanelLogoProps, SIZES, isPublicPanelPath(), PANEL_HOME (+3 more)
 
 ### Community 51 - "dependencies"
 Cohesion: 0.09
@@ -364,33 +359,33 @@ Nodes (23): dependencies, bcryptjs, clsx, framer-motion, jose, lucide-react, nex
 Cohesion: 0.14
 Nodes (14): scripts, build, db:deploy, db:generate, db:hash-user-passwords, db:migrate, db:seed, db:seed:locations (+6 more)
 
-### Community 53 - "search/buy/page.tsx"
-Cohesion: 0.20
-Nodes (13): BuyAdsSearchPage(), dynamic, metadata, SearchParams, BuyAdFilters(), dateFormatter, LiveClock(), LiveClockProps (+5 more)
+### Community 53 - "branches/actions.ts"
+Cohesion: 0.30
+Nodes (16): BranchActionResult, BranchReorderResult, BranchSimpleActionResult, createBranchAction(), deleteBranchAction(), guardRequest(), parseId(), placeError() (+8 more)
 
-### Community 54 - "UsersManager.tsx"
-Cohesion: 0.21
-Nodes (11): inputClassName(), UserFormModal(), UserFormModalProps, digitQuery(), FILTERS, matchesFilter(), UsersManagerProps, UserFilter (+3 more)
+### Community 54 - "purchase-requests/actions.ts"
+Cohesion: 0.19
+Nodes (14): PurchaseRequestActionResult, revalidateRequests(), savePurchaseRequestNoteAction(), setPurchaseRequestStatusAction(), buildPageList(), PageLink(), PurchaseRequestsManager(), changeStatus() (+6 more)
 
-### Community 55 - "BuyAdForm.tsx"
-Cohesion: 0.24
-Nodes (12): CurrencyToggle(), AdCarChoice, BuyAdForm(), BuyAdFormColor, BuyAdFormProps, digitsToAscii(), FieldError(), inputClass() (+4 more)
+### Community 55 - "AdminsManager.tsx"
+Cohesion: 0.22
+Nodes (14): AdminFormModal(), AdminFormModalProps, FieldError(), inputClassName(), AdminsManager(), handleDelete(), handleToggleActive(), showToast() (+6 more)
 
 ### Community 56 - "verification-submission.ts"
-Cohesion: 0.10
-Nodes (15): AdminSubmitVerificationResult, ReviewVerificationResult, isValidCompanyNationalId(), isValidNationalCode(), profileUpdateSchema, isVerificationPersonType(), VERIFICATION_REJECT_REASON_MAX, VerificationIdentity (+7 more)
+Cohesion: 0.15
+Nodes (7): saveVerificationFile(), isVerificationPersonType(), VerificationIdentity, VerificationPersonType, ParsedVerificationSubmission, ParseVerificationResult, StoreVerificationResult
 
 ### Community 57 - "SystemSettingsForm"
 Cohesion: 0.29
 Nodes (11): ContactInput(), inputClassName(), pickContact(), SettingCard(), SystemSettingsForm(), clearError(), handleSubmit(), setContactField() (+3 more)
 
-### Community 58 - "server-only"
-Cohesion: 0.14
-Nodes (18): server-only, AdminUsersPage(), dynamic, metadata, PUBLIC_AD_WHERE, PUBLIC_SELLER_WHERE, PublicSeller, PublicSellerProfile (+10 more)
+### Community 58 - "user-codes.ts"
+Cohesion: 0.15
+Nodes (17): dynamic, metadata, PanelSellersPage(), PUBLIC_AD_WHERE, PUBLIC_SELLER_WHERE, displayName(), listPublicSellers(), PublicSeller (+9 more)
 
-### Community 59 - "panel-search-shared.ts"
-Cohesion: 0.22
-Nodes (12): DEFAULTS, SearchFiltersProps, SORTS, AdDetailSaleTerm, SEARCH_SORT_LABELS, SEARCH_SORTS, SearchAdSaleTerm, SearchFilterValues (+4 more)
+### Community 59 - "BranchesManager.tsx"
+Cohesion: 0.21
+Nodes (16): BranchesManager(), handleConfirmDelete(), handleMove(), handleSaved(), handleToggleActive(), showToast(), upsertRecord(), BranchesManagerProps (+8 more)
 
 ### Community 60 - "RichTextEditor.tsx"
 Cohesion: 0.13
@@ -401,164 +396,144 @@ Cohesion: 0.20
 Nodes (10): devDependencies, autoprefixer, postcss, tailwindcss, @types/leaflet, @types/node, @types/react, @types/react-dom (+2 more)
 
 ### Community 62 - "market-rates.ts"
-Cohesion: 0.07
-Nodes (41): framer-motion, dynamic, GET(), dynamic, MyAdsTabsLayout(), dynamic, metadata, PanelDashboardPage() (+33 more)
+Cohesion: 0.09
+Nodes (31): dynamic, GET(), dynamic, metadata, PanelDashboardPage(), ChangePill(), CountdownRing(), CURRENCIES (+23 more)
 
 ### Community 63 - "UserAuthCard.tsx"
 Cohesion: 0.22
 Nodes (11): fieldClass(), FieldIcon(), FormAlert(), formatCountdown(), Step, submitClass, UserAuthCard(), handleCodeSubmit() (+3 more)
 
-### Community 64 - "verification/actions.ts"
-Cohesion: 0.33
-Nodes (8): submitVerificationAction(), SubmitVerificationResult, faDateTime, getUserVerification(), verificationDocumentUrl(), storeVerificationSubmission(), VerificationRow, verificationToRecord()
+### Community 64 - "verification-actions.ts"
+Cohesion: 0.15
+Nodes (17): adminSubmitVerificationAction(), AdminSubmitVerificationResult, ReviewVerificationResult, submitVerificationAction(), SubmitVerificationResult, dynamic, metadata, PanelVerificationPage() (+9 more)
 
-### Community 65 - "CarRecord"
-Cohesion: 0.11
-Nodes (20): BrandFormModalProps, BrandsManagerProps, BrandsTableProps, CarFormModalProps, CarsManagerProps, CarsTable(), CarsTableProps, ItemDraft (+12 more)
+### Community 65 - "permissions.ts"
+Cohesion: 0.24
+Nodes (13): AttentionItem, CatalogItem, PERMISSION_ICONS, PermissionChipsProps, RoleFormModalProps, RolesManagerProps, AdminRoleRecord, AuthorizedAdmin (+5 more)
 
 ### Community 66 - "graphify knowledge graph (graphify-out/)"
 Cohesion: 0.33
 Nodes (4): graphify skill (project-local), GRAPH_REPORT.md, graphify knowledge graph (graphify-out/), graphify-out/wiki/index.md
 
-### Community 69 - "[id]/route.ts"
-Cohesion: 0.09
-Nodes (20): prisma, assertDevelopmentEnvironment(), DEV_ADMIN, DATA_DIR, readRows(), seedLocations(), unquote(), main() (+12 more)
+### Community 69 - "seed-locations.mjs"
+Cohesion: 0.20
+Nodes (9): prisma, assertDevelopmentEnvironment(), DEV_ADMIN, DATA_DIR, readRows(), seedLocations(), unquote(), main() (+1 more)
 
 ### Community 72 - "BranchesMap.tsx"
+Cohesion: 0.18
+Nodes (23): BranchesMap(), BranchesMapProps, escapeHtml(), createMap(), hasNeshanKey, injectOnce(), IRAN_CENTER, IRAN_ZOOM (+15 more)
+
+### Community 73 - "[id]/route.ts"
 Cohesion: 0.21
-Nodes (20): BranchesMap(), BranchesMapProps, escapeHtml(), createMap(), hasNeshanKey, injectOnce(), IRAN_CENTER, IRAN_ZOOM (+12 more)
+Nodes (9): dynamic, GET(), notFound(), RouteContext, runtime, MIME_TO_EXTENSION, removeVerificationFiles(), resolveVerificationFile() (+1 more)
 
-### Community 73 - "validation/system-settings.ts"
-Cohesion: 0.24
-Nodes (12): LocationPicker(), applyCoordsText(), formatGeoPoint(), parseGeoPoint(), asciiDigits(), asUrl(), hostIs(), normalizeHandleLink() (+4 more)
-
-### Community 74 - "(panel)/dashboard/page.tsx"
-Cohesion: 0.05
-Nodes (63): AdminLoginPage(), LOGIN_HIGHLIGHTS, metadata, AdminDashboardPage(), dynamic, greetingFor(), metadata, AdminForbiddenPage() (+55 more)
+### Community 74 - "lucide-react"
+Cohesion: 0.07
+Nodes (52): lucide-react, AdminDashboardPage(), dynamic, greetingFor(), metadata, AdsTrendChart(), AdsTrendChartProps, MARGIN (+44 more)
 
 ### Community 76 - "middleware.ts"
-Cohesion: 0.19
-Nodes (10): isPublicPanelPath(), PANEL_HOME, PUBLIC_PANEL_PATTERNS, AREAS, config, isPassthrough(), middleware(), PASSTHROUGH_PREFIXES (+2 more)
+Cohesion: 0.32
+Nodes (7): AREAS, config, isPassthrough(), middleware(), PASSTHROUGH_PREFIXES, ProtectedArea, redirectTo()
 
 ### Community 77 - "purchase-requests-shared.ts"
-Cohesion: 0.15
-Nodes (23): PurchaseRequestDetailManagerProps, jalaliDay, PERIODS, PurchaseRequestsFiltersProps, PurchaseRequestsManagerProps, AdminPurchaseRequestPage, ADMIN_PURCHASE_REQUEST_FILTER_DEFAULTS, ADMIN_PURCHASE_REQUEST_PARAM_KEYS (+15 more)
+Cohesion: 0.17
+Nodes (23): jalaliDay, PERIODS, PurchaseRequestsFiltersProps, groupCode(), PurchaseRequestsManagerProps, ADMIN_PURCHASE_REQUEST_FILTER_DEFAULTS, ADMIN_PURCHASE_REQUEST_PARAM_KEYS, ADMIN_PURCHASE_REQUEST_SORT_LABELS (+15 more)
 
 ### Community 78 - "UrlFilterBar.tsx"
 Cohesion: 0.26
 Nodes (11): buildQuery(), UrlFilterBar(), applyAdvanced(), clearAll(), handleQueryChange(), handleSubmit(), navigate(), removeFilter() (+3 more)
 
-### Community 79 - "isTrustedOrigin"
-Cohesion: 0.10
-Nodes (25): PurchaseRequestActionResult, revalidateRequests(), savePurchaseRequestNoteAction(), clientIp(), loadPurchaseRequestLocationsAction(), submitPurchaseRequestAction(), SubmitPurchaseRequestResult, tooMany() (+17 more)
+### Community 79 - "purchase-request-actions.ts"
+Cohesion: 0.12
+Nodes (21): clientIp(), loadPurchaseRequestLocationsAction(), submitPurchaseRequestAction(), SubmitPurchaseRequestResult, tooMany(), handleSubmit(), listProvinceOptions(), createPurchaseRequest() (+13 more)
 
 ### Community 80 - "VerificationManager.tsx"
-Cohesion: 0.13
-Nodes (20): dynamic, metadata, PanelVerificationPage(), DocDraft, FieldError(), IdentityDraft, identityDraftFrom(), IdentitySummary() (+12 more)
+Cohesion: 0.20
+Nodes (14): DocDraft, FieldError(), IdentityDraft, identityDraftFrom(), IdentitySummary(), inputClassName(), newDoc(), PERSON_TYPE_ICONS (+6 more)
 
-### Community 81 - "admin.ts"
-Cohesion: 0.13
-Nodes (17): zod, PASSWORD_MIN_LENGTH, AdminLoginInput, adminLoginSchema, FieldErrors, normalizePhone(), optionalDigits(), ProfileUpdateInput (+9 more)
+### Community 81 - "normalizeDigits"
+Cohesion: 0.08
+Nodes (34): normalizeYear(), PASSWORD_MIN_LENGTH, AdminLoginInput, adminLoginSchema, FieldErrors, normalizeDigits(), normalizePhone(), buyAdSchema (+26 more)
 
 ### Community 82 - "search/page.tsx"
-Cohesion: 0.24
-Nodes (10): dynamic, filtersToQuery(), metadata, PanelSearchPage(), parseFilters(), SearchParams, single(), SearchFilters() (+2 more)
+Cohesion: 0.17
+Nodes (14): dynamic, filtersToQuery(), metadata, PanelSearchPage(), parseFilters(), SearchParams, single(), dateFormatter (+6 more)
 
-### Community 83 - "[id]/price-table/actions.ts"
-Cohesion: 0.33
-Nodes (9): parseBigInt(), saveUserPriceTableAction(), guardRequest(), parseBigInt(), saveMyPriceTableAction(), isPriceMarket(), entrySignature(), mergeDisabledPrices() (+1 more)
+### Community 83 - "lib/admins.ts"
+Cohesion: 0.23
+Nodes (11): AdminAdminsPage(), dynamic, metadata, ADMIN_ORDER_BY, adminRecordSelect, adminRoleInclude, AdminRoleRow, adminRoleToRecord() (+3 more)
 
 ### Community 84 - "next"
+Cohesion: 0.10
+Nodes (34): next, dynamic, EditBuyAdPage(), metadata, dynamic, metadata, NewBuyAdDetailsPage(), dynamic (+26 more)
+
+### Community 85 - "PriceTableManager.tsx"
+Cohesion: 0.21
+Nodes (9): PriceTableCarsTable(), PriceTableCarsTableProps, Filter, FILTERS, PriceTableManagerProps, Badge(), BadgeProps, BadgeTone (+1 more)
+
+### Community 86 - "AdKindTabs.tsx"
+Cohesion: 0.24
+Nodes (10): framer-motion, dynamic, SearchTabsLayout(), AdKind, AdKindTabs(), AdKindTabsProps, kindFor(), TABS (+2 more)
+
+### Community 87 - "ConfirmDialog"
 Cohesion: 0.12
-Nodes (27): next, dynamic, EditBuyAdPage(), metadata, dynamic, metadata, NewBuyAdDetailsPage(), dynamic (+19 more)
+Nodes (34): createUserAction(), deleteUserAction(), findUsersByCodeAction(), guardRequest(), revalidateCollaboratorContent(), toggleUserActiveAction(), toggleUserCollaborateAction(), updateUserAction() (+26 more)
 
-### Community 85 - "Toggle"
-Cohesion: 0.20
-Nodes (15): BranchesTable(), BrandsTable(), OptionsTable(), OptionsTableProps, typeLabel(), PriceTableCarsTable(), SponsorsTable(), Badge() (+7 more)
-
-### Community 86 - "SellersDirectory.tsx"
-Cohesion: 0.23
-Nodes (12): dynamic, metadata, PanelSellersPage(), groupSellerCode(), hueOf(), sellerInitials(), SellerMonogram(), asciiDigits() (+4 more)
-
-### Community 87 - "adminActionDenied"
-Cohesion: 0.28
-Nodes (16): createUserAction(), deleteUserAction(), findUsersByCodeAction(), guardRequest(), revalidateCollaboratorContent(), toggleUserActiveAction(), toggleUserCollaborateAction(), updateUserAction() (+8 more)
-
-### Community 88 - "BrandsManager"
-Cohesion: 0.36
-Nodes (10): deleteBrandAction(), isPrismaCode(), toggleBrandActiveAction(), BrandsManager(), handleConfirmDelete(), handleCreateSuccess(), handleError(), handleToggleActive() (+2 more)
-
-### Community 89 - "PurchaseRequestButton.tsx"
-Cohesion: 0.16
-Nodes (15): ColorSwatch(), ColorSwatchProps, MyAdCard(), NoImage(), STATUS_HINT, MyAdsManager(), fieldClass(), FieldError() (+7 more)
+### Community 88 - "validation/admins.ts"
+Cohesion: 0.29
+Nodes (6): AdminFormInput, emailSchema, idSchema, nameSchema, roleSchema, text()
 
 ### Community 91 - "[audience]/[id]/page.tsx"
 Cohesion: 0.28
 Nodes (8): AdminPurchaseRequestPage(), dynamic, metadata, PageProps, getAdminPurchaseRequestDetail(), snapshotLines(), toPerson(), toRecord()
 
 ### Community 92 - "SaleAdFormModal.tsx"
-Cohesion: 0.09
-Nodes (35): AdsFilters(), AdsFiltersProps, AdsFilterValues, AdsUserOption, PARAM_KEYS, AdsManagerProps, AdsTable(), AdsTableProps (+27 more)
+Cohesion: 0.06
+Nodes (52): AdsFilters(), AdsFiltersProps, AdsFilterValues, AdsUserOption, PARAM_KEYS, AdsManagerProps, AdsStatusCounts, AdsTableProps (+44 more)
 
-### Community 93 - "validation/sponsors.ts"
-Cohesion: 0.22
-Nodes (7): ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES, ParsedSponsorForm, SPONSOR_NAME_MAX_LENGTH, SPONSOR_SORT_ORDER_MAX, SponsorFormValues, sponsorSchema
+### Community 93 - "zod"
+Cohesion: 0.12
+Nodes (13): zod, colorCoreSchema, ColorFormValues, ParsedColorForm, optionCoreSchema, OptionFormValues, optionItemSchema, ParsedOptionForm (+5 more)
 
 ### Community 94 - "ThemeSwitch.tsx"
-Cohesion: 0.24
-Nodes (12): PanelAppLayout(), PanelSectionLayout(), viewport, applyTheme(), ThemeSwitch(), ThemeSwitchProps, isPanelTheme(), PANEL_THEME_COOKIE (+4 more)
+Cohesion: 0.27
+Nodes (11): PanelSectionLayout(), viewport, applyTheme(), ThemeSwitch(), ThemeSwitchProps, isPanelTheme(), PANEL_THEME_COOKIE, PANEL_THEME_MAX_AGE (+3 more)
 
-### Community 95 - "lib/user-cars.ts"
-Cohesion: 0.11
-Nodes (21): AdminUserProfilePage(), dynamic, metadata, PageProps, AdminUserSaleAdsPage(), dynamic, metadata, PageProps (+13 more)
+### Community 95 - "AdminShell.tsx"
+Cohesion: 0.10
+Nodes (26): AdminLoginPage(), LOGIN_HIGHLIGHTS, metadata, AdminPanelLayout(), ActiveNavInfo, ADMIN_NAV_GROUPS, AdminNavBadges, AdminNavGroup (+18 more)
 
-### Community 96 - "[audience]/page.tsx"
-Cohesion: 0.21
-Nodes (11): AdminPurchaseRequestsPage(), dynamic, generateMetadata(), PageProps, toAudience(), audienceWhere(), buildOrderBy(), getAdminPurchaseRequestCounts() (+3 more)
-
-### Community 97 - "settings/actions.ts"
-Cohesion: 0.43
-Nodes (5): saveSystemSettingsAction(), SystemSettingsActionResult, saveSystemSettings(), applyRotationToActiveCodes(), parseSystemSettingsForm()
+### Community 97 - "lib/system-settings.ts"
+Cohesion: 0.25
+Nodes (11): saveSystemSettingsAction(), SystemSettingsActionResult, PanelAppLayout(), getSystemSettings, parseActiveProvinceIds(), parseEnabledPriceFields(), parseRotationMinutes(), saveSystemSettings() (+3 more)
 
 ### Community 101 - "requests/page.tsx"
-Cohesion: 0.25
-Nodes (5): dynamic, metadata, MyPurchaseRequestsPage(), listMyPurchaseRequests(), PURCHASE_REQUEST_STATUS_TONES
-
-### Community 102 - "uploads.ts"
-Cohesion: 0.20
-Nodes (15): dynamic, fail(), POST(), RouteContext, runtime, carVideoToRecord(), sanitizeBaseName(), saveVideoStream() (+7 more)
+Cohesion: 0.24
+Nodes (6): dynamic, metadata, MyPurchaseRequestsPage(), listMyPurchaseRequests(), PURCHASE_REQUEST_STATUS_TONES, purchaseRequestSourceLabel()
 
 ### Community 103 - "AdminVerificationForm"
-Cohesion: 0.27
-Nodes (9): adminSubmitVerificationAction(), AdminVerificationForm(), chooseFile(), handleSubmit(), removeDoc(), updateDoc(), FieldError(), inputClassName() (+1 more)
+Cohesion: 0.28
+Nodes (8): AdminVerificationForm(), chooseFile(), handleSubmit(), removeDoc(), updateDoc(), FieldError(), inputClassName(), newDoc()
 
 ### Community 106 - "CarImagesManager.tsx"
-Cohesion: 0.12
-Nodes (30): addCarImageAction(), CarImageActionResult, CarImageSimpleActionResult, deleteCarImageAction(), deleteCarVideoAction(), guardRequest(), CarImagesPage(), dynamic (+22 more)
+Cohesion: 0.08
+Nodes (46): addCarImageAction(), CarImageActionResult, CarImageSimpleActionResult, deleteCarImageAction(), deleteCarVideoAction(), guardRequest(), CarImagesPage(), dynamic (+38 more)
 
-### Community 107 - "AdCard.tsx"
+### Community 107 - "utils.ts"
 Cohesion: 0.14
-Nodes (17): dynamic, PageProps, SellerProfilePage(), AdCard(), AdCardProps, NoImage(), hrefFor(), pageWindow() (+9 more)
-
-### Community 108 - "formatPersianNumber"
-Cohesion: 0.16
-Nodes (16): AdsTrendChart(), AdsTrendChartProps, MARGIN, niceStep(), TrendTable(), DeltaBadge(), Sparkline(), SparklineProps (+8 more)
+Nodes (20): dynamic, generateMetadata(), PageProps, SellerProfilePage(), generateMetadata(), hrefFor(), pageWindow(), SearchPagination() (+12 more)
 
 ### Community 110 - "[...path]/route.ts"
-Cohesion: 0.33
+Cohesion: 0.27
 Nodes (10): buildHeaders(), dynamic, GET(), HEAD(), lookup(), notFound(), parseRange(), RouteContext (+2 more)
 
-### Community 114 - "utils.ts"
-Cohesion: 0.19
-Nodes (17): ModalState, ModalState, ModalState, ColorsManagerProps, ModalState, ColorsTable(), ColorsTableProps, ModalState (+9 more)
+### Community 114 - "Toast"
+Cohesion: 0.26
+Nodes (11): CarsManager(), handleConfirmDelete(), handleCreateSuccess(), handleError(), handleUpdateSuccess(), showToast(), ModalState, CarsTable() (+3 more)
 
 ### Community 115 - "CarMediaSlider.tsx"
-Cohesion: 0.31
-Nodes (6): react-dom, CarMediaSlider(), CarMediaSliderProps, MediaViewer(), slideOffset(), CarMediaItem
-
-### Community 123 - "react"
-Cohesion: 0.10
-Nodes (10): lucide-react, react, ComingSoonProps, InfoTab, TABS, CHIPS, SearchAdsCardProps, Edges (+2 more)
+Cohesion: 0.36
+Nodes (5): CarMediaSlider(), CarMediaSliderProps, MediaViewer(), slideOffset(), CarMediaItem
 
 ## Ambiguous Edges - Review These
 - `OptionType enum (options.type)` → `options.type enum (text, number, select, checkbox)`  [AMBIGUOUS]
@@ -572,18 +547,18 @@ Nodes (10): lucide-react, react, ComingSoonProps, InfoTab, TABS, CHIPS, SearchAd
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `toPersianDigits()` connect `toPersianDigits` to `subscriptions/actions.ts`, `ProfileManager.tsx`, `UserProfile.tsx`, `cars/actions.ts`, `admin-buy-ads.ts`, `currency.ts`, `admins/actions.ts`, `AdminVerificationForm.tsx`, `BranchFormModal.tsx`, `BuyAdDetailView.tsx`, `colors/actions.ts`, `BuyAdDetailManager.tsx`, `car-form/actions.ts`, `panel/auth-actions.ts`, `PurchaseRequestDetailManager.tsx`, `lib/price-table.ts`, `lib/system-settings.ts`, `MyPriceTableManager.tsx`, `normalizeDigits`, `MyAdForm.tsx`, `price-table-shared.ts`, `price-market.ts`, `user-auth.ts`, `lib/cars.ts`, `sale-terms/actions.ts`, `PanelShell.tsx`, `guards.ts`, `ContactView.tsx`, `buy-ads-shared.ts`, `cn`, `sponsors/actions.ts`, `sale-ads/actions.ts`, `Modal`, `search/buy/page.tsx`, `UsersManager.tsx`, `BuyAdForm.tsx`, `verification-submission.ts`, `SystemSettingsForm`, `panel-search-shared.ts`, `market-rates.ts`, `UserAuthCard.tsx`, `CarRecord`, `(panel)/dashboard/page.tsx`, `purchase-requests-shared.ts`, `UrlFilterBar.tsx`, `isTrustedOrigin`, `VerificationManager.tsx`, `search/page.tsx`, `next`, `Toggle`, `SellersDirectory.tsx`, `adminActionDenied`, `BrandsManager`, `PurchaseRequestButton.tsx`, `SaleAdFormModal.tsx`, `requests/page.tsx`, `AdminVerificationForm`, `CarImagesManager.tsx`, `AdCard.tsx`, `formatPersianNumber`, `utils.ts`, `CarMediaSlider.tsx`, `react`?**
-  _High betweenness centrality (0.156) - this node is a cross-community bridge._
+- **Why does `cn()` connect `cn` to `subscriptions/actions.ts`, `ProfileManager.tsx`, `UserProfile.tsx`, `car-types/actions.ts`, `admin-buy-ads.ts`, `toPersianDigits`, `roles/actions.ts`, `AdminVerificationForm.tsx`, `contact/page.tsx`, `colors/actions.ts`, `adminActionDenied`, `react`, `PurchaseRequestDetailManager.tsx`, `SystemSettingsForm.tsx`, `MyPriceTableManager.tsx`, `admin/auth-actions.ts`, `BuyAdOffersPanel.tsx`, `MyAdForm.tsx`, `currency.ts`, `[code]/price-list/page.tsx`, `lib/cars.ts`, `Modal`, `PanelShell.tsx`, `ContactView.tsx`, `price-list/[carId]/page.tsx`, `sponsors/actions.ts`, `Toggle`, `sale-ads/actions.ts`, `BranchFormModal.tsx`, `(app)/page.tsx`, `purchase-requests/actions.ts`, `AdminsManager.tsx`, `SystemSettingsForm`, `BranchesManager.tsx`, `RichTextEditor.tsx`, `market-rates.ts`, `UserAuthCard.tsx`, `permissions.ts`, `BranchesMap.tsx`, `lucide-react`, `purchase-requests-shared.ts`, `UrlFilterBar.tsx`, `VerificationManager.tsx`, `search/page.tsx`, `next`, `PriceTableManager.tsx`, `AdKindTabs.tsx`, `ConfirmDialog`, `SaleAdFormModal.tsx`, `ThemeSwitch.tsx`, `AdminShell.tsx`, `requests/page.tsx`, `AdminVerificationForm`, `CarImagesManager.tsx`, `utils.ts`, `Toast`, `CarMediaSlider.tsx`?**
+  _High betweenness centrality (0.148) - this node is a cross-community bridge._
 - **What connects `@tiptap/pm`, `prisma`, `@types/leaflet` to the rest of the system?**
   _30 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `subscriptions/actions.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07867494824016563 - nodes in this community are weakly interconnected._
-- **Why does `cn()` connect `cn` to `subscriptions/actions.ts`, `ProfileManager.tsx`, `UserProfile.tsx`, `cars/actions.ts`, `admin-buy-ads.ts`, `currency.ts`, `admins/actions.ts`, `AdminVerificationForm.tsx`, `BranchFormModal.tsx`, `BuyAdDetailView.tsx`, `colors/actions.ts`, `BuyAdDetailManager.tsx`, `car-form/actions.ts`, `PurchaseRequestDetailManager.tsx`, `lib/system-settings.ts`, `MyPriceTableManager.tsx`, `admin/auth-actions.ts`, `toPersianDigits`, `MyAdForm.tsx`, `price-market.ts`, `user-auth.ts`, `lib/cars.ts`, `sale-terms/actions.ts`, `PanelShell.tsx`, `ContactView.tsx`, `sponsors/actions.ts`, `brands/actions.ts`, `sale-ads/actions.ts`, `Modal`, `(app)/page.tsx`, `search/buy/page.tsx`, `UsersManager.tsx`, `BuyAdForm.tsx`, `SystemSettingsForm`, `RichTextEditor.tsx`, `market-rates.ts`, `UserAuthCard.tsx`, `CarRecord`, `BranchesMap.tsx`, `validation/system-settings.ts`, `(panel)/dashboard/page.tsx`, `purchase-requests-shared.ts`, `UrlFilterBar.tsx`, `VerificationManager.tsx`, `next`, `Toggle`, `SellersDirectory.tsx`, `adminActionDenied`, `PurchaseRequestButton.tsx`, `SaleAdFormModal.tsx`, `ThemeSwitch.tsx`, `requests/page.tsx`, `AdminVerificationForm`, `CarImagesManager.tsx`, `AdCard.tsx`, `formatPersianNumber`, `utils.ts`, `CarMediaSlider.tsx`, `react`?**
-  _High betweenness centrality (0.152) - this node is a cross-community bridge._
+  _Cohesion score 0.07686116700201208 - nodes in this community are weakly interconnected._
+- **Why does `toPersianDigits()` connect `toPersianDigits` to `subscriptions/actions.ts`, `ProfileManager.tsx`, `UserProfile.tsx`, `car-types/actions.ts`, `admin-buy-ads.ts`, `roles/actions.ts`, `AdminVerificationForm.tsx`, `cn`, `colors/actions.ts`, `panel-search.ts`, `react`, `panel/auth-actions.ts`, `PurchaseRequestDetailManager.tsx`, `lib/price-table.ts`, `SystemSettingsForm.tsx`, `MyPriceTableManager.tsx`, `lib/buy-ads.ts`, `buy/actions.ts`, `BuyAdOffersPanel.tsx`, `MyAdForm.tsx`, `currency.ts`, `[code]/price-list/page.tsx`, `getCurrentUser`, `lib/cars.ts`, `Modal`, `PanelShell.tsx`, `guards.ts`, `ContactView.tsx`, `buy-ads-shared.ts`, `price-list/[carId]/page.tsx`, `sponsors/actions.ts`, `Toggle`, `sale-ads/actions.ts`, `BranchFormModal.tsx`, `purchase-requests/actions.ts`, `AdminsManager.tsx`, `verification-submission.ts`, `SystemSettingsForm`, `BranchesManager.tsx`, `market-rates.ts`, `UserAuthCard.tsx`, `verification-actions.ts`, `permissions.ts`, `lucide-react`, `purchase-requests-shared.ts`, `UrlFilterBar.tsx`, `purchase-request-actions.ts`, `VerificationManager.tsx`, `normalizeDigits`, `search/page.tsx`, `next`, `PriceTableManager.tsx`, `AdKindTabs.tsx`, `ConfirmDialog`, `SaleAdFormModal.tsx`, `AdminShell.tsx`, `requests/page.tsx`, `AdminVerificationForm`, `CarImagesManager.tsx`, `utils.ts`, `Toast`, `CarMediaSlider.tsx`?**
+  _High betweenness centrality (0.147) - this node is a cross-community bridge._
 - **Should `ProfileManager.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.07756813417190776 - nodes in this community are weakly interconnected._
-- **Why does `next` connect `next` to `subscriptions/actions.ts`, `ProfileManager.tsx`, `UserProfile.tsx`, `cars/actions.ts`, `admin-buy-ads.ts`, `currency.ts`, `prisma.ts`, `admins/actions.ts`, `BranchFormModal.tsx`, `BuyAdDetailView.tsx`, `colors/actions.ts`, `BuyAdDetailManager.tsx`, `car-form/actions.ts`, `ads/[id]/edit/page.tsx`, `panel/auth-actions.ts`, `PurchaseRequestDetailManager.tsx`, `lib/price-table.ts`, `lib/buy-ads.ts`, `admin/auth-actions.ts`, `buy/actions.ts`, `app/layout.tsx`, `toPersianDigits`, `MyAdForm.tsx`, `price-market.ts`, `user-auth.ts`, `lib/cars.ts`, `sale-terms/actions.ts`, `PanelShell.tsx`, `guards.ts`, `ContactView.tsx`, `session.ts`, `cn`, `sponsors/actions.ts`, `brands/actions.ts`, `package.json`, `sale-ads/actions.ts`, `(app)/page.tsx`, `search/buy/page.tsx`, `UsersManager.tsx`, `BuyAdForm.tsx`, `verification-submission.ts`, `server-only`, `market-rates.ts`, `UserAuthCard.tsx`, `verification/actions.ts`, `CarRecord`, `(panel)/dashboard/page.tsx`, `middleware.ts`, `purchase-requests-shared.ts`, `UrlFilterBar.tsx`, `isTrustedOrigin`, `VerificationManager.tsx`, `search/page.tsx`, `[id]/price-table/actions.ts`, `SellersDirectory.tsx`, `adminActionDenied`, `PurchaseRequestButton.tsx`, `[audience]/[id]/page.tsx`, `SaleAdFormModal.tsx`, `ThemeSwitch.tsx`, `lib/user-cars.ts`, `[audience]/page.tsx`, `settings/actions.ts`, `requests/page.tsx`, `uploads.ts`, `CarImagesManager.tsx`, `AdCard.tsx`, `formatPersianNumber`, `[...path]/route.ts`, `utils.ts`, `react`?**
-  _High betweenness centrality (0.128) - this node is a cross-community bridge._
+  _Cohesion score 0.07450980392156863 - nodes in this community are weakly interconnected._
+- **Why does `next` connect `next` to `subscriptions/actions.ts`, `ProfileManager.tsx`, `UserProfile.tsx`, `car-types/actions.ts`, `admin-buy-ads.ts`, `toPersianDigits`, `prisma.ts`, `roles/actions.ts`, `contact/page.tsx`, `cn`, `colors/actions.ts`, `adminActionDenied`, `react`, `isTrustedOrigin`, `panel/auth-actions.ts`, `PurchaseRequestDetailManager.tsx`, `lib/price-table.ts`, `lib/buy-ads.ts`, `admin/auth-actions.ts`, `buy/actions.ts`, `app/layout.tsx`, `BuyAdOffersPanel.tsx`, `admins/actions.ts`, `MyAdForm.tsx`, `[code]/price-list/page.tsx`, `getCurrentUser`, `lib/cars.ts`, `Modal`, `PanelShell.tsx`, `guards.ts`, `ContactView.tsx`, `session.ts`, `price-list/[carId]/page.tsx`, `sponsors/actions.ts`, `Toggle`, `lib/purchase-requests.ts`, `package.json`, `sale-ads/actions.ts`, `BranchFormModal.tsx`, `(app)/page.tsx`, `branches/actions.ts`, `purchase-requests/actions.ts`, `AdminsManager.tsx`, `user-codes.ts`, `market-rates.ts`, `UserAuthCard.tsx`, `verification-actions.ts`, `permissions.ts`, `lucide-react`, `middleware.ts`, `purchase-requests-shared.ts`, `UrlFilterBar.tsx`, `purchase-request-actions.ts`, `VerificationManager.tsx`, `search/page.tsx`, `lib/admins.ts`, `AdKindTabs.tsx`, `ConfirmDialog`, `[audience]/[id]/page.tsx`, `SaleAdFormModal.tsx`, `ThemeSwitch.tsx`, `AdminShell.tsx`, `lib/system-settings.ts`, `requests/page.tsx`, `CarImagesManager.tsx`, `utils.ts`, `[...path]/route.ts`?**
+  _High betweenness centrality (0.142) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

@@ -450,15 +450,15 @@
     "semantic_hash": "6c9d6c39f830612d72ae2657abf556dd"
   },
   "src/app/panel/(app)/price-list/[carId]/page.tsx": {
-    "mtime": 1794830078.520786,
-    "seen": 1794830228.1879163,
-    "ast_hash": "4962d48d045e8dbc79e6583fcaf9def1",
+    "mtime": 1794830334.167873,
+    "seen": 1794831730.8376472,
+    "ast_hash": "40ca70cb3b260eb3526c9a6fdb126690",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/price-list/page.tsx": {
-    "mtime": 1794830043.2789311,
-    "seen": 1794830228.1879175,
-    "ast_hash": "f571a3013efc26a945f9a8cde62a455d",
+    "mtime": 1794831440.0005217,
+    "seen": 1794831730.8376486,
+    "ast_hash": "f893922d0b48b6f7e6d0831e4421be0c",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/price-table/actions.ts": {
@@ -966,9 +966,9 @@
     "semantic_hash": "92f4cdd7ea81a426f345eacba59c0b49"
   },
   "src/components/panel/PanelShell.tsx": {
-    "mtime": 1794829342.7549365,
-    "seen": 1794829556.863245,
-    "ast_hash": "35ff253e6c03129199788902297421be",
+    "mtime": 1794831687.0380971,
+    "seen": 1794831730.84102,
+    "ast_hash": "6cf81b109f7a1047940e9a874559de72",
     "semantic_hash": ""
   },
   "src/components/panel/SafeImage.tsx": {
@@ -1044,15 +1044,15 @@
     "semantic_hash": "9c35bc555d20a8323349bdd11a2e2fc8"
   },
   "src/components/panel/panel-nav.ts": {
-    "mtime": 1794829342.746683,
-    "seen": 1794829556.8640854,
-    "ast_hash": "a4ddef7d486c68016883c8c35a34bd98",
+    "mtime": 1794831687.037872,
+    "seen": 1794831730.8419423,
+    "ast_hash": "cdaa0d3963f5bf64072b78c950b12386",
     "semantic_hash": ""
   },
   "src/components/panel/price-list/CarOffersView.tsx": {
-    "mtime": 1794830078.5209985,
-    "seen": 1794830228.1917403,
-    "ast_hash": "95d2fbe2dd17190fa8a6588a5561869b",
+    "mtime": 1794831224.3889446,
+    "seen": 1794831730.8419738,
+    "ast_hash": "ea372775f7a372f473f273fd469a3d01",
     "semantic_hash": ""
   },
   "src/components/panel/price-list/HorizontalScroller.tsx": {
@@ -1068,15 +1068,15 @@
     "semantic_hash": ""
   },
   "src/components/panel/price-list/price-list-ui.tsx": {
-    "mtime": 1794743413.8757386,
-    "seen": 1794743645.8722749,
-    "ast_hash": "4435d8e6f1e9dbf2ed9c549adb004a48",
+    "mtime": 1794831224.3887172,
+    "seen": 1794831730.84207,
+    "ast_hash": "0abd9315c460dead883135a79642d75a",
     "semantic_hash": ""
   },
   "src/components/panel/price-table/MyPriceTableManager.tsx": {
-    "mtime": 1794830004.1722634,
-    "seen": 1794830228.1918225,
-    "ast_hash": "6d0451a8ce12c7149377ed64a7a5f5f3",
+    "mtime": 1794831582.6802619,
+    "seen": 1794831730.8420715,
+    "ast_hash": "ffa56c0c20e79b7421d97e5a4d231d43",
     "semantic_hash": ""
   },
   "src/components/panel/profile/ProfileEditForm.tsx": {
@@ -1332,9 +1332,9 @@
     "semantic_hash": "541cb1341dfa7e9beed287cd0defe0e3"
   },
   "src/lib/price-list.ts": {
-    "mtime": 1794829873.17155,
-    "seen": 1794830228.1931858,
-    "ast_hash": "cc26aa400ce756ae0aad946cb8e8a382",
+    "mtime": 1794831238.1795404,
+    "seen": 1794831730.8436253,
+    "ast_hash": "bcb5f1da116847b47dc2d309add58bbb",
     "semantic_hash": ""
   },
   "src/lib/price-table-shared.ts": {
@@ -1685,12 +1685,6 @@
     "ast_hash": "5c98ca81e2ba9f2978ca7232396f86bb",
     "semantic_hash": ""
   },
-  "src/components/panel/PanelDrawer.tsx": {
-    "mtime": 1794829342.7547302,
-    "seen": 1794829556.86319,
-    "ast_hash": "a9c676c1bd9756bda04fe4df9066a662",
-    "semantic_hash": ""
-  },
   "src/components/panel/about/AboutHeroScene.tsx": {
     "mtime": 1794411245.6891012,
     "seen": 1794412302.695209,
@@ -2028,9 +2022,9 @@
     "semantic_hash": ""
   },
   "src/lib/auth/public-panel.ts": {
-    "mtime": 1794829458.695501,
-    "seen": 1794829556.8649302,
-    "ast_hash": "2dbac12fd2910108b69d2fbe81fcf4e7",
+    "mtime": 1794831269.1003962,
+    "seen": 1794831730.842935,
+    "ast_hash": "9687d75b3efabbad6acbf5b8e838b9eb",
     "semantic_hash": ""
   },
   "src/components/panel/DollarTicker.tsx": {
@@ -2166,15 +2160,15 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/page.tsx": {
-    "mtime": 1794829428.7717927,
-    "seen": 1794829556.8599694,
-    "ast_hash": "05a9ab4583555b2abd1fe54be0f61cef",
+    "mtime": 1794831440.0002637,
+    "seen": 1794831730.8376074,
+    "ast_hash": "43425e794e847a13f8ed14a3740b547a",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/sellers/[code]/page.tsx": {
-    "mtime": 1794829517.8082566,
-    "seen": 1794829556.8602202,
-    "ast_hash": "8889bda3aa8faf66a1a4f4cb32bcf5eb",
+    "mtime": 1794831300.279229,
+    "seen": 1794831730.8379016,
+    "ast_hash": "58a10dffb43dc0b06b9623aa368bfedb",
     "semantic_hash": ""
   },
   "src/app/panel/(app)/sellers/page.tsx": {
@@ -2184,9 +2178,9 @@
     "semantic_hash": ""
   },
   "src/components/panel/contact/InfoTabs.tsx": {
-    "mtime": 1794829383.3939238,
-    "seen": 1794829556.8640265,
-    "ast_hash": "c55e49452aebeb7d797bd53b49ca04a8",
+    "mtime": 1794831568.1320174,
+    "seen": 1794831730.8418765,
+    "ast_hash": "211a3957107f5daa53b7a73101c44d7c",
     "semantic_hash": ""
   },
   "src/components/panel/sellers/SellersDirectory.tsx": {
@@ -2202,27 +2196,39 @@
     "semantic_hash": ""
   },
   "src/lib/sellers.ts": {
-    "mtime": 1794829458.6789842,
-    "seen": 1794829556.8657498,
-    "ast_hash": "5f10f92da8dc99630259c5afc2c43c62",
+    "mtime": 1794831269.1003263,
+    "seen": 1794831730.8439045,
+    "ast_hash": "3e7f773844813a8ad4fdc6f8417c6d2c",
     "semantic_hash": ""
   },
   "src/components/panel/price-list/PriceMarketTabs.tsx": {
-    "mtime": 1794829961.06928,
-    "seen": 1794830228.1917949,
-    "ast_hash": "5c8e3a43c7854bfde99cbcf2cca65e7f",
+    "mtime": 1794831440.0005996,
+    "seen": 1794831730.842069,
+    "ast_hash": "6df3ab1bde2973235cc63a8d3ab61c82",
     "semantic_hash": ""
   },
   "src/components/panel/price-table/PriceTableMarketEditor.tsx": {
-    "mtime": 1794830004.172415,
-    "seen": 1794830228.191824,
-    "ast_hash": "7541a197d05291690e0db1693d5e3edf",
+    "mtime": 1794831440.0007288,
+    "seen": 1794831730.8420727,
+    "ast_hash": "d7cb3f8999d2bad316fc37dc462e65b0",
     "semantic_hash": ""
   },
   "src/lib/price-market.ts": {
     "mtime": 1794829826.2277973,
     "seen": 1794830228.193187,
     "ast_hash": "ab8a4dba5aacc5d401c3f29652d773ef",
+    "semantic_hash": ""
+  },
+  "src/app/panel/(app)/sellers/[code]/price-list/page.tsx": {
+    "mtime": 1794831440.0006707,
+    "seen": 1794831730.8379035,
+    "ast_hash": "50ded54551f319fc8a91dd29d2d09bf1",
+    "semantic_hash": ""
+  },
+  "src/components/panel/sellers/SellerHeader.tsx": {
+    "mtime": 1794831687.037717,
+    "seen": 1794831730.8424387,
+    "ast_hash": "c7d59912eb2c74942c21d6d2ffced657",
     "semantic_hash": ""
   }
 }

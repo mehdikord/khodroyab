@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   AtSign,
   BadgeCheck,
@@ -14,7 +13,6 @@ import {
   Fingerprint,
   Mailbox,
   MapPin,
-  Megaphone,
   Phone,
   Smartphone,
   Sparkles,
@@ -27,6 +25,8 @@ import { SafeImage } from "@/components/panel/SafeImage";
 import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { ProfileSheet } from "@/components/panel/profile/ProfileSheet";
 import { ProfileEditForm } from "@/components/panel/profile/ProfileEditForm";
+import { CollaboratorShortcuts } from "@/components/panel/profile/CollaboratorShortcuts";
+import type { PriceMarket } from "@/lib/price-market";
 import { displayNationalCode, profileCompletion, type ProfileAdStats, type ProfileRecord } from "@/lib/profile";
 import { AD_STATUS_LABELS } from "@/lib/ad-status";
 import { cn, toPersianDigits } from "@/lib/utils";
@@ -38,6 +38,10 @@ interface ProfileManagerProps {
   collabrate: boolean;
   /** The user's current public code (shown to others instead of their identity). */
   userCode: { code: string; validUntilLabel: string; rotationMinutes: number };
+  /** Collaborators: cars priced in each price list (free zone / national plate). */
+  priceListCounts: Record<PriceMarket, number>;
+  /** Identity verified (publishing ads and prices is unlocked). */
+  verified: boolean;
 }
 
 type SheetKind = "edit" | null;
@@ -250,7 +254,7 @@ function ActionTile({
 
 /* ───────────────────────── main ───────────────────────── */
 
-export function ProfileManager({ initialProfile, stats, collabrate, userCode }: ProfileManagerProps) {
+export function ProfileManager({ initialProfile, stats, collabrate, userCode, priceListCounts, verified }: ProfileManagerProps) {
   const [profile, setProfile] = useState<ProfileRecord>(initialProfile);
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [sheetLocked, setSheetLocked] = useState(false);
@@ -389,6 +393,9 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode }: 
         </div>
       </section>
 
+      {/* Collaborator workspaces: my ads, my price list */}
+      {collabrate && <CollaboratorShortcuts stats={stats} priceListCounts={priceListCounts} verified={verified} />}
+
       {/* Public code */}
       <section
         className="panel-card-in rounded-3xl border border-panel-line/[0.08] bg-panel-surface p-4 sm:p-5"
@@ -448,16 +455,6 @@ export function ProfileManager({ initialProfile, stats, collabrate, userCode }: 
         style={{ animationDelay: "360ms" }}
       >
         <span>{lastUpdate ? `آخرین به‌روزرسانی: ${lastUpdate}` : ""}</span>
-        {collabrate && (
-          <Link
-            href="/panel/ads"
-            className="inline-flex items-center gap-1.5 font-bold text-panel-accent transition-colors hover:text-panel-accent-soft"
-          >
-            <Megaphone className="h-3.5 w-3.5" />
-            مدیریت آگهی‌های من
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Link>
-        )}
       </div>
 
       {/* Sheets */}
