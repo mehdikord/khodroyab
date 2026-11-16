@@ -1,7 +1,8 @@
 /**
  * Customer-panel pages that anyone may open without signing in: the
  * dashboard, the sale-ad search and each sale ad, the price list and each
- * car's price page, and the about / contact pages. Everything else in the
+ * car's price page, the sellers directory and each seller's profile, and
+ * the about / contact pages. Everything else in the
  * panel (buy ads, profile, my ads, my price table, verification) needs an
  * account.
  *
@@ -16,6 +17,8 @@ const PUBLIC_PANEL_PATTERNS: RegExp[] = [
   /^\/panel\/price-list\/[^/]+$/,
   /^\/panel\/about$/,
   /^\/panel\/contact$/,
+  /^\/panel\/sellers$/,
+  /^\/panel\/sellers\/\d{8}$/,
 ];
 
 export function isPublicPanelPath(pathname: string): boolean {

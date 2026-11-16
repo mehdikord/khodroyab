@@ -10,6 +10,7 @@ import { ALL_PRICE_FIELD_KEYS, digitsOnly, mergePriceColumns, type PriceTablePri
 import { cn, toPersianDigits } from "@/lib/utils";
 import { BrandLogo, ColumnHeading, YearPrices } from "@/components/panel/price-list/price-list-ui";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
+import { DEFAULT_PRICE_MARKET, withPriceMarket, type PriceMarket } from "@/lib/price-market";
 
 interface PriceListBrowserProps {
   rows: PriceListRow[];
@@ -19,12 +20,14 @@ interface PriceListBrowserProps {
   rialPerUsd?: number | null;
   /** Price types in use (pricing settings). */
   priceFields?: readonly PriceTablePriceField[];
+  /** Price list shown (free zone / national plate); car pages open in the same list. */
+  market?: PriceMarket;
 }
 
 const headClass = "whitespace-nowrap px-3 py-3.5 text-right text-[11px] font-extrabold uppercase tracking-wider text-panel-muted";
 
-function carHref(row: PriceListRow): string {
-  return `/panel/price-list/${row.id}`;
+function carHref(row: PriceListRow, market: PriceMarket): string {
+  return withPriceMarket(`/panel/price-list/${row.id}`, market);
 }
 
 function hasAnyPrice(row: PriceListRow): boolean {
@@ -41,7 +44,13 @@ function hasAnyPrice(row: PriceListRow): boolean {
  * Desktop: a table whose car column stays pinned while the year columns
  * scroll horizontally. Below `lg`: cards with a scrollable strip of years.
  */
-export function PriceListBrowser({ rows, showPartner, rialPerUsd = null, priceFields = ALL_PRICE_FIELD_KEYS }: PriceListBrowserProps) {
+export function PriceListBrowser({
+  rows,
+  showPartner,
+  rialPerUsd = null,
+  priceFields = ALL_PRICE_FIELD_KEYS,
+  market = DEFAULT_PRICE_MARKET,
+}: PriceListBrowserProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState<string | null>(null);
@@ -85,10 +94,10 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null, priceFi
     if ((event.target as HTMLElement).closest("a")) return;
     if (window.getSelection()?.toString()) return;
     if (event.metaKey || event.ctrlKey) {
-      window.open(carHref(row), "_blank", "noopener");
+      window.open(carHref(row, market), "_blank", "noopener");
       return;
     }
-    router.push(carHref(row));
+    router.push(carHref(row, market));
   }
 
   function resetFilters() {
@@ -253,7 +262,7 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null, priceFi
                     <tr
                       key={row.id}
                       onClick={(event) => openRow(event, row)}
-                      onMouseEnter={() => router.prefetch(carHref(row))}
+                      onMouseEnter={() => router.prefetch(carHref(row, market))}
                       className="group cursor-pointer transition-colors hover:bg-[#FF6A00]/[0.045]"
                     >
                       <td className="sticky right-0 z-10 bg-panel-surface py-3.5 pe-3 ps-5 shadow-[-10px_0_14px_-12px_rgba(0,0,0,0.6)] transition-colors group-hover:bg-panel-surface-2">
@@ -265,7 +274,7 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null, priceFi
                           <BrandLogo name={row.brandName} image={row.brandImage} className="h-10 w-10 rounded-xl p-1" />
                           <div className="min-w-0">
                             <Link
-                              href={carHref(row)}
+                              href={carHref(row, market)}
                               className="block text-sm font-extrabold text-panel-text outline-none transition-colors group-hover:text-panel-accent focus-visible:underline"
                             >
                               {row.name}
@@ -322,7 +331,7 @@ export function PriceListBrowser({ rows, showPartner, rialPerUsd = null, priceFi
                 >
                   <div className="pointer-events-none absolute -top-16 end-[-40px] h-32 w-32 rounded-full bg-[#FF6A00]/10 blur-2xl" aria-hidden="true" />
 
-                  <Link href={carHref(row)} className="relative block p-4 pb-3 active:scale-[0.99]">
+                  <Link href={carHref(row, market)} className="relative block p-4 pb-3 active:scale-[0.99]">
                     <div className="flex items-start gap-3">
                       <BrandLogo name={row.brandName} image={row.brandImage} className="h-11 w-11 rounded-2xl p-1.5" />
                       <div className="min-w-0 flex-1">

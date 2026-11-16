@@ -9,6 +9,7 @@ import { findUserIdsByAnyCode, getActiveUserCode, getActiveUserCodes } from "@/l
 import { getActiveProvinceIds, getEnabledPriceFields } from "@/lib/system-settings";
 import { normalizeDigits } from "@/lib/validation/admin";
 import { parseJalaliDate } from "@/lib/jalali";
+import { withPriceMarket, type PriceMarket } from "@/lib/price-market";
 import {
   priceColumnKey,
   priceFieldsFor,
@@ -82,6 +83,8 @@ interface ResolvedTarget {
   colorId: bigint | null;
   colorName: string | null;
   currency: "usd" | "rial" | null;
+  /** Price list of a price-list request; null for sale ads. */
+  market: PriceMarket | null;
   lines: PurchaseRequestPriceLine[];
 }
 
@@ -125,6 +128,7 @@ async function resolveSaleAd(adIdRaw: string, showPartner: boolean): Promise<Res
     colorId: ad.colorId,
     colorName: ad.color?.name ?? null,
     currency: ad.currency,
+    market: null,
     lines,
   };
 }
@@ -133,6 +137,7 @@ async function resolvePriceList(
   carIdRaw: string,
   sellerCode: string,
   tierKey: string,
+  market: PriceMarket,
   showPartner: boolean
 ): Promise<ResolvedTarget | string> {
   const carId = toBigIntOrNull(carIdRaw);
@@ -144,6 +149,7 @@ async function resolvePriceList(
   const entry = await prisma.userPriceTableEntry.findFirst({
     where: {
       carId,
+      market,
       userId: { in: candidates },
       car: { priceTable: true },
       user: { isActive: true, collabrate: true, authenticaed: true },
@@ -198,6 +204,7 @@ async function resolvePriceList(
     colorId: chosen.colorId,
     colorName: chosen.color.name,
     currency: entry.currency,
+    market,
     lines: lines.slice(0, MAX_SNAPSHOT_LINES),
   };
 }
@@ -213,7 +220,7 @@ export async function createPurchaseRequest(input: PurchaseRequestFormInput, use
   const target =
     input.target.source === "sale_ad"
       ? await resolveSaleAd(input.target.adId, showPartner)
-      : await resolvePriceList(input.target.carId, input.target.sellerCode, input.target.tierKey, showPartner);
+      : await resolvePriceList(input.target.carId, input.target.sellerCode, input.target.tierKey, input.target.market, showPartner);
   if (typeof target === "string") return { ok: false, message: target };
 
   let requesterId: bigint | null = null;
@@ -269,6 +276,7 @@ export async function createPurchaseRequest(input: PurchaseRequestFormInput, use
       colorId: target.colorId,
       colorName: target.colorName,
       currency: target.currency,
+      market: target.market,
       priceSnapshot: snapshot as unknown as Prisma.InputJsonValue,
     },
     select: { id: true },
@@ -291,6 +299,7 @@ export async function listMyPurchaseRequests(userId: bigint): Promise<MyPurchase
       userCarId: true,
       year: true,
       colorName: true,
+      market: true,
       description: true,
       createdAt: true,
       updatedAt: true,
@@ -309,8 +318,9 @@ export async function listMyPurchaseRequests(userId: bigint): Promise<MyPurchase
       row.source === "sale_ad" && row.userCarId
         ? `/panel/ads/${row.userCarId.toString()}`
         : row.carId
-          ? `/panel/price-list/${row.carId.toString()}`
+          ? withPriceMarket(`/panel/price-list/${row.carId.toString()}`, row.market ?? "free_zone")
           : null,
+    market: row.market,
     year: row.year,
     colorName: row.colorName,
     description: row.description,
@@ -391,6 +401,7 @@ function toRecord(row: RecordRow, codes: Map<string, { code: string }>): AdminPu
     colorName: row.colorName,
     colorCode: row.color?.code ?? null,
     currency: row.currency,
+    market: row.market,
     priceLines: snapshotLines(row.priceSnapshot),
     hasNote: Boolean(row.adminNote?.trim()),
     createdAt: row.createdAt.toISOString(),

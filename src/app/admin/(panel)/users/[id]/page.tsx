@@ -58,7 +58,7 @@ export default async function AdminUserProfilePage({ params }: PageProps) {
     access.manageUser ? getUserVerification(userId) : Promise.resolve(null),
     access.priceTable
       ? getEnabledPriceFields().then((fields) => listRecentUserPriceTableEntries(userId, 3, fields))
-      : Promise.resolve({ total: 0, entries: [] }),
+      : Promise.resolve({ total: 0, totals: { free_zone: 0, national: 0 }, entries: [] }),
     getActiveUserCode(userId),
   ]);
 

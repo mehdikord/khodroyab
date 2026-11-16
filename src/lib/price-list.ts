@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { renderRichText } from "@/lib/rich-text";
+import { DEFAULT_PRICE_MARKET, PRICE_MARKETS, type PriceMarket } from "@/lib/price-market";
 import { getActiveUserCodes } from "@/lib/user-codes";
 import {
   ALL_PRICE_FIELD_KEYS,
@@ -92,6 +93,10 @@ export interface PriceListCarDetail {
   lowestByColumn: PriceListPricesByColumn;
   /** Every (year, colour) column among the offers, in column order. */
   columns: PriceColumn[];
+  /** Price list of the offers (free zone / national plate). */
+  market: PriceMarket;
+  /** Sellers with visible prices for this car in each price list (for the tabs). */
+  sellerCountByMarket: Record<PriceMarket, number>;
 }
 
 /** Only active, verified collaborators with at least one priced year tier count towards the list. */
@@ -231,7 +236,8 @@ function lowestSellersByColumn(tiers: TierRow[]): Record<string, Partial<Record<
 }
 
 /**
- * Every car the admin allowed in price tables, with the lowest raw, clearance
+ * One price list (`market`): every car the admin allowed in price tables (the
+ * same cars in both lists), with the lowest raw, clearance
  * and instant price any active seller entered for it, per (year, colour).
  * Collaborator prices are included only when `showPartner` (verified collaborator
  * viewer); only the `enabled` price types (pricing settings) are included.
@@ -239,14 +245,15 @@ function lowestSellersByColumn(tiers: TierRow[]): Record<string, Partial<Record<
  */
 export async function listPriceListRows(
   showPartner: boolean,
-  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS,
+  market: PriceMarket = DEFAULT_PRICE_MARKET
 ): Promise<PriceListRow[]> {
   const cars = await prisma.car.findMany({
     where: { priceTable: true },
     select: {
       ...carInfoSelect,
       priceTableEntries: {
-        where: pricedEntryWhere,
+        where: { ...pricedEntryWhere, market },
         select: { userId: true, currency: true, prices: { select: tierSelect } },
       },
     },
@@ -322,7 +329,8 @@ export async function getPriceListCarDetail(
   {
     enabled = ALL_PRICE_FIELD_KEYS,
     withSellerCodes = true,
-  }: { enabled?: readonly PriceTablePriceField[]; withSellerCodes?: boolean } = {}
+    market = DEFAULT_PRICE_MARKET,
+  }: { enabled?: readonly PriceTablePriceField[]; withSellerCodes?: boolean; market?: PriceMarket } = {}
 ): Promise<PriceListCarDetail | null> {
   if (!/^\d{1,20}$/.test(carIdRaw)) return null;
 
@@ -333,11 +341,13 @@ export async function getPriceListCarDetail(
       carImages: { select: { imageUrl: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
       carVideos: { select: { videoUrl: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
       description: true,
+      // Both lists: the chosen one is shown, the other only counted for its tab.
       priceTableEntries: {
         where: pricedEntryWhere,
         select: {
           updatedAt: true,
           userId: true,
+          market: true,
           currency: true,
           prices: { select: tierSelect, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
         },
@@ -347,9 +357,13 @@ export async function getPriceListCarDetail(
   if (!car) return null;
 
   const visibility: Visibility = { showPartner, enabled };
-  const entries = car.priceTableEntries
+  const visible = car.priceTableEntries
     .map((entry) => ({ ...entry, prices: visibleTiers(entry.prices, entry.currency, entry.userId, visibility) }))
     .filter((entry) => entry.prices.length > 0);
+  const sellerCountByMarket = Object.fromEntries(
+    PRICE_MARKETS.map((item) => [item, visible.filter((entry) => entry.market === item).length])
+  ) as Record<PriceMarket, number>;
+  const entries = visible.filter((entry) => entry.market === market);
 
   const codes = withSellerCodes ? await getActiveUserCodes(entries.map((entry) => entry.userId)) : new Map();
   const offers: PriceListOffer[] = entries
@@ -380,21 +394,52 @@ export async function getPriceListCarDetail(
     ),
     lowestByColumn: lowestPricesByColumn(tiers),
     columns: mergePriceColumns(tiers.map(tierColumn)),
+    market,
+    sellerCountByMarket,
   };
 }
 
 /**
  * How many distinct active sellers have priced at least one price-list car
- * with a price of an enabled type (pricing settings).
+ * in one price list (`market`) with a price of an enabled type (pricing settings).
  */
-export async function countPriceListSellers(enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS): Promise<number> {
+export async function countPriceListSellers(
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS,
+  market: PriceMarket = DEFAULT_PRICE_MARKET
+): Promise<number> {
   const sellers = await prisma.userPriceTableEntry.groupBy({
     by: ["userId"],
     where: {
       ...pricedEntryWhere,
+      market,
       car: { priceTable: true },
       prices: { some: { OR: priceKeysFor(enabled).map((key) => ({ [key]: { not: null } })) } },
     },
   });
   return sellers.length;
+}
+
+/**
+ * Per price list: how many cars have at least one visible price, and how many
+ * sellers priced them (the tab badges of the price list page).
+ */
+export async function getPriceListMarketStats(
+  enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
+): Promise<Record<PriceMarket, { cars: number; sellers: number }>> {
+  const where = {
+    ...pricedEntryWhere,
+    car: { priceTable: true },
+    prices: { some: { OR: priceKeysFor(enabled).map((key) => ({ [key]: { not: null } })) } },
+  } satisfies Prisma.UserPriceTableEntryWhereInput;
+  const [cars, sellers] = await Promise.all([
+    prisma.userPriceTableEntry.groupBy({ by: ["market", "carId"], where }),
+    prisma.userPriceTableEntry.groupBy({ by: ["market", "userId"], where }),
+  ]);
+  const stats = Object.fromEntries(PRICE_MARKETS.map((item) => [item, { cars: 0, sellers: 0 }])) as Record<
+    PriceMarket,
+    { cars: number; sellers: number }
+  >;
+  for (const row of cars) stats[row.market].cars += 1;
+  for (const row of sellers) stats[row.market].sellers += 1;
+  return stats;
 }

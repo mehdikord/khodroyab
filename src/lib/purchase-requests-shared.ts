@@ -5,6 +5,7 @@
  */
 
 import type { PriceCurrency } from "@/lib/currency";
+import { PRICE_MARKET_LABELS, type PriceMarket } from "@/lib/price-market";
 
 /* ───────────────────────── Status & source ───────────────────────── */
 
@@ -39,6 +40,12 @@ export const PURCHASE_REQUEST_SOURCE_LABELS: Record<PurchaseRequestSource, strin
   sale_ad: "آگهی فروش",
   price_list: "لیست قیمت",
 };
+
+/** "آگهی فروش", or "لیست قیمت · پلاک ملی" for a price-list request. */
+export function purchaseRequestSourceLabel(source: PurchaseRequestSource, market?: PriceMarket | null): string {
+  const label = PURCHASE_REQUEST_SOURCE_LABELS[source];
+  return source === "price_list" && market ? `${label} · ${PRICE_MARKET_LABELS[market]}` : label;
+}
 
 export function isPurchaseRequestSource(value: unknown): value is PurchaseRequestSource {
   return typeof value === "string" && (PURCHASE_REQUEST_SOURCES as readonly string[]).includes(value);
@@ -85,6 +92,8 @@ export interface MyPurchaseRequestRecord {
   href: string | null;
   year: string | null;
   colorName: string | null;
+  /** Price list of a price-list request (free zone / national plate). */
+  market: PriceMarket | null;
   description: string | null;
   createdAtLabel: string;
   updatedAtLabel: string;
@@ -131,6 +140,8 @@ export interface AdminPurchaseRequestRecord {
   colorName: string | null;
   colorCode: string | null;
   currency: PriceCurrency | null;
+  /** Price list of a price-list request (free zone / national plate). */
+  market: PriceMarket | null;
   priceLines: PurchaseRequestPriceLine[];
   hasNote: boolean;
   createdAt: string;
@@ -264,6 +275,8 @@ export type PurchaseRequestTarget =
     }
   | {
       source: "price_list";
+      /** Which price list the seller's row belongs to. */
+      market: PriceMarket;
       carId: string;
       carLabel: string;
       sellerCode: string;

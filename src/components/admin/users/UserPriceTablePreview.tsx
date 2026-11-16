@@ -7,11 +7,14 @@ import { currencyLabel } from "@/lib/currency";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
 import { CountPill, ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
 import { formatPersianNumber, toPersianDigits } from "@/lib/utils";
+import { PRICE_MARKETS, PRICE_MARKET_LABELS, type PriceMarket } from "@/lib/price-market";
 
 interface UserPriceTablePreviewProps {
   userId: string;
   /** Rows the user has priced in total. */
   total: number;
+  /** Priced rows per price list (free zone / national plate). */
+  totals: Record<PriceMarket, number>;
   /** Most recently updated rows (max 3). */
   entries: RecentPriceTableEntryRecord[];
 }
@@ -28,13 +31,17 @@ function headlinePrice(tier: RecentPriceTableEntryRecord["tiers"][number]): { la
 }
 
 /** Profile section: the collaborator's latest price-table rows and a link to the full editor. */
-export function UserPriceTablePreview({ userId, total, entries }: UserPriceTablePreviewProps) {
+export function UserPriceTablePreview({ userId, total, totals, entries }: UserPriceTablePreviewProps) {
   return (
     <ProfileSection
       icon={Table2}
       title="جدول لیست قیمت"
-      badge={<CountPill>{toPersianDigits(total)} خودرو</CountPill>}
-      description={total > 0 ? "آخرین قیمت‌های به‌روزشده" : "قیمت‌های ثبت‌شده کاربر برای خودروهای جدول"}
+      badge={<CountPill>{toPersianDigits(total)} ردیف</CountPill>}
+      description={
+        total > 0
+          ? `آخرین قیمت‌های به‌روزشده · ${PRICE_MARKETS.map((market) => `${PRICE_MARKET_LABELS[market]}: ${toPersianDigits(totals[market])} خودرو`).join("، ")}`
+          : "قیمت‌های ثبت‌شده کاربر در لیست‌های منطقه آزاد و پلاک ملی"
+      }
       action={{ href: `/admin/users/${userId}/price-table`, label: "مدیریت جدول قیمت" }}
     >
       {entries.length === 0 ? (
@@ -46,10 +53,21 @@ export function UserPriceTablePreview({ userId, total, entries }: UserPriceTable
             const price = first ? headlinePrice(first) : null;
             const more = entry.tiers.length - 1;
             return (
-              <li key={entry.car.id} className="flex items-center gap-3 px-3 py-2.5">
+              <li key={`${entry.market}:${entry.car.id}`} className="flex items-center gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-bold text-[#F5F5F5]">
-                    {entry.car.name} <span className="text-[11px] font-semibold text-[#5E6672]">{entry.car.brandName}</span>
+                  <p className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold text-[#F5F5F5]">
+                    <span className="truncate">
+                      {entry.car.name} <span className="text-[11px] font-semibold text-[#5E6672]">{entry.car.brandName}</span>
+                    </span>
+                    <span
+                      className={
+                        entry.market === "national"
+                          ? "shrink-0 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-extrabold text-sky-300"
+                          : "shrink-0 rounded-md border border-[#FF6A00]/30 bg-[#FF6A00]/10 px-1.5 py-0.5 text-[9px] font-extrabold text-[#FF8A2A]"
+                      }
+                    >
+                      {PRICE_MARKET_LABELS[entry.market]}
+                    </span>
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-[#8B93A1]">
                     {first && (

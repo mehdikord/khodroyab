@@ -8,6 +8,7 @@ import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { replaceUserPriceTable, type SavePriceTableResult } from "@/lib/price-table";
 import { parsePriceTableForm } from "@/lib/validation/price-table";
 import { getEnabledPriceFields } from "@/lib/system-settings";
+import { isPriceMarket } from "@/lib/price-market";
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
@@ -20,14 +21,15 @@ function parseBigInt(value: string): bigint | null {
 }
 
 /**
- * Replace a collaborator's price table on their behalf (see
- * `replaceUserPriceTable`). Unlike the customer's own editor, the admin may
+ * Replace one price list (free zone / national plate) of a collaborator's
+ * price table on their behalf (see `replaceUserPriceTable`). Unlike the customer's own editor, the admin may
  * edit it whether or not the user's identity is verified yet.
  */
-export async function saveUserPriceTableAction(userIdRaw: string, formData: FormData): Promise<SavePriceTableResult> {
+export async function saveUserPriceTableAction(userIdRaw: string, market: string, formData: FormData): Promise<SavePriceTableResult> {
   if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("price_table");
   if (denied) return { ok: false, message: denied };
+  if (!isPriceMarket(market)) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
 
   const userId = parseBigInt(userIdRaw);
   if (userId === null) return { ok: false, message: "شناسه کاربر نامعتبر است" };
@@ -40,7 +42,7 @@ export async function saveUserPriceTableAction(userIdRaw: string, formData: Form
   const parsed = parsePriceTableForm(formData, enabled);
   if (!parsed.success) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
 
-  const result = await replaceUserPriceTable(userId, parsed.entries, enabled);
+  const result = await replaceUserPriceTable(userId, market, parsed.entries, enabled);
   if (result.ok) {
     revalidatePath(`/admin/users/${userId.toString()}`);
     revalidatePath(`/admin/users/${userId.toString()}/price-table`);

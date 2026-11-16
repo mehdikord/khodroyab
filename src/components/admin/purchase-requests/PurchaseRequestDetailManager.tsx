@@ -34,7 +34,7 @@ import { savePurchaseRequestNoteAction, setPurchaseRequestStatusAction } from "@
 import {
   PURCHASE_REQUEST_AUDIENCE_LABELS,
   PURCHASE_REQUEST_NOTE_MAX,
-  PURCHASE_REQUEST_SOURCE_LABELS,
+  purchaseRequestSourceLabel,
   PURCHASE_REQUEST_STATUS_LABELS,
   type AdminPurchaseRequestDetail,
   type PurchaseRequestPerson,
@@ -204,7 +204,7 @@ export function PurchaseRequestDetailManager({ request: initial, justSeen }: Pur
                 <span className="font-mono">درخواست #{toPersianDigits(request.id)}</span>
                 <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] px-1.5 py-0.5">
                   <SourceIcon className="h-3 w-3 text-[#FF8A2A]" />
-                  از {PURCHASE_REQUEST_SOURCE_LABELS[request.source]}
+                  از {purchaseRequestSourceLabel(request.source, request.market)}
                 </span>
                 <span className="rounded-md border border-white/[0.08] px-1.5 py-0.5">{request.isGuest ? "کاربر مهمان" : "کاربر واردشده"}</span>
               </p>

@@ -15,6 +15,7 @@ import {
 } from "@/lib/price-table-shared";
 import type { PriceTableEntryInput } from "@/lib/validation/price-table";
 import type { PriceCurrency } from "@/lib/currency";
+import type { PriceMarket } from "@/lib/price-market";
 
 /** A car the admin has allowed in price tables (the catalogue side of a row). */
 export interface PriceTableCarRecord {
@@ -97,18 +98,19 @@ export async function listPriceTableCars(): Promise<PriceTableCarRecord[]> {
 }
 
 /**
- * The customer's saved entries, restricted to cars that are still eligible.
- * Pass `showPartner = false` for viewers who may not see collaborator prices:
+ * The customer's saved entries of one price list (`market`), restricted to
+ * cars that are still eligible. Pass `showPartner = false` for viewers who may not see collaborator prices:
  * those are blanked, and tiers left without any visible price are dropped.
  * `enabled` (pricing settings) blanks the disabled price types the same way.
  */
 export async function listUserPriceTableEntries(
   userId: bigint,
+  market: PriceMarket,
   showPartner = true,
   enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
 ): Promise<PriceTableEntryRecord[]> {
   const entries = await prisma.userPriceTableEntry.findMany({
-    where: { userId, car: { priceTable: true } },
+    where: { userId, market, car: { priceTable: true } },
     select: {
       carId: true,
       currency: true,
@@ -156,6 +158,8 @@ export function buildPriceTableRows(cars: PriceTableCarRecord[], entries: PriceT
 /** A saved row of a user's price table with its car, for short previews. */
 export interface RecentPriceTableEntryRecord {
   car: PriceTableCarRecord;
+  /** Price list of the row (free zone / national plate). */
+  market: PriceMarket;
   currency: PriceCurrency;
   tiers: PriceTableTierRecord[];
   updatedAtLabel: string;
@@ -164,22 +168,23 @@ export interface RecentPriceTableEntryRecord {
 const faDate = new Intl.DateTimeFormat("fa-IR", { year: "numeric", month: "long", day: "numeric" });
 
 /**
- * The user's most recently saved rows (eligible cars only), newest first, plus
- * how many rows they have in total. Every price of the `enabled` types is
- * included (admin view).
+ * The user's most recently saved rows of both price lists (eligible cars
+ * only), newest first, plus how many rows they have in each list. Every price
+ * of the `enabled` types is included (admin view).
  */
 export async function listRecentUserPriceTableEntries(
   userId: bigint,
   take: number,
   enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
-): Promise<{ total: number; entries: RecentPriceTableEntryRecord[] }> {
+): Promise<{ total: number; totals: Record<PriceMarket, number>; entries: RecentPriceTableEntryRecord[] }> {
   const where = { userId, car: { priceTable: true }, prices: { some: {} } } satisfies Prisma.UserPriceTableEntryWhereInput;
-  const [total, rows] = await Promise.all([
-    prisma.userPriceTableEntry.count({ where }),
+  const [groups, rows] = await Promise.all([
+    prisma.userPriceTableEntry.groupBy({ by: ["market"], where, _count: { _all: true } }),
     prisma.userPriceTableEntry.findMany({
       where,
       select: {
         updatedAt: true,
+        market: true,
         currency: true,
         car: { select: priceTableCarSelect },
         prices: {
@@ -201,10 +206,14 @@ export async function listRecentUserPriceTableEntries(
       take,
     }),
   ]);
+  const totals: Record<PriceMarket, number> = { free_zone: 0, national: 0 };
+  for (const group of groups) totals[group.market] = group._count._all;
   return {
-    total,
+    total: totals.free_zone + totals.national,
+    totals,
     entries: rows.map((row) => ({
       car: toCarRecord(row.car),
+      market: row.market,
       currency: row.currency,
       tiers: row.prices
         .map(({ color, colorId, ...tier }) => ({
@@ -292,9 +301,9 @@ function mergeDisabledPrices(
 }
 
 /**
- * Replace a user's price table with the validated rows. Shared by the
- * customer's own editor and the admin's editor; callers authorise and
- * revalidate.
+ * Replace one price list (`market`) of a user's price table with the
+ * validated rows; the other list is never touched. Shared by the customer's
+ * own editor and the admin's editor; callers authorise and revalidate.
  *
  * - Only cars the admin has flagged (`cars.price_table`) are accepted.
  * - Eligible cars missing from the submission are removed from the table.
@@ -309,6 +318,7 @@ function mergeDisabledPrices(
  */
 export async function replaceUserPriceTable(
   userId: bigint,
+  market: PriceMarket,
   submitted: PriceTableEntryInput[],
   enabled: readonly PriceTablePriceField[] = ALL_PRICE_FIELD_KEYS
 ): Promise<SavePriceTableResult> {
@@ -349,7 +359,7 @@ export async function replaceUserPriceTable(
     }
 
     const existing = await prisma.userPriceTableEntry.findMany({
-      where: { userId, carId: { in: eligibleIds } },
+      where: { userId, market, carId: { in: eligibleIds } },
       select: {
         carId: true,
         currency: true,
@@ -381,14 +391,14 @@ export async function replaceUserPriceTable(
     await prisma.$transaction(
       async (tx) => {
         await tx.userPriceTableEntry.deleteMany({
-          where: { userId, carId: { in: eligibleIds, notIn: submittedIds } },
+          where: { userId, market, carId: { in: eligibleIds, notIn: submittedIds } },
         });
 
         for (const entry of changed) {
           const carId = BigInt(entry.carId);
           const saved = await tx.userPriceTableEntry.upsert({
-            where: { userId_carId: { userId, carId } },
-            create: { userId, carId, currency: entry.currency },
+            where: { userId_carId_market: { userId, carId, market } },
+            create: { userId, carId, market, currency: entry.currency },
             // Always touch `updatedAt`, even when only the tiers changed.
             update: { currency: entry.currency, updatedAt: new Date() },
             select: { id: true },
@@ -407,7 +417,7 @@ export async function replaceUserPriceTable(
       { timeout: 30_000 }
     );
 
-    return { ok: true, entries: await listUserPriceTableEntries(userId, true, enabled) };
+    return { ok: true, entries: await listUserPriceTableEntries(userId, market, true, enabled) };
   } catch (error) {
     console.error("[price-table:save] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };

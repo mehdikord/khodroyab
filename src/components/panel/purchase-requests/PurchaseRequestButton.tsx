@@ -26,7 +26,7 @@ import { loadPurchaseRequestLocationsAction, submitPurchaseRequestAction } from 
 import type { ProvinceOption } from "@/lib/branches";
 import {
   PURCHASE_REQUEST_DESCRIPTION_MAX,
-  PURCHASE_REQUEST_SOURCE_LABELS,
+  purchaseRequestSourceLabel,
   type PurchaseRequestTarget,
   type PurchaseRequestViewer,
 } from "@/lib/purchase-requests-shared";
@@ -198,6 +198,7 @@ function PurchaseRequestDialog({
       formData.set("carId", target.carId);
       formData.set("sellerCode", target.sellerCode);
       formData.set("tierKey", tierKey);
+      formData.set("market", target.market);
     }
     setFormError(null);
     startTransition(async () => {
@@ -254,7 +255,7 @@ function PurchaseRequestDialog({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-extrabold tracking-wide text-panel-accent">
-                  درخواست خرید · از {PURCHASE_REQUEST_SOURCE_LABELS[target.source]}
+                  درخواست خرید · از {purchaseRequestSourceLabel(target.source, target.source === "price_list" ? target.market : null)}
                 </p>
                 <h2 id={titleId} className="mt-0.5 break-words text-base font-black leading-7 text-panel-text">
                   {target.carLabel}

@@ -1,16 +1,6 @@
-import React from "react";
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { getSystemSettings } from "@/lib/system-settings";
-import { AboutView } from "@/components/panel/about/AboutView";
-
-export const metadata: Metadata = {
-  title: "درباره خودرو یاب",
-};
-
-/** "About Khodroyab": the text the administrator writes in the system settings. */
-export default async function PanelAboutPage() {
-  const { aboutText } = await getSystemSettings();
-
-  return <AboutView text={aboutText} />;
+/** "About Khodroyab" now lives as a tab of the contact page. */
+export default function PanelAboutPage() {
+  redirect("/panel/contact?tab=about");
 }

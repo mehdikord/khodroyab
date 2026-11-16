@@ -7,6 +7,7 @@ import {
   PURCHASE_REQUEST_NAME_MAX,
   PURCHASE_REQUEST_NOTE_MAX,
 } from "@/lib/purchase-requests-shared";
+import { PRICE_MARKETS } from "@/lib/price-market";
 
 /** Where the form was opened: a sale ad, or one seller's row of a car's price list. */
 const targetSchema = z.discriminatedUnion("source", [
@@ -18,6 +19,8 @@ const targetSchema = z.discriminatedUnion("source", [
     source: z.literal("price_list"),
     carId: z.string().regex(/^\d{1,20}$/, { error: "خودرو نامعتبر است" }),
     sellerCode: z.string().regex(/^\d{8}$/, { error: "کد فروشنده نامعتبر است" }),
+    /** Which of the two price lists (free zone / national plate) the seller's row is in. */
+    market: z.enum(PRICE_MARKETS, { error: "لیست قیمت نامعتبر است" }),
     /** The chosen "<year>:<colorId>:<currency>" column of the seller's prices (required). */
     tierKey: z.string().regex(/^\d{4}:\d{1,20}:(usd|rial)$/, { error: "سال و رنگ مورد نظر را انتخاب کنید" }),
   }),
@@ -69,6 +72,7 @@ export function parsePurchaseRequestForm(formData: FormData, isGuest: boolean): 
     carId: field(formData, "carId"),
     sellerCode: field(formData, "sellerCode"),
     tierKey: field(formData, "tierKey"),
+    market: field(formData, "market"),
   });
   if (!target.success) Object.assign(fieldErrors, zodFieldErrors(target.error));
 

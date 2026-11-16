@@ -1,4 +1,4 @@
-import { Info, LayoutDashboard, ListOrdered, Megaphone, PhoneCall, Search, Table2, UserRound } from "lucide-react";
+import { CarFront, Info, LayoutDashboard, ListOrdered, PhoneCall, Store, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface PanelNavItem {
@@ -8,75 +8,81 @@ export interface PanelNavItem {
   shortLabel: string;
   href: string;
   icon: LucideIcon;
-  /** Marks the primary action of the panel (visually emphasised in the dock). */
-  primary?: boolean;
-  /** Only collaborators (کاربران همکار) see this item: publishing ads and a price table. */
-  collaboratorOnly?: boolean;
   /** Needs an account: for a guest the dock item opens the sign-in screen instead. */
   requiresAccount?: boolean;
-  /**
-   * Informational page (about, contact). Shown in the dock on desktop only; on
-   * small screens it lives in the side drawer opened from the header.
-   */
-  secondary?: boolean;
   /** One-line description shown in the side drawer. */
   description?: string;
 }
 
-/** Main navigation of the customer panel; rendered as the fixed bottom dock. */
+/**
+ * The fixed bottom dock, the same for guests and members, in this order:
+ * sellers, price list, used cars (sale-ad search), contact (with the about
+ * tab), profile. Collaborators reach "my ads" / "my price list" from the
+ * account menu and the price list page.
+ */
 export const PANEL_NAV_ITEMS: PanelNavItem[] = [
-  { key: "dashboard", label: "داشبورد", shortLabel: "داشبورد", href: "/panel/dashboard", icon: LayoutDashboard },
-  { key: "search", label: "جستجوی خودرو", shortLabel: "جستجو", href: "/panel/search", icon: Search, primary: true },
-  { key: "ads", label: "آگهی‌های من", shortLabel: "آگهی‌ها", href: "/panel/ads", icon: Megaphone, collaboratorOnly: true },
+  { key: "sellers", label: "فروشندگان", shortLabel: "فروشندگان", href: "/panel/sellers", icon: Store },
   { key: "price-list", label: "لیست قیمت", shortLabel: "لیست قیمت", href: "/panel/price-list", icon: ListOrdered },
-  { key: "price-table", label: "جدول من", shortLabel: "جدول من", href: "/panel/price-table", icon: Table2, collaboratorOnly: true },
+  { key: "search", label: "خودرو کارکرده", shortLabel: "خودرو کارکرده", href: "/panel/search", icon: CarFront },
+  { key: "contact", label: "تماس با ما", shortLabel: "تماس با ما", href: "/panel/contact", icon: PhoneCall },
   { key: "profile", label: "پروفایل", shortLabel: "پروفایل", href: "/panel/profile", icon: UserRound, requiresAccount: true },
+];
+
+/** Extra pages listed in the mobile side drawer (opened from the header). */
+export const PANEL_DRAWER_ITEMS: PanelNavItem[] = [
+  {
+    key: "dashboard",
+    label: "داشبورد",
+    shortLabel: "داشبورد",
+    href: "/panel/dashboard",
+    icon: LayoutDashboard,
+    description: "نمای کلی بازار، آگهی‌ها و قیمت دلار",
+  },
   {
     key: "about",
     label: "درباره خودرویاب",
     shortLabel: "درباره ما",
-    href: "/panel/about",
+    href: "/panel/contact?tab=about",
     icon: Info,
-    secondary: true,
     description: "داستان، ارزش‌ها و مسیر خودرویاب",
-  },
-  {
-    key: "contact",
-    label: "تماس با ما",
-    shortLabel: "تماس با ما",
-    href: "/panel/contact",
-    icon: PhoneCall,
-    secondary: true,
-    description: "راه‌های ارتباط با پشتیبانی خودرویاب",
   },
 ];
 
-/** Informational pages listed in the mobile side drawer. */
-export const PANEL_SECONDARY_ITEMS: PanelNavItem[] = PANEL_NAV_ITEMS.filter((item) => item.secondary);
+const startsWith = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-/**
- * Dock of a guest (not signed in), in this order on every screen size: price
- * list, ads (opens the sale-ad search), contact, about.
- */
-const GUEST_NAV_KEYS = ["price-list", "search", "contact", "about"] as const;
-const GUEST_SHORT_LABELS: Partial<Record<string, string>> = { search: "آگهی‌ها و خرید" };
-
-export const PANEL_GUEST_NAV_ITEMS: PanelNavItem[] = GUEST_NAV_KEYS.map((key) => {
-  const item = PANEL_NAV_ITEMS.find((candidate) => candidate.key === key)!;
-  // Always in the dock for guests, also on small screens.
-  return { ...item, secondary: false, shortLabel: GUEST_SHORT_LABELS[key] ?? item.shortLabel };
-});
-
-/**
- * The dock items a visitor sees: guests get the short public menu; signed-in
- * non-collaborators cannot publish, so their publishing items are hidden.
- */
-export function panelNavItemsFor(collabrate: boolean, guest = false): PanelNavItem[] {
-  if (guest) return PANEL_GUEST_NAV_ITEMS;
-  return collabrate ? PANEL_NAV_ITEMS : PANEL_NAV_ITEMS.filter((item) => !item.collaboratorOnly);
+/** The dock item a page belongs to (highlighted in the dock). */
+export function activeDockKey(pathname: string): string | null {
+  if (startsWith(pathname, "/panel/sellers")) return "sellers";
+  if (startsWith(pathname, "/panel/price-list") || startsWith(pathname, "/panel/price-table")) return "price-list";
+  // A public sale ad (/panel/ads/123) belongs to the used-car search; the rest of /panel/ads is "my ads".
+  if (startsWith(pathname, "/panel/search") || /^\/panel\/ads\/\d+$/.test(pathname)) return "search";
+  if (startsWith(pathname, "/panel/contact") || startsWith(pathname, "/panel/about")) return "contact";
+  if (
+    pathname === "/panel" ||
+    ["/panel/profile", "/panel/requests", "/panel/verification", "/panel/ads"].some((prefix) => startsWith(pathname, prefix))
+  ) {
+    return "profile";
+  }
+  return null;
 }
 
-/** Resolve the active nav item for a pathname. */
-export function findActivePanelItem(pathname: string): PanelNavItem | undefined {
-  return PANEL_NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+const PAGE_TITLES: [prefix: string, title: string][] = [
+  ["/panel/dashboard", "داشبورد"],
+  ["/panel/sellers", "فروشندگان"],
+  ["/panel/price-list", "لیست قیمت"],
+  ["/panel/price-table", "لیست قیمت من"],
+  ["/panel/search", "خودرو کارکرده"],
+  ["/panel/contact", "تماس با ما و درباره خودرویاب"],
+  ["/panel/about", "درباره خودرویاب"],
+  ["/panel/profile", "پروفایل"],
+  ["/panel/requests", "درخواست‌های خرید من"],
+  ["/panel/verification", "احراز هویت"],
+];
+
+/** Title shown in the top bar for a pathname. */
+export function panelPageTitle(pathname: string): string {
+  if (pathname === "/panel") return "ورود همکاران";
+  if (/^\/panel\/ads\/\d+$/.test(pathname)) return "جزئیات آگهی";
+  if (startsWith(pathname, "/panel/ads")) return "آگهی‌های من";
+  return PAGE_TITLES.find(([prefix]) => startsWith(pathname, prefix))?.[1] ?? "پنل کاربری";
 }

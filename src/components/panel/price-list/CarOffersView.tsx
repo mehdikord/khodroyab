@@ -18,6 +18,7 @@ import { SellerCodeBadge } from "@/components/panel/SellerCodeBadge";
 import { HorizontalScroller } from "@/components/panel/price-list/HorizontalScroller";
 import { PurchaseRequestButton } from "@/components/panel/purchase-requests/PurchaseRequestButton";
 import type { PurchaseRequestTarget, PurchaseRequestTierOption, PurchaseRequestViewer } from "@/lib/purchase-requests-shared";
+import { DEFAULT_PRICE_MARKET, type PriceMarket } from "@/lib/price-market";
 
 interface CarOffersViewProps {
   car: PriceListCarInfo;
@@ -35,6 +36,10 @@ interface CarOffersViewProps {
   viewer: PurchaseRequestViewer;
   /** Cover photo of the car, for the request form's header. */
   carImage?: string | null;
+  /** Open-market rial per dollar: each price shows its small equivalent in the other currency. */
+  rialPerUsd?: number | null;
+  /** Price list of the offers (free zone / national plate); purchase requests record it. */
+  market?: PriceMarket;
 }
 
 /** Seller order by price: cheapest first, or most expensive first. */
@@ -127,6 +132,8 @@ export function CarOffersView({
   priceFields = ALL_PRICE_FIELD_KEYS,
   viewer,
   carImage = null,
+  rialPerUsd = null,
+  market = DEFAULT_PRICE_MARKET,
 }: CarOffersViewProps) {
   const fields = useMemo(() => priceFieldsFor(priceFields), [priceFields]);
   const fieldKeys = useMemo(() => fields.map((field) => field.key), [fields]);
@@ -196,6 +203,7 @@ export function CarOffersView({
       ? null
       : {
           source: "price_list",
+          market,
           carId: car.id,
           carLabel: `${car.brandName} ${car.name} - مدل ${toPersianDigits(car.model)}`,
           sellerCode: offer.sellerCode,
@@ -416,6 +424,7 @@ export function CarOffersView({
                         highlight={sortBy}
                         showPartner={showPartner}
                         fields={fieldKeys}
+                        rialPerUsd={rialPerUsd}
                       />
                     </td>
                   ))}
@@ -477,6 +486,7 @@ export function CarOffersView({
                           highlight={sortBy}
                           showPartner={showPartner}
                           fields={fieldKeys}
+                          rialPerUsd={rialPerUsd}
                         />
                       </div>
                     );

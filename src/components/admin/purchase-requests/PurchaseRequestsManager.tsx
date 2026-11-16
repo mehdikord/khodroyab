@@ -28,7 +28,7 @@ import { PurchaseRequestStatusSelect } from "@/components/admin/purchase-request
 import { setPurchaseRequestStatusAction } from "@/app/admin/(panel)/purchase-requests/actions";
 import {
   PURCHASE_REQUEST_AUDIENCE_LABELS,
-  PURCHASE_REQUEST_SOURCE_LABELS,
+  purchaseRequestSourceLabel,
   PURCHASE_REQUEST_STATUS_LABELS,
   type AdminPurchaseRequestCounts,
   type AdminPurchaseRequestFilterOptions,
@@ -287,7 +287,7 @@ function RequestRow({
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
               <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] px-1.5 py-0.5 text-[#9BA3AE]">
                 <SourceIcon className="h-3 w-3 text-[#FF8A2A]" />
-                {PURCHASE_REQUEST_SOURCE_LABELS[request.source]}
+                {purchaseRequestSourceLabel(request.source, request.market)}
                 {request.adCode && <span className="font-mono">{toPersianDigits(request.adCode)}</span>}
               </span>
               {(request.year || request.colorName) && (

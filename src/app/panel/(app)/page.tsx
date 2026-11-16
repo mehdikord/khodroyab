@@ -1,14 +1,11 @@
 import React from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/user-auth";
 import { PANEL_HOME, safePanelNext } from "@/lib/auth/public-panel";
 import { listActiveSponsors } from "@/lib/sponsors";
 import { getSystemSettings } from "@/lib/system-settings";
-import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
 import { SponsorsMarquee } from "@/components/panel/SponsorsMarquee";
 import { UserAuthCard } from "@/components/panel/UserAuthCard";
@@ -24,8 +21,9 @@ interface PageProps {
 }
 
 /**
- * Login / registration screen at exactly `/panel`, with the active sponsors'
- * logo strip at the top. `?next=` (a panel path) is where the visitor returns
+ * Login / registration screen at exactly `/panel`, inside the panel chrome
+ * (top bar and bottom dock stay available), with the active sponsors' logo
+ * strip at the top. `?next=` (a panel path) is where the visitor returns
  * after signing in, e.g. the profile page they tapped as a guest.
  */
 export default async function PanelLoginPage({ searchParams }: PageProps) {
@@ -42,31 +40,16 @@ export default async function PanelLoginPage({ searchParams }: PageProps) {
   const { registrationOpen } = settings;
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden">
-      <div className="panel-ambient pointer-events-none absolute inset-0" aria-hidden="true" />
-      <div className="admin-grid-bg pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
-
+    <div className="relative">
       {sponsors.length > 0 && (
         <SponsorsMarquee
           sponsors={sponsors}
-          className="admin-animate-in relative z-10 border-b border-panel-line/[0.06] bg-panel-surface/40 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm"
+          className="admin-animate-in relative z-10 -mx-4 border-y border-panel-line/[0.06] bg-panel-surface/40 py-3 backdrop-blur-sm sm:mx-0 sm:rounded-2xl sm:border"
         />
       )}
 
-      <div
-        className={cn(
-          "relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10 sm:justify-center sm:py-12",
-          sponsors.length > 0 ? "pt-8" : "pt-[max(2.5rem,env(safe-area-inset-top))]"
-        )}
-      >
-        {/* Back to the public site */}
-        <Link
-          href={PANEL_HOME}
-          className="admin-animate-in mb-6 inline-flex items-center gap-1.5 self-start rounded-xl px-1 py-1 text-xs font-bold text-panel-muted transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40"
-        >
-          <ArrowRight className="h-4 w-4" />
-          بازگشت به خودرو یاب
-        </Link>
+      <div className="relative isolate mx-auto flex w-full max-w-md flex-col pb-6 pt-6 sm:pt-10">
+        <div className="panel-ambient pointer-events-none absolute inset-x-[-30%] inset-y-0 -z-10" aria-hidden="true" />
 
         {/* Brand */}
         <div className="admin-animate-in flex flex-col items-center text-center">
@@ -90,10 +73,6 @@ export default async function PanelLoginPage({ searchParams }: PageProps) {
           <UserAuthCard next={next} registrationOpen={registrationOpen} />
         </div>
       </div>
-
-      <p className="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 text-center text-xs text-panel-faint">
-        © {new Date().getFullYear()} خودرو یاب — KHODROYAB
-      </p>
     </div>
   );
 }

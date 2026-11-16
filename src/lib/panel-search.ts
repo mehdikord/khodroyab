@@ -360,3 +360,23 @@ export async function getAdDetail(idRaw: string, adViewer: AdViewer): Promise<Ad
     })),
   };
 }
+
+/** One seller's public sale ads, newest first, paginated (the seller's profile page). */
+export async function listSellerAds(userId: bigint, requestedPage: number, showPartner: boolean): Promise<SearchResult> {
+  const where = { ...PUBLIC_AD_WHERE, userId } satisfies Prisma.UserCarWhereInput;
+  const total = await prisma.userCar.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE));
+  const page = Math.min(Math.max(1, requestedPage), pageCount);
+  const rows =
+    total === 0
+      ? []
+      : await prisma.userCar.findMany({
+          where,
+          include: searchInclude,
+          orderBy: buildOrderBy("newest"),
+          skip: (page - 1) * SEARCH_PAGE_SIZE,
+          take: SEARCH_PAGE_SIZE,
+        });
+  const sellerCodes = await sellerCodesFor(rows);
+  return { ads: rows.map((row) => toSearchAdRecord(row, showPartner, sellerCodes)), total, page, pageCount, pageSize: SEARCH_PAGE_SIZE };
+}

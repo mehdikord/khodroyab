@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   AlertCircle,
   CalendarDays,
@@ -36,18 +36,27 @@ import {
   type PriceTablePriceField,
 } from "@/lib/price-table-shared";
 import { cn, formatPersianNumber, joinFa, toPersianDigits } from "@/lib/utils";
-import { CURRENCY_LABELS, DEFAULT_PRICE_TABLE_CURRENCY, type PriceCurrency } from "@/lib/currency";
+import { CURRENCY_LABELS, type PriceCurrency } from "@/lib/currency";
+import { DEFAULT_PRICE_MARKET, PRICE_MARKET_DEFAULT_CURRENCY, type PriceMarket } from "@/lib/price-market";
 import { CurrencyToggle } from "@/components/ads/CurrencyToggle";
 
 interface MyPriceTableManagerProps {
   cars: PriceTableCarRecord[];
   colors: ColorRecord[];
   initialEntries: PriceTableEntryRecord[];
-  /** Saves the whole table; defaults to the signed-in customer's own table. */
+  /** Which price list is edited (free zone / national plate): sets the currency of new rows. */
+  market?: PriceMarket;
+  /** Saves this list; defaults to the signed-in customer's own list of `market`. */
   saveAction?: (formData: FormData) => Promise<SavePriceTableResult>;
+  /** Shown inside a page that has its own `<h1>` (the market tabs): the heading becomes an `<h2>`. */
+  embedded?: boolean;
+  /** Reports whether there are unsaved changes (e.g. for a marker on the tab). */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Reports how many cars have at least one price (as edited). */
+  onFilledChange?: (count: number) => void;
   /** Price types in use (pricing settings); only these get inputs. Defaults to all three. */
   priceFields?: readonly PriceTablePriceField[];
-  /** Page heading; defaults to «جدول من». */
+  /** Page heading; defaults to «لیست قیمت من». */
   title?: string;
   successMessage?: string;
 }
@@ -86,11 +95,11 @@ function emptyTier(year: string, colorId: string): TierDraft {
 }
 
 /** A fresh row: one blank tier for the customer to fill in. */
-function emptyDraft(): Draft {
-  return { currency: DEFAULT_PRICE_TABLE_CURRENCY, tiers: [emptyTier("", "")] };
+function emptyDraft(currency: PriceCurrency): Draft {
+  return { currency, tiers: [emptyTier("", "")] };
 }
 
-function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[]): Drafts {
+function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[], currency: PriceCurrency): Drafts {
   const byCar = new Map(entries.map((entry) => [entry.carId, entry]));
   const drafts: Drafts = {};
   for (const car of cars) {
@@ -109,7 +118,7 @@ function toDrafts(cars: PriceTableCarRecord[], entries: PriceTableEntryRecord[])
               >),
             })),
           }
-        : emptyDraft();
+        : emptyDraft(currency);
   }
   return drafts;
 }
@@ -211,14 +220,20 @@ export function MyPriceTableManager({
   cars,
   colors,
   initialEntries,
-  saveAction = saveMyPriceTableAction,
+  market = DEFAULT_PRICE_MARKET,
+  saveAction: saveActionProp,
+  embedded = false,
+  onDirtyChange,
+  onFilledChange,
   priceFields = ALL_PRICE_FIELD_KEYS,
-  title = "جدول من",
+  title = "لیست قیمت من",
   successMessage = "جدول قیمت شما ذخیره شد",
 }: MyPriceTableManagerProps) {
   const fields = useMemo(() => priceFieldsFor(priceFields), [priceFields]);
   const tierGridClass = TIER_GRID_CLASSES[fields.length] ?? TIER_GRID_CLASSES[3];
-  const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries));
+  const defaultCurrency = PRICE_MARKET_DEFAULT_CURRENCY[market];
+  const saveAction = saveActionProp ?? ((formData: FormData) => saveMyPriceTableAction(market, formData));
+  const [saved, setSaved] = useState<Drafts>(() => toDrafts(cars, initialEntries, defaultCurrency));
   const [drafts, setDrafts] = useState<Drafts>(saved);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RowFilter>("all");
@@ -231,13 +246,14 @@ export function MyPriceTableManager({
   const carById = useMemo(() => new Map(cars.map((car) => [car.id, car])), [cars]);
   const indexById = useMemo(() => new Map(cars.map((car, index) => [car.id, index])), [cars]);
 
-  const draftOf = (car: PriceTableCarRecord) => drafts[car.id] ?? emptyDraft();
+  const draftOf = (car: PriceTableCarRecord) => drafts[car.id] ?? emptyDraft(defaultCurrency);
 
   const dirtyIds = useMemo(
     () => new Set(cars.filter((car) => drafts[car.id] && saved[car.id] && !sameDraft(drafts[car.id], saved[car.id])).map((car) => car.id)),
     [cars, drafts, saved]
   );
   const isDirty = dirtyIds.size > 0;
+  useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
 
   const stats = useMemo(() => {
     let filled = 0;
@@ -250,6 +266,7 @@ export function MyPriceTableManager({
     }
     return { filled, tiers };
   }, [cars, drafts]);
+  useEffect(() => onFilledChange?.(stats.filled), [stats.filled, onFilledChange]);
 
   const visibleCars = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -280,7 +297,7 @@ export function MyPriceTableManager({
   function updateDraft(carId: string, change: (draft: Draft) => Draft) {
     const car = carById.get(carId);
     if (!car) return;
-    setDrafts((prev) => ({ ...prev, [carId]: change(prev[carId] ?? emptyDraft()) }));
+    setDrafts((prev) => ({ ...prev, [carId]: change(prev[carId] ?? emptyDraft(defaultCurrency)) }));
     setFieldErrors((prev) => {
       const prefix = `${carId}.`;
       if (!Object.keys(prev).some((key) => key.startsWith(prefix))) return prev;
@@ -326,7 +343,7 @@ export function MyPriceTableManager({
   }
 
   function clearRow(car: PriceTableCarRecord) {
-    updateDraft(car.id, () => emptyDraft());
+    updateDraft(car.id, () => emptyDraft(defaultCurrency));
   }
 
   function discardChanges() {
@@ -355,7 +372,7 @@ export function MyPriceTableManager({
     startTransition(async () => {
       const result = await saveAction(formData);
       if (result.ok) {
-        const next = toDrafts(cars, result.entries);
+        const next = toDrafts(cars, result.entries, defaultCurrency);
         setSaved(next);
         setDrafts(next);
         showToast("success", successMessage);
@@ -371,6 +388,7 @@ export function MyPriceTableManager({
   }
 
   const errorCount = Object.keys(fieldErrors).length;
+  const Heading = embedded ? "h2" : "h1";
 
   return (
     <div ref={topRef} className="scroll-mt-20 space-y-5">
@@ -379,10 +397,10 @@ export function MyPriceTableManager({
       {/* Header */}
       <div className="admin-animate-in flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-black text-panel-text sm:text-2xl">
+          <Heading className={cn("flex items-center gap-2 font-black text-panel-text", embedded ? "text-lg sm:text-xl" : "text-xl sm:text-2xl")}>
             <Table2 className="h-5 w-5 text-panel-accent" />
             {title}
-          </h1>
+          </Heading>
           <p className="mt-1 text-xs text-panel-muted sm:text-sm">
             {cars.length === 0 ? (
               "در حال حاضر خودرویی برای جدول قیمت تعریف نشده است."

@@ -7,6 +7,7 @@ import { isTrustedOrigin } from "@/lib/auth/request-guard";
 import { replaceUserPriceTable, type SavePriceTableResult } from "@/lib/price-table";
 import { parsePriceTableForm } from "@/lib/validation/price-table";
 import { getEnabledPriceFields } from "@/lib/system-settings";
+import { isPriceMarket } from "@/lib/price-market";
 
 const UNAUTHENTICATED_MESSAGE = "نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید.";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
@@ -35,17 +36,21 @@ async function guardRequest(): Promise<{ ok: false; message: string } | { ok: tr
   return { ok: true, userId };
 }
 
-/** Replace the customer's own price table with the submitted rows (see `replaceUserPriceTable`). */
-export async function saveMyPriceTableAction(formData: FormData): Promise<SavePriceTableResult> {
+/**
+ * Replace one price list (free zone / national plate) of the customer's own
+ * price table with the submitted rows (see `replaceUserPriceTable`).
+ */
+export async function saveMyPriceTableAction(market: string, formData: FormData): Promise<SavePriceTableResult> {
   const guard = await guardRequest();
   if (!guard.ok) return guard;
   const { userId } = guard;
+  if (!isPriceMarket(market)) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
 
   const enabled = await getEnabledPriceFields();
   const parsed = parsePriceTableForm(formData, enabled);
   if (!parsed.success) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
 
-  const result = await replaceUserPriceTable(userId, parsed.entries, enabled);
+  const result = await replaceUserPriceTable(userId, market, parsed.entries, enabled);
   if (result.ok) {
     revalidatePath("/panel/price-table");
     revalidatePath("/panel/price-list", "layout");

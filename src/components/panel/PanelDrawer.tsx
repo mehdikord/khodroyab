@@ -7,12 +7,12 @@ import { ChevronLeft, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
-import { PANEL_SECONDARY_ITEMS } from "@/components/panel/panel-nav";
+import { PANEL_DRAWER_ITEMS } from "@/components/panel/panel-nav";
 
 /**
- * Mobile-only side drawer (below `md`) holding the informational pages
- * (about, contact). On desktop these items sit in the bottom dock instead,
- * so the trigger is hidden there.
+ * Mobile-only side drawer (below `md`) holding the pages that are not in the
+ * dock (dashboard, about). On desktop the logo leads to the dashboard, so the
+ * trigger is hidden there.
  */
 export function PanelDrawer({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
@@ -128,9 +128,9 @@ export function PanelDrawer({ pathname }: { pathname: string }) {
           </div>
 
           <nav aria-label="صفحات اطلاعاتی" className="relative flex-1 space-y-2 overflow-y-auto p-3">
-            {PANEL_SECONDARY_ITEMS.map((item, index) => {
+            {PANEL_DRAWER_ITEMS.map((item, index) => {
               const Icon = item.icon;
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = pathname === item.href;
               return (
                 <Link
                   key={item.key}

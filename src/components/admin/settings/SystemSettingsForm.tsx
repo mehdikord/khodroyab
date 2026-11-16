@@ -327,7 +327,7 @@ export function SystemSettingsForm({ initialSettings, provinces }: SystemSetting
         <SettingCard
           icon={BadgeDollarSign}
           title="تنظیمات قیمت‌دهی"
-          description="انواع قیمتی که همکاران در «جدول من» وارد می‌کنند و در لیست قیمت نمایش داده می‌شوند. نوع غیرفعال در هیچ صفحه‌ای (پنل کاربران، لیست قیمت و پنل مدیریت) نمایش داده نمی‌شود، ولی مقادیر ثبت‌شده آن حذف نمی‌شوند و با فعال کردن دوباره برمی‌گردند. حداقل یک نوع قیمت باید فعال باشد."
+          description="انواع قیمتی که همکاران در «لیست قیمت من» وارد می‌کنند و در لیست قیمت نمایش داده می‌شوند. نوع غیرفعال در هیچ صفحه‌ای (پنل کاربران، لیست قیمت و پنل مدیریت) نمایش داده نمی‌شود، ولی مقادیر ثبت‌شده آن حذف نمی‌شوند و با فعال کردن دوباره برمی‌گردند. حداقل یک نوع قیمت باید فعال باشد."
         >
           {priceFields.map((key) => (
             <input key={key} type="hidden" name="enabledPriceFields" value={key} />
@@ -559,7 +559,7 @@ export function SystemSettingsForm({ initialSettings, provinces }: SystemSetting
               متن درباره ما
             </label>
             <a
-              href="/panel/about"
+              href="/panel/contact?tab=about"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF8A2A] hover:underline"

@@ -3,11 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LogIn, LogOut, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ChevronDown, ListOrdered, LogIn, LogOut, Megaphone, ShieldCheck, ShoppingBag } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PanelLogo } from "@/components/panel/PanelLogo";
-import { findActivePanelItem, panelNavItemsFor } from "@/components/panel/panel-nav";
+import { PANEL_NAV_ITEMS, activeDockKey, panelPageTitle } from "@/components/panel/panel-nav";
 import { logoutUserAction } from "@/app/panel/auth-actions";
 import { ThemeSwitch } from "@/components/panel/ThemeSwitch";
 import { VerificationNotice } from "@/components/panel/verification/VerificationNotice";
@@ -66,19 +66,18 @@ function Avatar({ user, className }: { user: PanelShellUser; className?: string 
 }
 
 /** Fixed bottom dock holding the panel's main navigation. */
-function Dock({ pathname, collabrate, guest }: { pathname: string; collabrate: boolean; guest: boolean }) {
-  const active = findActivePanelItem(pathname);
+function Dock({ pathname, guest }: { pathname: string; guest: boolean }) {
+  const activeKey = activeDockKey(pathname);
   return (
     <nav aria-label="ناوبری اصلی پنل" className="panel-dock pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-3">
       <div
         className={cn(
-          "panel-dock-glass pointer-events-auto mx-auto flex max-w-md items-center gap-1 rounded-[22px] p-1.5",
-          guest ? "md:max-w-xl" : collabrate ? "md:max-w-3xl" : "md:max-w-2xl"
+          "panel-dock-glass pointer-events-auto mx-auto flex max-w-md items-center gap-1 rounded-[22px] p-1.5 md:max-w-2xl"
         )}
       >
-        {panelNavItemsFor(collabrate, guest).map((item) => {
+        {PANEL_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = active?.key === item.key;
+          const isActive = activeKey === item.key;
           // Guests reach account-only items (profile) through the sign-in screen.
           const href = guest && item.requiresAccount ? panelLoginHref(item.href) : item.href;
           return (
@@ -87,8 +86,7 @@ function Dock({ pathname, collabrate, guest }: { pathname: string; collabrate: b
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                item.secondary ? "hidden md:flex" : "flex",
-                "relative min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40",
+                "relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00]/40",
                 isActive
                   ? "bg-gradient-to-b from-[#FF6A00]/[0.22] to-[#FF6A00]/[0.08] text-panel-text"
                   : "text-panel-muted-2 hover:bg-panel-line/[0.04] hover:text-panel-text active:scale-95"
@@ -103,13 +101,12 @@ function Dock({ pathname, collabrate, guest }: { pathname: string; collabrate: b
               <span
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-xl transition-all duration-200",
-                  item.primary && !isActive && "bg-[#FF6A00]/10 text-panel-accent",
                   isActive && "scale-110 text-panel-accent"
                 )}
               >
                 <Icon className="h-[19px] w-[19px]" strokeWidth={isActive ? 2.4 : 2} />
               </span>
-              <span className={cn("text-[10px] leading-none", isActive ? "font-extrabold" : "font-semibold")}>
+              <span className={cn("whitespace-nowrap text-[10px] leading-none", isActive ? "font-extrabold" : "font-semibold")}>
                 {item.shortLabel}
               </span>
             </Link>
@@ -143,12 +140,7 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const activeItem = findActivePanelItem(pathname);
-  const pageTitle = pathname.startsWith("/panel/verification")
-    ? "احراز هویت"
-    : pathname.startsWith("/panel/requests")
-      ? "درخواست‌های خرید من"
-      : activeItem?.label ?? "پنل کاربری";
+  const pageTitle = panelPageTitle(pathname);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -193,7 +185,8 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
 
           {/* Account menu (guests get a sign-in button instead) */}
           {!user ? (
-            <GuestSignIn pathname={pathname} />
+            // Already on the sign-in screen: no second sign-in button.
+            pathname !== "/panel" && <GuestSignIn pathname={pathname} />
           ) : (
             <div className="relative" ref={menuRef}>
               <button
@@ -223,6 +216,26 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
                     </div>
                   </div>
                   <div className="p-1.5">
+                    {user.collabrate && (
+                      <>
+                        <Link
+                          href="/panel/ads"
+                          role="menuitem"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
+                        >
+                          <Megaphone className="h-4 w-4 text-panel-accent" />
+                          <span>آگهی‌های من</span>
+                        </Link>
+                        <Link
+                          href="/panel/price-table"
+                          role="menuitem"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-panel-muted transition-colors hover:bg-panel-line/[0.05] hover:text-panel-text"
+                        >
+                          <ListOrdered className="h-4 w-4 text-panel-accent" />
+                          <span>لیست قیمت من</span>
+                        </Link>
+                      </>
+                    )}
                     <Link
                       href="/panel/requests"
                       role="menuitem"
@@ -282,7 +295,7 @@ export const PanelShell: React.FC<PanelShellProps> = ({ user, theme, consultatio
 
       {consultationPhone && <ConsultationFab phone={consultationPhone} />}
 
-      <Dock pathname={pathname} collabrate={user?.collabrate ?? false} guest={!user} />
+      <Dock pathname={pathname} guest={!user} />
     </div>
   );
 };

@@ -426,22 +426,31 @@ model UserCarSaleTermPriceHistory {
 // The prices themselves live in `user_price_table_prices`, one row per
 // (production year, colour) combination the customer chose to price.
 model UserPriceTableEntry {
-  id        BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
-  userId    BigInt        @map("user_id") @db.UnsignedBigInt
-  carId     BigInt        @map("car_id") @db.UnsignedBigInt
+  id        BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt          @map("user_id") @db.UnsignedBigInt
+  carId     BigInt          @map("car_id") @db.UnsignedBigInt
+  /// Which of the two separate price lists the row belongs to (free zone / national plate).
+  market    PriceListMarket @default(free_zone)
   /// Currency of every price of this row (all its year/colour tiers).
-  currency  PriceCurrency @default(usd)
-  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamp(0)
+  currency  PriceCurrency   @default(usd)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamp(0)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   car  Car  @relation(fields: [carId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   prices UserPriceTablePrice[]
 
-  @@unique([userId, carId])
+  @@unique([userId, carId, market])
   @@index([carId])
+  @@index([carId, market])
   @@map("user_price_table_entries")
+}
+
+/// The two independent price lists: cars of the free zone (منطقه آزاد) and national-plate cars (پلاک ملی).
+enum PriceListMarket {
+  free_zone
+  national
 }
 
 // ─── Table 17: user_price_table_prices ───────────────────────────────────────
@@ -842,6 +851,8 @@ model PurchaseRequest {
   year          String?               @db.VarChar(10)
   colorId       BigInt?               @map("color_id") @db.UnsignedBigInt
   colorName     String?               @map("color_name") @db.VarChar(255)
+  /// Price list the request came from (source = price_list): free zone or national plate.
+  market        PriceListMarket?
   currency      PriceCurrency?
   /// Prices the requester saw when sending: `{ lines: [{ label, price, partner? }] }`.
   priceSnapshot Json?                 @map("price_snapshot")

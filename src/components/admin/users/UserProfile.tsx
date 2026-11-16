@@ -27,6 +27,7 @@ import type { UserRecord } from "@/lib/users";
 import type { UserCarRecord } from "@/lib/user-cars";
 import type { VerificationRecord } from "@/lib/verification-shared";
 import type { RecentPriceTableEntryRecord } from "@/lib/price-table";
+import type { PriceMarket } from "@/lib/price-market";
 import { UserVerificationSection } from "@/components/admin/users/UserVerificationSection";
 import { UserPriceTablePreview } from "@/components/admin/users/UserPriceTablePreview";
 import { CountPill, ProfileSection, SectionEmpty } from "@/components/admin/users/ProfileSection";
@@ -41,7 +42,7 @@ interface UserProfileProps {
   /** Latest ads (max 3) for the minimal preview list. */
   recentAds: UserCarRecord[];
   /** Latest price-table rows (max 3) and the total row count. */
-  priceTable: { total: number; entries: RecentPriceTableEntryRecord[] };
+  priceTable: { total: number; totals: Record<PriceMarket, number>; entries: RecentPriceTableEntryRecord[] };
   /** Latest identity-verification submission (collaborators only); null when none was sent. */
   verification: VerificationRecord | null;
   /** What the viewing admin's role allows on this page. */
@@ -490,7 +491,7 @@ export function UserProfile({ user, saleAdsCount, recentAds, priceTable, verific
 
           {/* Price table (latest 3 rows) */}
           {showPriceTable && (
-            <UserPriceTablePreview userId={user.id} total={priceTable.total} entries={priceTable.entries} />
+            <UserPriceTablePreview userId={user.id} total={priceTable.total} totals={priceTable.totals} entries={priceTable.entries} />
           )}
         </div>
       )}

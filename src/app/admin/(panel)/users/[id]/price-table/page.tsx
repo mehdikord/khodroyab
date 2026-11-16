@@ -9,7 +9,8 @@ import { requireAdminAccess } from "@/lib/auth/guards";
 import { listColors } from "@/lib/colors";
 import { listPriceTableCars, listUserPriceTableEntries } from "@/lib/price-table";
 import { getEnabledPriceFields } from "@/lib/system-settings";
-import { MyPriceTableManager } from "@/components/panel/price-table/MyPriceTableManager";
+import { PriceTableMarketEditor } from "@/components/panel/price-table/PriceTableMarketEditor";
+import { parsePriceMarket } from "@/lib/price-market";
 import { saveUserPriceTableAction } from "./actions";
 
 export const metadata: Metadata = {
@@ -21,10 +22,11 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: { id: string };
+  searchParams: Record<string, string | string[] | undefined>;
 }
 
 /** The admin's editor for one collaborator's price table (same editor the collaborator uses). */
-export default async function AdminUserPriceTablePage({ params }: PageProps) {
+export default async function AdminUserPriceTablePage({ params, searchParams }: PageProps) {
   await requireAdminAccess("price_table");
 
   let userId: bigint;
@@ -72,11 +74,13 @@ export default async function AdminUserPriceTablePage({ params }: PageProps) {
   }
 
   const priceFields = await getEnabledPriceFields();
-  const [cars, entries, colors] = await Promise.all([
+  const [cars, freeZone, national, colors] = await Promise.all([
     listPriceTableCars(),
-    listUserPriceTableEntries(userId, true, priceFields),
+    listUserPriceTableEntries(userId, "free_zone", true, priceFields),
+    listUserPriceTableEntries(userId, "national", true, priceFields),
     listColors(),
   ]);
+  const id = user.id.toString();
 
   return (
     <div className="space-y-5">
@@ -94,14 +98,18 @@ export default async function AdminUserPriceTablePage({ params }: PageProps) {
         </span>
       </div>
 
-      <MyPriceTableManager
+      <PriceTableMarketEditor
         cars={cars}
         colors={colors}
-        initialEntries={entries}
+        entriesByMarket={{ free_zone: freeZone, national }}
         priceFields={priceFields}
-        saveAction={saveUserPriceTableAction.bind(null, user.id.toString())}
-        title={`جدول قیمت ${user.companyName || user.name}`}
-        successMessage="جدول قیمت کاربر ذخیره شد"
+        initialMarket={parsePriceMarket(searchParams.market)}
+        saveActions={{
+          free_zone: saveUserPriceTableAction.bind(null, id, "free_zone"),
+          national: saveUserPriceTableAction.bind(null, id, "national"),
+        }}
+        title={`لیست قیمت ${user.companyName || user.name}`}
+        successMessage="لیست قیمت کاربر ذخیره شد"
       />
     </div>
   );

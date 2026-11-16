@@ -5,7 +5,7 @@ import { ArrowLeft, CalendarClock, Fingerprint, Inbox, ListOrdered, Megaphone, S
 
 import { requireUser } from "@/lib/auth/user-auth";
 import {
-  PURCHASE_REQUEST_SOURCE_LABELS,
+  purchaseRequestSourceLabel,
   PURCHASE_REQUEST_STATUS_LABELS,
   PURCHASE_REQUEST_STATUS_TONES,
   listMyPurchaseRequests,
@@ -68,7 +68,7 @@ export default async function MyPurchaseRequestsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold text-panel-muted">
-                    درخواست <span className="font-mono">{toPersianDigits(request.id)}</span> · از {PURCHASE_REQUEST_SOURCE_LABELS[request.source]}
+                    درخواست <span className="font-mono">{toPersianDigits(request.id)}</span> · از {purchaseRequestSourceLabel(request.source, request.market)}
                   </p>
                   <p className="mt-1 break-words text-sm font-black leading-6 text-panel-text">{toPersianDigits(request.carLabel)}</p>
                 </div>
