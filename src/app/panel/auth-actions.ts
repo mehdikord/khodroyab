@@ -20,8 +20,8 @@ import { toPersianDigits } from "@/lib/utils";
 import { getSystemSettings } from "@/lib/system-settings";
 
 /** Best-effort client IP for throttling. */
-function getClientIp(): string {
-  const headerList = headers();
+async function getClientIp(): Promise<string> {
+  const headerList = await headers();
   const forwardedFor = headerList.get("x-forwarded-for");
   if (forwardedFor) return forwardedFor.split(",")[0]?.trim() || "unknown";
   return headerList.get("x-real-ip") || "unknown";
@@ -55,7 +55,7 @@ export type RequestOtpActionResult =
  * next step can also ask a new customer for their name.
  */
 export async function requestOtpAction(formData: FormData): Promise<RequestOtpActionResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: INVALID_REQUEST };
+  if (!(await isTrustedOrigin())) return { ok: false, message: INVALID_REQUEST };
 
   const parsed = parseOtpRequestForm(formData);
   if (!parsed.success) {
@@ -64,7 +64,7 @@ export async function requestOtpAction(formData: FormData): Promise<RequestOtpAc
   const { phone } = parsed.data;
 
   // Per-IP cap on code requests, so one client cannot spam many numbers.
-  const ipKey = `otp-send::${getClientIp()}`;
+  const ipKey = `otp-send::${await getClientIp()}`;
   const ipLimit = checkRateLimit(ipKey);
   if (!ipLimit.allowed) {
     return {
@@ -121,7 +121,7 @@ export type VerifyOtpActionResult = { ok: true } | { ok: false; message: string;
  * away, never a collaborator; only an administrator can turn that on).
  */
 export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActionResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: INVALID_REQUEST };
+  if (!(await isTrustedOrigin())) return { ok: false, message: INVALID_REQUEST };
 
   const phoneOnly = parseOtpRequestForm(formData);
   if (!phoneOnly.success) {
@@ -129,7 +129,7 @@ export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActi
   }
   const phone = phoneOnly.data.phone;
 
-  const throttleKey = `otp-verify::${getClientIp()}::${phone}`;
+  const throttleKey = `otp-verify::${await getClientIp()}::${phone}`;
   const limit = checkRateLimit(throttleKey);
   if (!limit.allowed) {
     return {
@@ -191,7 +191,7 @@ export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActi
     }
 
     const token = await issueUserSessionToken(sessionUser);
-    setUserSessionCookie(token);
+    await setUserSessionCookie(token);
     return { ok: true };
   } catch (error) {
     console.error("[users:otp-verify] failed", error);
@@ -201,6 +201,6 @@ export async function verifyOtpAction(formData: FormData): Promise<VerifyOtpActi
 
 /** Destroy the current user session; the visitor stays on the public dashboard as a guest. */
 export async function logoutUserAction(): Promise<void> {
-  clearUserSessionCookie();
+  await clearUserSessionCookie();
   redirect(PANEL_HOME);
 }

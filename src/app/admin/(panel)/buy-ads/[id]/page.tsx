@@ -14,10 +14,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default async function AdminBuyAdDetailPage({ params }: PageProps) {
+export default async function AdminBuyAdDetailPage(props: PageProps) {
+  const params = await props.params;
   await requireAdminAccess("ads");
 
   const ad = await getAdminBuyAdDetail(params.id);

@@ -22,7 +22,7 @@ export function issueSessionToken(admin: CurrentAdmin): Promise<string> {
 
 /** Read and verify the current admin session from the request cookies. */
 export async function readSessionFromCookies(): Promise<CurrentAdmin | null> {
-  const token = cookies().get(ADMIN_SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) {
     return null;
   }
@@ -34,9 +34,9 @@ export async function readSessionFromCookies(): Promise<CurrentAdmin | null> {
 }
 
 /** Persist a session token in a hardened HttpOnly cookie. */
-export function setSessionCookie(token: string): void {
+export async function setSessionCookie(token: string): Promise<void> {
   const ttl = getSessionTtlSeconds();
-  cookies().set({
+  (await cookies()).set({
     name: ADMIN_SESSION_COOKIE,
     value: token,
     httpOnly: true,
@@ -48,8 +48,8 @@ export function setSessionCookie(token: string): void {
 }
 
 /** Remove the session cookie, invalidating the client's access. */
-export function clearSessionCookie(): void {
-  cookies().set({
+export async function clearSessionCookie(): Promise<void> {
+  (await cookies()).set({
     name: ADMIN_SESSION_COOKIE,
     value: "",
     httpOnly: true,

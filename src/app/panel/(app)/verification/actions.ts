@@ -22,7 +22,7 @@ export type SubmitVerificationResult =
  * rejected one (and its files) and resets `authenticaed`.
  */
 export async function submitVerificationAction(formData: FormData): Promise<SubmitVerificationResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
   if (!user.collabrate) return { ok: false, message: "احراز هویت فقط برای کاربران همکار فعال است." };

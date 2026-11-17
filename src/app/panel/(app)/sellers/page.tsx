@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-/** Public sellers directory (open to guests): name and code of every verified collaborator. */
+/** Public sellers directory (open to guests): the name of every verified collaborator. */
 export default async function PanelSellersPage() {
   const sellers = await listPublicSellers();
   return <SellersDirectory sellers={sellers} />;

@@ -9,8 +9,8 @@ import { headers } from "next/headers";
  * this helper adds an explicit defense-in-depth guard shared by every action
  * module in the admin panel.
  */
-export function isTrustedOrigin(): boolean {
-  const headerList = headers();
+export async function isTrustedOrigin(): Promise<boolean> {
+  const headerList = await headers();
   const origin = headerList.get("origin");
   const host = headerList.get("host");
   if (!origin || !host) {

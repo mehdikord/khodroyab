@@ -16,7 +16,8 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage({ searchParams }: { searchParams: { filter?: string } }) {
+export default async function AdminUsersPage(props: { searchParams: Promise<{ filter?: string }> }) {
+  const searchParams = await props.searchParams;
   // Ads / price-table admins may browse users (read-only) to act on their behalf.
   const admin = await requireAdminAccess(USER_DIRECTORY_ACCESS);
 

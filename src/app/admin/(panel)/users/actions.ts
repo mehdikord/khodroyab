@@ -16,7 +16,7 @@ import { normalizeDigits } from "@/lib/validation/admin";
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
 async function guardRequest() {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("users");
   if (denied) return { ok: false, message: denied };
   return null;
@@ -288,7 +288,7 @@ function revalidateCollaboratorContent(userId: bigint) {
  * can browse the user list may call it.
  */
 export async function findUsersByCodeAction(code: string): Promise<{ ok: true; userIds: string[] } | { ok: false; message: string }> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied(USER_DIRECTORY_ACCESS);
   if (denied) return { ok: false, message: denied };
   try {

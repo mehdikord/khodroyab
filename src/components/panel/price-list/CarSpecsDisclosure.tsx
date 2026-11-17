@@ -56,8 +56,8 @@ export function CarSpecsDisclosure({ html, carName }: { html: string; carName: s
           "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         )}
-        // React 18 has no typed `inert`; the string form keeps closed content out of tab order.
-        {...(open ? {} : ({ inert: "" } as Record<string, string>))}
+        // Keeps the collapsed content out of the tab order and the accessibility tree.
+        inert={!open}
       >
         <div className="min-h-0 overflow-hidden">
           <div

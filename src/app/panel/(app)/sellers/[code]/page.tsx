@@ -16,17 +16,20 @@ import { SellerHeader } from "@/components/panel/sellers/SellerHeader";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { code: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ code: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const seller = /^\d{8}$/.test(params.code) ? await getPublicSellerByCode(params.code) : null;
   return { title: seller ? `${seller.name} | فروشندگان خودرو یاب` : "فروشنده | خودرو یاب" };
 }
 
 /** A seller's public profile (open to guests): name, code and their approved sale ads. */
-export default async function SellerProfilePage({ params, searchParams }: PageProps) {
+export default async function SellerProfilePage(props: PageProps) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   if (!/^\d{8}$/.test(params.code)) notFound();
   const seller = await getPublicSellerByCode(params.code);
   if (!seller) notFound();

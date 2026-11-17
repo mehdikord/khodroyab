@@ -27,7 +27,7 @@ export type TeamSimpleActionResult = { ok: true } | { ok: false; message: string
 export type TeamReorderResult = { ok: true; records: TeamMemberRecord[] } | { ok: false; message: string };
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("team");
   if (denied) return { ok: false, message: denied };
   return null;

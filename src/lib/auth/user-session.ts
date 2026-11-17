@@ -19,7 +19,7 @@ export function issueUserSessionToken(user: SessionUser): Promise<string> {
 
 /** Read and verify the current user session from the request cookies. */
 export async function readUserSessionFromCookies(): Promise<SessionUser | null> {
-  const token = cookies().get(USER_SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(USER_SESSION_COOKIE)?.value;
   if (!token) return null;
   const payload = await verifySessionToken(token, "user");
   if (!payload) return null;
@@ -27,8 +27,8 @@ export async function readUserSessionFromCookies(): Promise<SessionUser | null> 
 }
 
 /** Persist a user session token in a hardened HttpOnly cookie. */
-export function setUserSessionCookie(token: string): void {
-  cookies().set({
+export async function setUserSessionCookie(token: string): Promise<void> {
+  (await cookies()).set({
     name: USER_SESSION_COOKIE,
     value: token,
     httpOnly: true,
@@ -40,8 +40,8 @@ export function setUserSessionCookie(token: string): void {
 }
 
 /** Remove the user session cookie. */
-export function clearUserSessionCookie(): void {
-  cookies().set({
+export async function clearUserSessionCookie(): Promise<void> {
+  (await cookies()).set({
     name: USER_SESSION_COOKIE,
     value: "",
     httpOnly: true,

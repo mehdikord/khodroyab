@@ -13,14 +13,15 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
  * «تماس با ما» (default tab: office details and active branches) and
  * «درباره خودرویاب» (the administrator's text and the team) on one page, as two tabs.
  */
-export default async function PanelContactPage({ searchParams }: PageProps) {
+export default async function PanelContactPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const [settings, branches, team] = await Promise.all([getSystemSettings(), listActiveBranches(), listActiveTeamMembers()]);
   const tab = searchParams.tab === "about" ? "about" : "contact";
 

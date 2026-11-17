@@ -41,10 +41,11 @@ function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
  * lowest price of each enabled type any seller has entered, with that seller's code.
  */
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function PanelPriceListPage({ searchParams }: PageProps) {
+export default async function PanelPriceListPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   // Two separate lists with the same cars and features: free zone (default) and national plate.
   const market = parsePriceMarket(searchParams.market);
   const user = await getCurrentUser();

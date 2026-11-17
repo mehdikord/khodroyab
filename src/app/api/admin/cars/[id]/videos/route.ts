@@ -18,15 +18,16 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 interface RouteContext {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 function fail(message: string, status: number): Response {
   return Response.json({ ok: false, message }, { status });
 }
 
-export async function POST(request: NextRequest, { params }: RouteContext): Promise<Response> {
-  if (!isTrustedOrigin()) return fail("درخواست نامعتبر است.", 403);
+export async function POST(request: NextRequest, props: RouteContext): Promise<Response> {
+  const params = await props.params;
+  if (!(await isTrustedOrigin())) return fail("درخواست نامعتبر است.", 403);
   const denied = await adminActionDenied("cars");
   if (denied) return fail(denied, 401);
 

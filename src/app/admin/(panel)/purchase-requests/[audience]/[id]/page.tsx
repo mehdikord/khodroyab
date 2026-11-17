@@ -14,11 +14,12 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  params: { audience: string; id: string };
+  params: Promise<{ audience: string; id: string }>;
 }
 
 /** One purchase request in full (root only). Opening it marks it as seen. */
-export default async function AdminPurchaseRequestPage({ params }: PageProps) {
+export default async function AdminPurchaseRequestPage(props: PageProps) {
+  const params = await props.params;
   await requireAdminAccess("root");
   if (params.audience !== "public" && params.audience !== "members") notFound();
 

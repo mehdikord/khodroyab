@@ -19,14 +19,15 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 interface RouteContext {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 function notFound(): Response {
   return new Response("Not Found", { status: 404, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function GET(_request: Request, { params }: RouteContext): Promise<Response> {
+export async function GET(_request: Request, props: RouteContext): Promise<Response> {
+  const params = await props.params;
   if (!/^\d{1,20}$/.test(params.id)) return notFound();
 
   const document = await prisma.userVerificationDocument.findUnique({

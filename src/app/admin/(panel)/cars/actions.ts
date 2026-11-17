@@ -37,7 +37,7 @@ const STALE_RELATION_RESULT = {
 async function guardRequest(): Promise<
   { ok: false; message: string } | null
 > {
-  if (!isTrustedOrigin()) {
+  if (!(await isTrustedOrigin())) {
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
   const denied = await adminActionDenied("cars");

@@ -15,7 +15,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /** Dedicated page of one buy ad: its live price offers and the sale ads of the same car. */
-export default async function BuyAdDetailPage({ params }: { params: { id: string } }) {
+export default async function BuyAdDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await requireUser();
 
   const ad = await getBuyAdDetail(params.id, { id: user.id, isPartner: user.isPartner });

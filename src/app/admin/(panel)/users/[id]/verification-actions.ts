@@ -35,7 +35,7 @@ export async function reviewVerificationAction(
   decision: "approve" | "reject",
   reasonRaw = ""
 ): Promise<ReviewVerificationResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("users");
   if (denied) return { ok: false, message: denied };
   if (decision !== "approve" && decision !== "reject") return { ok: false, message: "تصمیم نامعتبر است" };
@@ -105,7 +105,7 @@ export type AdminSubmitVerificationResult =
  * set to "1" it is stored as approved right away; otherwise it waits for review.
  */
 export async function adminSubmitVerificationAction(userIdRaw: string, formData: FormData): Promise<AdminSubmitVerificationResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("users");
   if (denied) return { ok: false, message: denied };
 

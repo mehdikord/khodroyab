@@ -29,7 +29,7 @@ const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوبار�
 const LAST_ROOT_MESSAGE = "سامانه باید حداقل یک مدیر کل فعال داشته باشد.";
 
 async function guardRequest(): Promise<{ ok: true; actor: AuthorizedAdmin } | { ok: false; message: string }> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const auth = await authorizeAdminAction("root");
   if (!auth.ok) return auth;
   return { ok: true, actor: auth.admin };

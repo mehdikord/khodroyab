@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -25,7 +25,8 @@ interface PageProps {
  * national plate tabs): colour + raw/clearance/instant prices (public and
  * collaborator) per eligible car. Locked until verified.
  */
-export default async function PanelPriceTablePage({ searchParams }: PageProps) {
+export default async function PanelPriceTablePage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const user = await requireCollaborator();
   if (!user.isPartner) return <VerificationRequired feature="ثبت جدول قیمت" />;
   const userId = BigInt(user.id);

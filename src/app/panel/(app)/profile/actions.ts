@@ -19,7 +19,7 @@ export type ProfileActionResult =
   | { ok: false; message: string; fieldErrors?: Record<string, string> };
 
 async function guardRequest(): Promise<{ ok: false; message: string } | { ok: true; userId: bigint }> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: UNAUTHENTICATED_MESSAGE };
   try {

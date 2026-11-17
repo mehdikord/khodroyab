@@ -22,10 +22,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default async function AdminUserSaleAdsPage({ params }: PageProps) {
+export default async function AdminUserSaleAdsPage(props: PageProps) {
+  const params = await props.params;
   await requireAdminAccess("ads");
 
   let userId: bigint;

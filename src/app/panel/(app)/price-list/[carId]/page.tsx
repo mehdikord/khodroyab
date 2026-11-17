@@ -22,11 +22,12 @@ import type { CarMediaItem } from "@/lib/car-media-shared";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { carId: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ carId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   // Only the car's name is used here, so collaborator prices are never needed.
   const detail = await getPriceListCarDetail(params.carId, false, null, { withSellerCodes: false });
   return {
@@ -37,7 +38,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 /** Every seller's prices (enabled types only) for one price-list car (open to guests, public prices only). */
-export default async function PriceListCarPage({ params, searchParams }: PageProps) {
+export default async function PriceListCarPage(props: PageProps) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   // Same tab as the list the visitor came from (free zone by default).
   const market = parsePriceMarket(searchParams.market);
   const user = await getCurrentUser();

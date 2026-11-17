@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -26,7 +26,8 @@ interface PageProps {
  * strip at the top. `?next=` (a panel path) is where the visitor returns
  * after signing in, e.g. the profile page they tapped as a guest.
  */
-export default async function PanelLoginPage({ searchParams }: PageProps) {
+export default async function PanelLoginPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const next = safePanelNext(searchParams.next);
 
   // A *valid* session skips the login screen. A stale/invalid cookie simply

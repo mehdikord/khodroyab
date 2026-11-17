@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function AdminBuyAdsPage({ searchParams }: PageProps) {
+export default async function AdminBuyAdsPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   await requireAdminAccess("ads");
 
   const filters = parseAdminBuyAdFilters(searchParams);

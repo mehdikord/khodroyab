@@ -20,7 +20,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /** Edit one of the customer's own ads; another customer's id simply does not exist. */
-export default async function EditAdPage({ params }: { params: { id: string } }) {
+export default async function EditAdPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await requireCollaborator();
   if (!user.isPartner) return <VerificationRequired feature="ویرایش آگهی" />;
 

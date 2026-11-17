@@ -20,7 +20,7 @@ export type BranchSimpleActionResult = { ok: true } | { ok: false; message: stri
 export type BranchReorderResult = { ok: true; records: BranchRecord[] } | { ok: false; message: string };
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("branches");
   if (denied) return { ok: false, message: denied };
   return null;

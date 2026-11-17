@@ -22,7 +22,7 @@ function parseBigInt(value: string): bigint | null {
 }
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("price_table");
   if (denied) return { ok: false, message: denied };
   return null;

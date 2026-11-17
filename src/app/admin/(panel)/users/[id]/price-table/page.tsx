@@ -21,12 +21,14 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { id: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /** The admin's editor for one collaborator's price table (same editor the collaborator uses). */
-export default async function AdminUserPriceTablePage({ params, searchParams }: PageProps) {
+export default async function AdminUserPriceTablePage(props: PageProps) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   await requireAdminAccess("price_table");
 
   let userId: bigint;

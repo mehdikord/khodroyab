@@ -28,7 +28,8 @@ const PATHNAME = "/panel/search/buy";
 type SearchParams = Record<string, string | string[] | undefined>;
 
 /** Every active buy ad in the system, with text search, filters, sorting and pagination. */
-export default async function BuyAdsSearchPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function BuyAdsSearchPage(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const user = await requireUser();
 
   const filters = parseBuyAdFilters(searchParams);

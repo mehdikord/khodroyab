@@ -16,15 +16,16 @@ import { PurchaseRequestsManager } from "@/components/admin/purchase-requests/Pu
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { audience: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ audience: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function toAudience(value: string): PurchaseRequestAudience | null {
   return value === "public" || value === "members" ? value : null;
 }
 
-export function generateMetadata({ params }: PageProps): Metadata {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const audience = toAudience(params.audience);
   return {
     title: `${audience ? PURCHASE_REQUEST_AUDIENCE_LABELS[audience] : "درخواست‌های خرید"} | پنل مدیریت خودرو یاب`,
@@ -33,7 +34,9 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 /** Purchase requests of guests (`public`) or of signed-in customers (`members`); root only. */
-export default async function AdminPurchaseRequestsPage({ params, searchParams }: PageProps) {
+export default async function AdminPurchaseRequestsPage(props: PageProps) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   await requireAdminAccess("root");
   const audience = toAudience(params.audience);
   if (!audience) notFound();

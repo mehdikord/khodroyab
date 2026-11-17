@@ -17,7 +17,7 @@ export type SystemSettingsActionResult =
 
 /** Save the system settings (root administrator only). */
 export async function saveSystemSettingsAction(formData: FormData): Promise<SystemSettingsActionResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("root");
   if (denied) return { ok: false, message: denied };
 

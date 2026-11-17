@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /** Second step of a new ad: the details of the chosen car. */
-export default async function NewAdDetailsPage({ params }: { params: { carId: string } }) {
+export default async function NewAdDetailsPage(props: { params: Promise<{ carId: string }> }) {
+  const params = await props.params;
   const user = await requireCollaborator();
   if (!user.isPartner) return <VerificationRequired feature="ثبت آگهی" />;
 

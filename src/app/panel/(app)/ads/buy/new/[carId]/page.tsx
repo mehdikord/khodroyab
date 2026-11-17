@@ -16,7 +16,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /** Second step of a new buy ad: year, mileage, colour and notes of the chosen car. */
-export default async function NewBuyAdDetailsPage({ params }: { params: { carId: string } }) {
+export default async function NewBuyAdDetailsPage(props: { params: Promise<{ carId: string }> }) {
+  const params = await props.params;
   const user = await requireCollaborator();
   if (!user.isPartner) return <VerificationRequired feature="ثبت آگهی خرید" />;
 

@@ -26,7 +26,7 @@ function parseBigInt(value: string): bigint | null {
  * edit it whether or not the user's identity is verified yet.
  */
 export async function saveUserPriceTableAction(userIdRaw: string, market: string, formData: FormData): Promise<SavePriceTableResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("price_table");
   if (denied) return { ok: false, message: denied };
   if (!isPriceMarket(market)) return { ok: false, message: GENERIC_FAILURE_MESSAGE };

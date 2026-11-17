@@ -38,10 +38,11 @@ function toBigIntOrNull(value: string): bigint | null {
 }
 
 interface PageProps {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }
 
-export default async function AdminAllAdsPage({ searchParams }: PageProps) {
+export default async function AdminAllAdsPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   await requireAdminAccess("ads");
 
   /* ───── Parse filters from the URL ───── */

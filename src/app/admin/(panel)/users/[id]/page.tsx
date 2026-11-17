@@ -21,10 +21,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default async function AdminUserProfilePage({ params }: PageProps) {
+export default async function AdminUserProfilePage(props: PageProps) {
+  const params = await props.params;
   const admin = await requireAdminAccess(USER_DIRECTORY_ACCESS);
   const access = {
     manageUser: hasPermission(admin, "users"),

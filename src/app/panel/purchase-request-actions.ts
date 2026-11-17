@@ -14,8 +14,8 @@ import { toPersianDigits } from "@/lib/utils";
 
 const GENERIC_FAILURE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
-function clientIp(): string {
-  const list = headers();
+async function clientIp(): Promise<string> {
+  const list = await headers();
   return list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || "unknown";
 }
 
@@ -34,13 +34,13 @@ export type SubmitPurchaseRequestResult =
  * minutes; the in-memory limiter then blocks for 15 minutes).
  */
 export async function submitPurchaseRequestAction(formData: FormData): Promise<SubmitPurchaseRequestResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE };
 
   const user = await getCurrentUser();
   const parsed = parsePurchaseRequestForm(formData, !user);
   if (!parsed.success) return { ok: false, message: parsed.message, fieldErrors: parsed.fieldErrors };
 
-  const keys = [`purchase-request::ip::${clientIp()}`, `purchase-request::phone::${user?.phone ?? parsed.data.guest!.phone}`];
+  const keys = [`purchase-request::ip::${await clientIp()}`, `purchase-request::phone::${user?.phone ?? parsed.data.guest!.phone}`];
   for (const key of keys) {
     const limit = checkRateLimit(key);
     if (!limit.allowed) return { ok: false, message: tooMany(limit.retryAfterSeconds) };

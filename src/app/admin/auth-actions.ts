@@ -25,8 +25,8 @@ export type LoginActionResult =
   | { ok: false; message: string; fieldErrors?: FieldErrors };
 
 /** Best-effort client IP for throttling. */
-function getClientIp(): string {
-  const headerList = headers();
+async function getClientIp(): Promise<string> {
+  const headerList = await headers();
   const forwardedFor = headerList.get("x-forwarded-for");
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || "unknown";
@@ -41,7 +41,7 @@ function getClientIp(): string {
 export async function loginAdminAction(
   formData: FormData
 ): Promise<LoginActionResult> {
-  if (!isTrustedOrigin()) {
+  if (!(await isTrustedOrigin())) {
     return {
       ok: false,
       message: "درخواست نامعتبر است. لطفاً دوباره تلاش کنید.",
@@ -58,7 +58,7 @@ export async function loginAdminAction(
   }
 
   const { phone, password } = parsed.data;
-  const throttleKey = `${getClientIp()}::${phone}`;
+  const throttleKey = `${await getClientIp()}::${phone}`;
 
   const limit = checkRateLimit(throttleKey);
   if (!limit.allowed) {
@@ -83,13 +83,13 @@ export async function loginAdminAction(
 
   resetAttempts(throttleKey);
   const token = await issueSessionToken(admin);
-  setSessionCookie(token);
+  await setSessionCookie(token);
 
   return { ok: true };
 }
 
 /** Destroy the current administrator session. */
 export async function logoutAdminAction(): Promise<void> {
-  clearSessionCookie();
+  await clearSessionCookie();
   redirect("/admin");
 }

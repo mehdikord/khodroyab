@@ -6,7 +6,8 @@ import { getBuyAdOffersState } from "@/lib/buy-ads";
 export const dynamic = "force-dynamic";
 
 /** The live offers panel of a buy ad, polled by the ad page every 20 seconds. */
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+export async function GET(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ message: "unauthorized" }, { status: 401 });
 

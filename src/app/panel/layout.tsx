@@ -18,8 +18,8 @@ export const viewport: Viewport = {
  * a cookie so the chosen theme is server-rendered without a flash. The public Navbar, Footer and mobile
  * dock are suppressed for `/panel/*` routes.
  */
-export default function PanelSectionLayout({ children }: { children: React.ReactNode }) {
-  const theme = readPanelTheme();
+export default async function PanelSectionLayout({ children }: { children: React.ReactNode }) {
+  const theme = await readPanelTheme();
   return (
     <div className="panel-root panel-scrollbar" data-theme={theme}>
       {children}

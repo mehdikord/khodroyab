@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 interface RouteContext {
-  params: { path: string[] };
+  params: Promise<{ path: string[] }>;
 }
 
 function notFound(): Response {
@@ -80,7 +80,8 @@ function parseRange(header: string | null, size: number): { start: number; end: 
   return { start, end };
 }
 
-export async function GET(request: NextRequest, { params }: RouteContext): Promise<Response> {
+export async function GET(request: NextRequest, props: RouteContext): Promise<Response> {
+  const params = await props.params;
   const file = await lookup(params.path ?? []);
   if (!file) return notFound();
 
@@ -111,7 +112,8 @@ export async function GET(request: NextRequest, { params }: RouteContext): Promi
   return new Response(body, { status: 200, headers });
 }
 
-export async function HEAD(_request: NextRequest, { params }: RouteContext): Promise<Response> {
+export async function HEAD(_request: NextRequest, props: RouteContext): Promise<Response> {
+  const params = await props.params;
   const file = await lookup(params.path ?? []);
   if (!file) return notFound();
   return new Response(null, { status: 200, headers: buildHeaders(file) });

@@ -15,7 +15,7 @@ import { getSystemSettings } from "@/lib/system-settings";
  */
 export default async function PanelAppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
-  const theme = readPanelTheme();
+  const theme = await readPanelTheme();
   const settings = await getSystemSettings();
 
   return (

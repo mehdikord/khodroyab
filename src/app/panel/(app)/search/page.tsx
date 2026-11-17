@@ -63,7 +63,8 @@ function filtersToQuery(filters: SearchFilterValues): string {
  * Car search: every approved, active sale ad in the system, with text search,
  * advanced filters, sorting and pagination. Open to guests (public prices only).
  */
-export default async function PanelSearchPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function PanelSearchPage(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const user = await getCurrentUser();
 
   const filters = parseFilters(searchParams);

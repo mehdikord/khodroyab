@@ -22,7 +22,7 @@ function revalidateRequests(id: string) {
 
 /** Change a request's status (root only); the change is logged with the admin's name. */
 export async function setPurchaseRequestStatusAction(id: string, status: string): Promise<PurchaseRequestActionResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const auth = await authorizeAdminAction("root");
   if (!auth.ok) return auth;
   if (!isPurchaseRequestStatus(status)) return { ok: false, message: "وضعیت نامعتبر است" };
@@ -40,7 +40,7 @@ export async function setPurchaseRequestStatusAction(id: string, status: string)
 
 /** Save the internal note of a request (root only). */
 export async function savePurchaseRequestNoteAction(id: string, note: string): Promise<PurchaseRequestActionResult> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const auth = await authorizeAdminAction("root");
   if (!auth.ok) return auth;
   const parsed = adminNoteSchema.safeParse(note);

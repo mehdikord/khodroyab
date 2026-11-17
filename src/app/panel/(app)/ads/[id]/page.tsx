@@ -19,7 +19,8 @@ export const dynamic = "force-dynamic";
  * Dedicated page of one sale ad. Guests may open any public ad (public prices
  * only); a signed-in owner also sees their own pending / rejected / inactive ad.
  */
-export default async function AdDetailPage({ params }: { params: { id: string } }) {
+export default async function AdDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getCurrentUser();
 
   // Same cached open-market quote as the dashboard; never a fresh request per view.

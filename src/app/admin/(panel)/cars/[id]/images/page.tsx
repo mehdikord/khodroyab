@@ -15,10 +15,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default async function CarImagesPage({ params }: PageProps) {
+export default async function CarImagesPage(props: PageProps) {
+  const params = await props.params;
   await requireAdminAccess("cars");
 
   let carId: bigint;

@@ -6,7 +6,7 @@
  * panel (buy ads, profile, my ads, my price table, verification) needs an
  * account.
  *
- * Shared by the middleware (edge) and the server, so it must stay free of
+ * Shared by the proxy (`src/proxy.ts`) and the server, so it must stay free of
  * server-only imports.
  */
 const PUBLIC_PANEL_PATTERNS: RegExp[] = [

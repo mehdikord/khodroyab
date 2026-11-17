@@ -11,13 +11,13 @@ import { isPublicPanelPath } from "@/lib/auth/public-panel";
  * database validation happen server-side on every request via the protected
  * pages (`requireAdmin()` / `requireUser()`) and the login pages.
  *
- * This split matters: middleware cannot be the authority on whether a session
+ * This split matters: the proxy cannot be the authority on whether a session
  * is *valid*, only on whether one was *offered*. Redirecting authenticated
  * visitors away from a login screen is therefore handled by the login page
  * itself, which can actually verify the token — this avoids redirect loops
  * caused by a stale or tampered cookie.
  *
- * Middleware is defense-in-depth and UX sugar only; it is never the sole
+ * The proxy is defense-in-depth and UX sugar only; it is never the sole
  * authorization mechanism.
  */
 
@@ -79,7 +79,7 @@ function redirectTo(request: NextRequest, pathname: string, params?: Record<stri
   return NextResponse.redirect(url);
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   // The site root and any non-panel URL open the home page (sellers).

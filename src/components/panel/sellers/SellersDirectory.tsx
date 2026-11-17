@@ -2,27 +2,21 @@
 
 import React, { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
-import { BadgeCheck, ChevronLeft, Fingerprint, Search, SearchX, Store, X } from "lucide-react";
+import { BadgeCheck, ChevronLeft, Search, SearchX, Store, X } from "lucide-react";
 
-import { groupSellerCode, SellerMonogram } from "@/components/panel/sellers/seller-ui";
+import { SellerMonogram } from "@/components/panel/sellers/seller-ui";
 import { cn, toPersianDigits } from "@/lib/utils";
 
 export interface DirectorySeller {
   name: string;
+  /** Only used for the profile link; not shown in the directory. */
   code: string;
 }
 
-/** Persian / Arabic digits → ASCII, spaces removed (for code search). */
-function asciiDigits(input: string): string {
-  return input
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
-}
-
 /**
- * The sellers directory: hero with the count and an instant search (name or
- * code), then one card per seller (monogram, name, code) linking to their
- * profile with their ads.
+ * The sellers directory: hero with the count and an instant name search,
+ * then one card per seller (monogram and name) linking to their profile
+ * with their ads.
  */
 export function SellersDirectory({ sellers }: { sellers: DirectorySeller[] }) {
   const [query, setQuery] = useState("");
@@ -31,8 +25,7 @@ export function SellersDirectory({ sellers }: { sellers: DirectorySeller[] }) {
   const results = useMemo(() => {
     const text = deferred.trim();
     if (!text) return sellers;
-    const digits = asciiDigits(text).replace(/\s+/g, "");
-    return sellers.filter((seller) => seller.name.includes(text) || (/^\d+$/.test(digits) && seller.code.includes(digits)));
+    return sellers.filter((seller) => seller.name.includes(text));
   }, [sellers, deferred]);
 
   return (
@@ -64,7 +57,7 @@ export function SellersDirectory({ sellers }: { sellers: DirectorySeller[] }) {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="جستجوی نام یا کد فروشنده…"
+                placeholder="جستجوی نام فروشنده…"
                 aria-label="جستجوی فروشنده"
                 className="h-12 w-full rounded-2xl border border-panel-line/[0.12] bg-panel-bg/80 pe-11 ps-11 text-sm text-panel-text outline-none backdrop-blur transition-all placeholder:text-panel-faint hover:border-panel-line/25 focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"
               />
@@ -97,9 +90,9 @@ export function SellersDirectory({ sellers }: { sellers: DirectorySeller[] }) {
               {sellers.length === 0 ? <Store className="h-7 w-7" /> : <SearchX className="h-7 w-7" />}
             </span>
             <p className="mt-5 text-base font-extrabold text-panel-text">
-              {sellers.length === 0 ? "هنوز فروشنده فعالی ثبت نشده است" : "فروشنده‌ای با این نام یا کد پیدا نشد"}
+              {sellers.length === 0 ? "هنوز فروشنده فعالی ثبت نشده است" : "فروشنده‌ای با این نام پیدا نشد"}
             </p>
-            {sellers.length > 0 && <p className="mt-2 text-xs text-panel-muted-2">نام دیگری را امتحان کنید یا کد ۸ رقمی فروشنده را وارد کنید.</p>}
+            {sellers.length > 0 && <p className="mt-2 text-xs text-panel-muted-2">نام دیگری را امتحان کنید.</p>}
           </div>
         </div>
       ) : (
@@ -119,15 +112,7 @@ export function SellersDirectory({ sellers }: { sellers: DirectorySeller[] }) {
                   className="pointer-events-none absolute inset-y-0 -start-1/3 w-1/4 skew-x-[-20deg] bg-gradient-to-l from-transparent via-[#FF6A00]/10 to-transparent opacity-0 transition-all duration-700 group-hover:start-[110%] group-hover:opacity-100"
                 />
                 <SellerMonogram name={seller.name} className="h-14 w-14 text-base" />
-                <span className="min-w-0 flex-1">
-                  <span className="line-clamp-2 break-words text-sm font-extrabold leading-6 text-panel-text">{seller.name}</span>
-                  <span className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-panel-line/[0.08] bg-panel-bg/70 px-2 py-1">
-                    <Fingerprint className="h-3.5 w-3.5 text-panel-accent" />
-                    <span dir="ltr" className="font-mono text-[12px] font-bold tracking-[0.14em] text-panel-text-2">
-                      {toPersianDigits(groupSellerCode(seller.code))}
-                    </span>
-                  </span>
-                </span>
+                <span className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-extrabold leading-6 text-panel-text">{seller.name}</span>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-panel-line/[0.05] text-panel-muted transition-all group-hover:bg-[#FF6A00] group-hover:text-[#07090C]">
                   <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                 </span>

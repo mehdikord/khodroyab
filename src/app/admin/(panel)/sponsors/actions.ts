@@ -22,7 +22,7 @@ export type SponsorSimpleActionResult = { ok: true } | { ok: false; message: str
 export type SponsorReorderResult = { ok: true; records: SponsorRecord[] } | { ok: false; message: string };
 
 async function guardRequest(): Promise<{ ok: false; message: string } | null> {
-  if (!isTrustedOrigin()) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  if (!(await isTrustedOrigin())) return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   const denied = await adminActionDenied("sponsors");
   if (denied) return { ok: false, message: denied };
   return null;
