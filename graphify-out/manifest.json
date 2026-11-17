@@ -540,9 +540,9 @@
     "semantic_hash": "449e1f7412e2c2107a2275efdc5e9b02"
   },
   "src/components/admin/admin-nav.tsx": {
-    "mtime": 1794747376.7532547,
-    "seen": 1794747629.7553906,
-    "ast_hash": "5df5379e942e94966eb39cfaef30e783",
+    "mtime": 1794904692.777509,
+    "seen": 1794904989.5811634,
+    "ast_hash": "ac6011e33fc98250dafc88a100873188",
     "semantic_hash": ""
   },
   "src/components/admin/admins/AdminFormModal.tsx": {
@@ -744,9 +744,9 @@
     "semantic_hash": "d3db9b1b7e53f49c66c36676f150f065"
   },
   "src/components/admin/roles/PermissionChips.tsx": {
-    "mtime": 1794413103.2151985,
-    "seen": 1794413498.875441,
-    "ast_hash": "55ae72d38f6689922c7067b563e0199c",
+    "mtime": 1794904930.5626247,
+    "seen": 1794904989.5824544,
+    "ast_hash": "f4afed848879fd8882ebd6f7f23a1355",
     "semantic_hash": ""
   },
   "src/components/admin/roles/RoleFormModal.tsx": {
@@ -1206,9 +1206,9 @@
     "semantic_hash": "309ac6625ee5275ee264dc5c1c525229"
   },
   "src/lib/auth/permissions.ts": {
-    "mtime": 1794413098.1122148,
-    "seen": 1794413498.8780997,
-    "ast_hash": "ee8e93574e3c47e61bd6f77decb56a1c",
+    "mtime": 1794904692.7773397,
+    "seen": 1794904989.5865383,
+    "ast_hash": "a194a7ab8a8cb07214d710e316f941ce",
     "semantic_hash": ""
   },
   "src/lib/auth/rate-limit.ts": {
@@ -1392,9 +1392,9 @@
     "semantic_hash": "0320ba624d140754423fc8e9f312c356"
   },
   "src/lib/uploads.ts": {
-    "mtime": 1794766446.9004688,
-    "seen": 1794767008.178248,
-    "ast_hash": "fc4fc8cbdd2ef0c90b69b1dc3d42bbca",
+    "mtime": 1794904692.7774508,
+    "seen": 1794904989.5878613,
+    "ast_hash": "a715e09ab34699ca54ab46f9496708e9",
     "semantic_hash": ""
   },
   "src/lib/user-car-extras.ts": {
@@ -1680,9 +1680,9 @@
     "semantic_hash": ""
   },
   "src/app/panel/(app)/contact/page.tsx": {
-    "mtime": 1794829373.679194,
-    "seen": 1794829556.859912,
-    "ast_hash": "5c98ca81e2ba9f2978ca7232396f86bb",
+    "mtime": 1794904808.6389737,
+    "seen": 1794904989.5803952,
+    "ast_hash": "ca5d5d8f406f54d03150d8fa6e9a7aa6",
     "semantic_hash": ""
   },
   "src/components/panel/about/AboutHeroScene.tsx": {
@@ -1692,9 +1692,9 @@
     "semantic_hash": ""
   },
   "src/components/panel/about/AboutView.tsx": {
-    "mtime": 1794411174.5035577,
-    "seen": 1794412302.69521,
-    "ast_hash": "79c275c7f1222bc9546c45c945236cf2",
+    "mtime": 1794904808.6388636,
+    "seen": 1794904989.5839553,
+    "ast_hash": "c562371330212e6d4a0913fde9d9b681",
     "semantic_hash": ""
   },
   "src/components/panel/contact/BrandIcons.tsx": {
@@ -2241,6 +2241,54 @@
     "mtime": 1794833009.4014528,
     "seen": 1794833048.3160617,
     "ast_hash": "a5d5e3fee31b0d1279ad13444d137ca7",
+    "semantic_hash": ""
+  },
+  "src/app/admin/(panel)/team/actions.ts": {
+    "mtime": 1794904737.5394263,
+    "seen": 1794904989.579097,
+    "ast_hash": "822dfc6bd8d61a3e63b81ec813682a55",
+    "semantic_hash": ""
+  },
+  "src/app/admin/(panel)/team/page.tsx": {
+    "mtime": 1794904738.323387,
+    "seen": 1794904989.579099,
+    "ast_hash": "a25c52bb5f5881b3b0f979965a599dbd",
+    "semantic_hash": ""
+  },
+  "src/components/admin/team/TeamManager.tsx": {
+    "mtime": 1794904904.0844142,
+    "seen": 1794904989.58286,
+    "ast_hash": "9926eabbaa12a79272c61f3d65e5ff3e",
+    "semantic_hash": ""
+  },
+  "src/components/admin/team/TeamMemberFormModal.tsx": {
+    "mtime": 1794904902.5173302,
+    "seen": 1794904989.5828614,
+    "ast_hash": "edb08eb8a628cd9817ca8450ba2f6482",
+    "semantic_hash": ""
+  },
+  "src/components/admin/team/TeamTable.tsx": {
+    "mtime": 1794904903.3044212,
+    "seen": 1794904989.5828624,
+    "ast_hash": "0e2392b8cd5a012fab7b2b564f026b9c",
+    "semantic_hash": ""
+  },
+  "src/components/panel/about/TeamSection.tsx": {
+    "mtime": 1794904800.898577,
+    "seen": 1794904989.5839567,
+    "ast_hash": "4a88fb993a3be2d00b59f58a35ac22cb",
+    "semantic_hash": ""
+  },
+  "src/lib/team.ts": {
+    "mtime": 1794904735.9615052,
+    "seen": 1794904989.5878594,
+    "ast_hash": "0ee9d631ab475124126c709360d7568e",
+    "semantic_hash": ""
+  },
+  "src/lib/validation/team.ts": {
+    "mtime": 1794904736.749466,
+    "seen": 1794904989.5885127,
+    "ast_hash": "981fb9147fe8230b050a7b3de568a73e",
     "semantic_hash": ""
   }
 }

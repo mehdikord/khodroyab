@@ -568,6 +568,26 @@ model Sponsor {
   @@map("sponsors")
 }
 
+/// A Khodroyab team member, shown on the "About us" page in display order.
+model TeamMember {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(255)
+  /// Photo path (`/uploads/team/...`) or absolute URL.
+  photo     String   @db.VarChar(1024)
+  /// Role/title within the company (سمت در مجموعه).
+  position  String   @db.VarChar(255)
+  /// Optional short bio.
+  bio       String?  @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  /// Display priority: lower numbers are shown first.
+  sortOrder Int      @default(0) @map("sort_order") @db.UnsignedInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([isActive, sortOrder])
+  @@map("team_members")
+}
+
 /// Legal form of a collaborator: natural person (حقیقی) or legal entity (حقوقی).
 enum VerificationPersonType {
   natural

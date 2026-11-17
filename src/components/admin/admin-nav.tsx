@@ -13,6 +13,7 @@ import {
   KeyRound,
   Settings,
   ShoppingBag,
+  UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -102,6 +103,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/sponsors",
         icon: HeartHandshake,
         requirement: "sponsors",
+      },
+      {
+        key: "team",
+        label: "تیم خودرویاب",
+        enLabel: "TEAM",
+        href: "/admin/team",
+        icon: UsersRound,
+        requirement: "team",
       },
       {
         key: "branches",

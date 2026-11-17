@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { getSystemSettings } from "@/lib/system-settings";
 import { listActiveBranches } from "@/lib/branches";
+import { listActiveTeamMembers } from "@/lib/team";
 import { ContactView } from "@/components/panel/contact/ContactView";
 import { AboutView } from "@/components/panel/about/AboutView";
 import { InfoTabs } from "@/components/panel/contact/InfoTabs";
@@ -17,10 +18,10 @@ interface PageProps {
 
 /**
  * «تماس با ما» (default tab: office details and active branches) and
- * «درباره خودرویاب» (the administrator's text) on one page, as two tabs.
+ * «درباره خودرویاب» (the administrator's text and the team) on one page, as two tabs.
  */
 export default async function PanelContactPage({ searchParams }: PageProps) {
-  const [settings, branches] = await Promise.all([getSystemSettings(), listActiveBranches()]);
+  const [settings, branches, team] = await Promise.all([getSystemSettings(), listActiveBranches(), listActiveTeamMembers()]);
   const tab = searchParams.tab === "about" ? "about" : "contact";
 
   return (
@@ -40,7 +41,7 @@ export default async function PanelContactPage({ searchParams }: PageProps) {
           branches={branches}
         />
       }
-      about={<AboutView text={settings.aboutText} />}
+      about={<AboutView text={settings.aboutText} team={team} />}
     />
   );
 }

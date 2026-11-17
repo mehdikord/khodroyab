@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FileText, PhoneCall, Search } from "lucide-react";
 
 import { AboutHeroScene } from "@/components/panel/about/AboutHeroScene";
+import { TeamSection, type TeamSectionMember } from "@/components/panel/about/TeamSection";
 
 /** Split the admin's text into paragraphs on blank lines; single line breaks stay inside a paragraph. */
 function toParagraphs(text: string): string[] {
@@ -16,9 +17,10 @@ function toParagraphs(text: string): string[] {
  * "About Khodroyab" page. One memorable moment: an animated night-drive hero
  * (a sports car drawing itself in, then driving past a moving city). Below it the administrator's text
  * reads as an editorial column: the first paragraph as a larger lede, the
- * rest in a narrow measure guided by an orange rule.
+ * rest in a narrow measure guided by an orange rule. The team (if any) follows
+ * the text, in the administrator's order.
  */
-export function AboutView({ text }: { text: string }) {
+export function AboutView({ text, team = [] }: { text: string; team?: TeamSectionMember[] }) {
   const [lede, ...rest] = toParagraphs(text);
 
   return (
@@ -58,6 +60,9 @@ export function AboutView({ text }: { text: string }) {
           <p className="mt-1.5 text-xs leading-6 text-panel-muted-2">تا آن زمان می‌توانید آگهی‌ها و لیست قیمت خودروها را ببینید.</p>
         </div>
       )}
+
+      {/* Team */}
+      <TeamSection members={team} />
 
       {/* Next steps */}
       <nav aria-label="ادامه مسیر" className="mx-auto flex max-w-[68ch] flex-col gap-2 px-1 sm:flex-row sm:px-2">
