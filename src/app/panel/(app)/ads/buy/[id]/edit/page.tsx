@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { requireCollaborator } from "@/lib/auth/user-auth";
-import { getMyBuyAd, listBuyAdCarChoices, listBuyAdColors } from "@/lib/buy-ads";
+import { getMyBuyAd, listBuyAdColors } from "@/lib/buy-ads";
+import { listBrandChoices } from "@/lib/catalog";
+import { carChoiceFromAd } from "@/lib/catalog-shared";
 import { BuyAdForm } from "@/components/panel/buy-ads/BuyAdForm";
 import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
@@ -23,6 +25,9 @@ export default async function EditBuyAdPage(props: { params: Promise<{ id: strin
   const ad = await getMyBuyAd(params.id, BigInt(user.id));
   if (!ad) notFound();
 
-  const [cars, colors] = await Promise.all([listBuyAdCarChoices(), listBuyAdColors()]);
-  return <BuyAdForm mode="edit" ad={ad} cars={cars} colors={colors} buyerCode={ad.buyerCode} />;
+  // Brands only: the form fetches the chosen brand's cars on demand.
+  const [brands, colors] = await Promise.all([listBrandChoices({ carWhere: {} }), listBuyAdColors()]);
+  return (
+    <BuyAdForm mode="edit" ad={ad} initialCar={carChoiceFromAd(ad)} brands={brands} colors={colors} buyerCode={ad.buyerCode} />
+  );
 }

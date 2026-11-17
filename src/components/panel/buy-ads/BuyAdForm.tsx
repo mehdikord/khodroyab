@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useId, useMemo, useRef, useState, useTransition } from "react";
+import React, { useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, Eye, Fingerprint, Gavel, Loader2, Lock, Send, ShieldCheck, Zap } from "lucide-react";
 
-import { SearchableSelect, type SearchableSelectOption } from "@/components/admin/ui/SearchableSelect";
+import { SearchableSelect } from "@/components/admin/ui/SearchableSelect";
+import { useCarSelection } from "@/components/catalog/useCarSelection";
+import type { BrandChoice, CarChoice } from "@/lib/catalog-shared";
 import { ColorSwatch } from "@/components/admin/ui/ColorSwatch";
-import type { AdCarChoice } from "@/components/panel/ads/AdCarPicker";
 import { BuyAdCard } from "@/components/panel/buy-ads/BuyAdCard";
 import { createBuyAdAction, updateBuyAdAction } from "@/app/panel/(app)/ads/buy/actions";
 import { BUY_AD_DESCRIPTION_MAX, type BuyAdRecord } from "@/lib/buy-ads-shared";
@@ -24,9 +25,10 @@ interface BuyAdFormColor {
 interface BuyAdFormProps {
   mode: "create" | "edit";
   ad: BuyAdRecord | null;
-  /** Car picked in the first step of the create flow. */
-  initialCarId?: string;
-  cars: AdCarChoice[];
+  /** Car picked in the first step (create) or the ad's current car (edit). */
+  initialCar: CarChoice | null;
+  /** Brands to switch the car (edit only); their cars are fetched on demand. */
+  brands: BrandChoice[];
   colors: BuyAdFormColor[];
   /** The user's current public code, for the live preview. */
   buyerCode: string;
@@ -82,15 +84,23 @@ function presetLabel(km: number): string {
  * optional notes, plus the currency collaborators will offer prices in. There
  * is no moderation, so a live preview of the public card sits beside the form.
  */
-export function BuyAdForm({ mode, ad, initialCarId, cars, colors, buyerCode }: BuyAdFormProps) {
+export function BuyAdForm({ mode, ad, initialCar, brands, colors, buyerCode }: BuyAdFormProps) {
   const isEdit = mode === "edit";
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const ids = { brand: useId(), car: useId(), year: useId(), mileage: useId(), description: useId() };
 
-  const initialCar = cars.find((car) => car.id === (ad?.carId ?? initialCarId)) ?? null;
-  const [brandId, setBrandId] = useState(initialCar?.brandId ?? "");
-  const [carId, setCarId] = useState(initialCar?.id ?? "");
+  const {
+    brandId,
+    carId,
+    selectBrand: handleBrandChange,
+    selectCar: setCarId,
+    brandOptions,
+    carOptions,
+    selectedCar,
+    carsLoading,
+    carsError,
+  } = useCarSelection(brands, initialCar);
   const [year, setYear] = useState(ad?.year ?? "");
   const [mileage, setMileage] = useState(ad ? String(ad.mileage) : "");
   const [colorId, setColorId] = useState(ad?.colorId ?? "");
@@ -103,28 +113,7 @@ export function BuyAdForm({ mode, ad, initialCarId, cars, colors, buyerCode }: B
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const selectedCar = cars.find((car) => car.id === carId) ?? null;
   const selectedColor = colors.find((color) => color.id === colorId) ?? null;
-
-  const brandOptions = useMemo<SearchableSelectOption[]>(() => {
-    const counts = new Map<string, { name: string; count: number }>();
-    for (const car of cars) {
-      const entry = counts.get(car.brandId) ?? { name: car.brandName, count: 0 };
-      entry.count += 1;
-      counts.set(car.brandId, entry);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => a[1].name.localeCompare(b[1].name, "fa"))
-      .map(([id, { name, count }]) => ({ value: id, label: name, description: `${toPersianDigits(count)} خودرو` }));
-  }, [cars]);
-
-  const carOptions = useMemo<SearchableSelectOption[]>(
-    () =>
-      cars
-        .filter((car) => car.brandId === brandId)
-        .map((car) => ({ value: car.id, label: car.name, description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`, keywords: car.model })),
-    [cars, brandId]
-  );
 
   const mileageValue = mileageNumber(mileage);
   const mileageFormatted = formatPersianNumber(mileage);
@@ -155,10 +144,6 @@ export function BuyAdForm({ mode, ad, initialCarId, cars, colors, buyerCode }: B
     createdAtLabel: ad?.createdAtLabel ?? "همین حالا",
   };
 
-  function handleBrandChange(next: string) {
-    setBrandId(next);
-    setCarId("");
-  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -264,8 +249,9 @@ export function BuyAdForm({ mode, ad, initialCarId, cars, colors, buyerCode }: B
                       placeholder={brandId ? "خودرو را انتخاب کنید" : "ابتدا برند را انتخاب کنید"}
                       searchPlaceholder="جستجوی نام یا مدل…"
                       emptyText="خودرویی برای این برند پیدا نشد"
+                      loading={carsLoading}
                     />
-                    <FieldError message={fieldErrors.carId} />
+                    <FieldError message={fieldErrors.carId ?? carsError ?? undefined} />
                   </div>
                 </div>
               ) : (
@@ -459,7 +445,7 @@ export function BuyAdForm({ mode, ad, initialCarId, cars, colors, buyerCode }: B
               </Link>
               <button
                 type="submit"
-                disabled={isPending || cars.length === 0}
+                disabled={isPending || !carId}
                 className="flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#FF6A00] to-[#FF8A2A] px-6 text-sm font-extrabold text-[#07090C] shadow-[0_0_28px_rgba(255,106,0,0.35)] transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isPending ? (

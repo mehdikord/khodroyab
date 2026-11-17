@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { carRecordInclude, carToRecord, type CarRecord } from "@/lib/cars";
 import { adminActionDenied } from "@/lib/auth/guards";
 import { isTrustedOrigin } from "@/lib/auth/request-guard";
+import { priceTableCarWhere, type PriceTableFilters } from "@/lib/catalog";
 
 const GENERIC_FAILURE_MESSAGE = "خطایی رخ داد؛ لطفاً دوباره تلاش کنید.";
 
@@ -87,6 +88,39 @@ export async function setCarsPriceTableAction(ids: string[], enabled: boolean): 
     return { ok: true, records: records.map(carToRecord) };
   } catch (error) {
     console.error("[price-table:bulk] failed", error);
+    return { ok: false, message: GENERIC_FAILURE_MESSAGE };
+  }
+}
+
+export type PriceTableFilteredBulkResult = { ok: true; count: number } | { ok: false; message: string };
+
+/**
+ * Enable or disable every car matching the screen's filters (all pages), in
+ * one UPDATE on the server, so the browser never has to hold the full list.
+ */
+export async function setFilteredCarsPriceTableAction(
+  filters: PriceTableFilters,
+  enabled: boolean
+): Promise<PriceTableFilteredBulkResult> {
+  const guardResult = await guardRequest();
+  if (guardResult) return guardResult;
+
+  const safe: PriceTableFilters = {
+    q: typeof filters?.q === "string" ? filters.q.slice(0, 100) : "",
+    brandId: typeof filters?.brandId === "string" ? filters.brandId : "",
+    status: filters?.status === "enabled" || filters?.status === "disabled" ? filters.status : "",
+  };
+
+  try {
+    const where = priceTableCarWhere(safe);
+    const result = await prisma.car.updateMany({
+      where: { AND: [where, { priceTable: !enabled }] },
+      data: { priceTable: Boolean(enabled) },
+    });
+    revalidatePriceTablePages();
+    return { ok: true, count: result.count };
+  } catch (error) {
+    console.error("[price-table:bulk-filter] failed", error);
     return { ok: false, message: GENERIC_FAILURE_MESSAGE };
   }
 }

@@ -1,21 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Car, ChevronLeft, Search } from "lucide-react";
+import { ArrowRight, Car, ChevronLeft, Loader2, Search } from "lucide-react";
 
 import { SafeImage } from "@/components/panel/SafeImage";
-import { cn, toPersianDigits } from "@/lib/utils";
+import { SearchableSelect } from "@/components/admin/ui/SearchableSelect";
+import { brandOptionsOf, fetchCarPage } from "@/components/catalog/useCarSelection";
+import { CAR_PICKER_PAGE_SIZE, type BrandChoice, type CarChoice, type CarChoicePage } from "@/lib/catalog-shared";
+import { toPersianDigits } from "@/lib/utils";
 
-export interface AdCarChoice {
-  id: string;
-  name: string;
-  model: string;
-  brandId: string;
-  brandName: string;
-  carTypeName: string;
-  imageUrl: string | null;
-}
+/** @deprecated use `CarChoice` from `@/lib/catalog-shared`. */
+export type AdCarChoice = CarChoice;
 
 function NoImage() {
   return (
@@ -26,7 +22,9 @@ function NoImage() {
 }
 
 interface AdCarPickerProps {
-  cars: AdCarChoice[];
+  brands: BrandChoice[];
+  /** First page, rendered on the server. */
+  initialPage: CarChoicePage;
   /** Each car links to `${basePath}/${carId}`. */
   basePath?: string;
   backHref?: string;
@@ -35,9 +33,14 @@ interface AdCarPickerProps {
   subtitle?: string;
 }
 
-/** First step of a new ad (sale or buy): search the catalogue and pick a car. */
+/**
+ * First step of a new ad (sale or buy): search the catalogue and pick a car.
+ * The catalogue is searched on the server one page at a time; further pages
+ * load as the list is scrolled.
+ */
 export function AdCarPicker({
-  cars,
+  brands,
+  initialPage,
   basePath = "/panel/ads/new",
   backHref = "/panel/ads",
   backLabel = "آگهی‌های من",
@@ -46,29 +49,69 @@ export function AdCarPicker({
 }: AdCarPickerProps) {
   const [query, setQuery] = useState("");
   const [brandId, setBrandId] = useState("");
+  const [items, setItems] = useState<CarChoice[]>(initialPage.items);
+  const [page, setPage] = useState(initialPage.page);
+  const [pageCount, setPageCount] = useState(initialPage.pageCount);
+  const [total, setTotal] = useState(initialPage.total);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const firstRun = useRef(true);
 
-  const brands = useMemo(() => {
-    const names = new Map<string, string>();
-    for (const car of cars) names.set(car.brandId, car.brandName);
-    return Array.from(names.entries()).map(([id, name]) => ({ id, name }));
-  }, [cars]);
+  const brandOptions = useMemo(() => brandOptionsOf(brands), [brands]);
 
-  const visible = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return cars.filter((car) => {
-      if (brandId && car.brandId !== brandId) return false;
-      if (!normalized) return true;
-      return `${car.brandName} ${car.name} ${car.model} ${car.carTypeName}`.toLowerCase().includes(normalized);
-    });
-  }, [cars, query, brandId]);
+  async function load(nextPage: number, replace: boolean) {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchCarPage(
+        { q: query.trim(), brandId, page: nextPage, size: CAR_PICKER_PAGE_SIZE },
+        controller.signal
+      );
+      setItems((prev) => (replace ? result.items : [...prev, ...result.items]));
+      setPage(result.page);
+      setPageCount(result.pageCount);
+      setTotal(result.total);
+    } catch (err) {
+      if ((err as { name?: string }).name !== "AbortError") setError("بارگذاری خودروها ناموفق بود.");
+    } finally {
+      if (abortRef.current === controller) setLoading(false);
+    }
+  }
 
-  const chipClass = (active: boolean) =>
-    cn(
-      "inline-flex h-9 shrink-0 items-center rounded-full border px-3.5 text-xs font-bold transition-colors",
-      active
-        ? "border-[#FF6A00]/50 bg-[#FF6A00]/15 text-panel-accent"
-        : "border-panel-line/[0.1] bg-panel-surface text-panel-muted hover:border-panel-line/20 hover:text-panel-text"
+  // New search or brand: restart from page 1 (debounced for typing).
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const timer = setTimeout(() => void load(1, true), 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, brandId]);
+
+  const hasMore = page < pageCount;
+
+  // Infinite scroll: fetch the next page when the sentinel comes into view.
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasMore || loading || error) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void load(page + 1, false);
+      },
+      { rootMargin: "400px" }
     );
+    observer.observe(node);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loading, error, page]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   return (
     <div className="space-y-5">
@@ -81,40 +124,51 @@ export function AdCarPicker({
         <p className="mt-1 text-xs text-panel-muted sm:text-sm">{subtitle}</p>
       </div>
 
-      <div className="group relative">
-        <Search className="pointer-events-none absolute start-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-panel-faint" />
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="جستجوی نام خودرو، برند یا مدل…"
-          aria-label="جستجوی خودرو"
-          className="h-12 w-full rounded-2xl border border-panel-line/[0.1] bg-panel-surface pe-4 ps-11 text-sm text-panel-text outline-none transition-all placeholder:text-panel-faint hover:border-panel-line/20 focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"
-        />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="group relative sm:col-span-2">
+          <Search className="pointer-events-none absolute start-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-panel-faint" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="جستجوی نام خودرو، برند یا مدل…"
+            aria-label="جستجوی خودرو"
+            className="h-12 w-full rounded-2xl border border-panel-line/[0.1] bg-panel-surface pe-4 ps-11 text-sm text-panel-text outline-none transition-all placeholder:text-panel-faint hover:border-panel-line/20 focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"
+          />
+        </div>
+        {brandOptions.length > 1 && (
+          <SearchableSelect
+            value={brandId}
+            onChange={setBrandId}
+            options={brandOptions}
+            clearable
+            placeholder="همه برندها"
+            searchPlaceholder="جستجوی برند…"
+            emptyText="برندی پیدا نشد"
+          />
+        )}
       </div>
 
-      {brands.length > 1 && (
-        <div className="panel-no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <button type="button" onClick={() => setBrandId("")} aria-pressed={!brandId} className={chipClass(!brandId)}>
-            همه برندها
-          </button>
-          {brands.map((brand) => (
-            <button key={brand.id} type="button" onClick={() => setBrandId(brand.id)} aria-pressed={brandId === brand.id} className={chipClass(brandId === brand.id)}>
-              {brand.name}
-            </button>
-          ))}
-        </div>
-      )}
+      <p className="flex items-center gap-2 text-xs text-panel-muted" aria-live="polite">
+        {loading && page <= 1 ? (
+          <>
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-panel-accent" />
+            در حال جستجو…
+          </>
+        ) : (
+          `${toPersianDigits(total)} خودرو`
+        )}
+      </p>
 
-      {visible.length === 0 ? (
+      {items.length === 0 && !loading ? (
         <div className="rounded-2xl border border-dashed border-panel-line/[0.12] px-6 py-12 text-center">
           <p className="text-sm font-bold text-panel-muted">
-            {cars.length === 0 ? "هنوز خودرویی در سامانه تعریف نشده است" : "خودرویی با این مشخصات پیدا نشد"}
+            {error ?? (!query && !brandId ? "هنوز خودرویی در سامانه تعریف نشده است" : "خودرویی با این مشخصات پیدا نشد")}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {visible.map((car) => (
+          {items.map((car) => (
             <Link
               key={car.id}
               href={`${basePath}/${car.id}`}
@@ -138,6 +192,21 @@ export function AdCarPicker({
               <ChevronLeft className="h-4 w-4 shrink-0 text-panel-faint transition-all group-hover:-translate-x-0.5 group-hover:text-panel-accent" />
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Infinite-scroll sentinel + manual fallback */}
+      {hasMore && (
+        <div ref={sentinelRef} className="flex justify-center py-2">
+          <button
+            type="button"
+            onClick={() => void load(page + 1, false)}
+            disabled={loading}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-panel-line/[0.12] px-5 text-xs font-bold text-panel-text-2 transition-colors hover:border-[#FF6A00]/40 hover:text-panel-text disabled:opacity-60"
+          >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {error ? "تلاش دوباره" : loading ? "در حال بارگذاری…" : "نمایش خودروهای بیشتر"}
+          </button>
         </div>
       )}
     </div>

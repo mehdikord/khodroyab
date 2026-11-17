@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import prisma from "@/lib/prisma";
+import { getCarChoice } from "@/lib/catalog";
 import { requireCollaborator } from "@/lib/auth/user-auth";
-import { carRecordInclude, carToRecord } from "@/lib/cars";
 import { colorToRecord } from "@/lib/colors";
 import { optionRecordInclude, optionToRecord } from "@/lib/options";
 import { saleTermToRecord } from "@/lib/sale-terms";
@@ -25,7 +25,7 @@ export default async function NewAdDetailsPage(props: { params: Promise<{ carId:
   if (!user.isPartner) return <VerificationRequired feature="ثبت آگهی" />;
 
   if (!/^\d+$/.test(params.carId)) notFound();
-  const car = await prisma.car.findUnique({ where: { id: BigInt(params.carId) }, include: carRecordInclude });
+  const car = await getCarChoice(params.carId);
   if (!car) notFound();
 
   const [saleTerms, colors, options] = await Promise.all([
@@ -38,8 +38,8 @@ export default async function NewAdDetailsPage(props: { params: Promise<{ carId:
     <MyAdForm
       mode="create"
       ad={null}
-      initialCarId={car.id.toString()}
-      cars={[carToRecord(car)]}
+      initialCar={car}
+      brands={[]}
       saleTerms={saleTerms.map(saleTermToRecord)}
       colors={colors.map(colorToRecord)}
       options={options.map(optionToRecord)}

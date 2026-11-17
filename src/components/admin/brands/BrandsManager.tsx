@@ -1,32 +1,52 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useTransition } from "react";
-import { Plus, Search, Tag, Tags } from "lucide-react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
+import { Loader2, Plus, Search, Tag, Tags } from "lucide-react";
 
 import { BrandsTable } from "@/components/admin/brands/BrandsTable";
 import { BrandFormModal } from "@/components/admin/brands/BrandFormModal";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { Toast, type ToastState } from "@/components/admin/ui/Toast";
+import { AdminPagination } from "@/components/admin/ui/AdminPagination";
+import { useDebouncedQueryParam, useListParams } from "@/components/admin/ui/useListParams";
 import {
   deleteBrandAction,
   toggleBrandActiveAction,
 } from "@/app/admin/(panel)/brands/actions";
 import type { BrandRecord } from "@/lib/brands";
-import { toPersianDigits } from "@/lib/utils";
+import { cn, toPersianDigits } from "@/lib/utils";
 
 type ModalState =
   | { mode: "create" }
   | { mode: "edit"; brand: BrandRecord }
   | null;
 
+export type BrandsStatusFilter = "" | "active" | "inactive";
+
 interface BrandsManagerProps {
+  /** The current page only (server-paginated). */
   initialBrands: BrandRecord[];
+  /** Brands matching the filters. */
+  total: number;
+  /** Brands in the catalogue. */
+  allCount: number;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  filters: { q: string; status: BrandsStatusFilter };
 }
 
-/** Full CRUD orchestrator for the brands module. */
-export function BrandsManager({ initialBrands }: BrandsManagerProps) {
+const STATUS_FILTERS: { key: BrandsStatusFilter; label: string }[] = [
+  { key: "", label: "همه" },
+  { key: "active", label: "فعال" },
+  { key: "inactive", label: "غیرفعال" },
+];
+
+/** Full CRUD orchestrator for the brands module (one server page at a time). */
+export function BrandsManager({ initialBrands, total, allCount, page, pageCount, pageSize, filters }: BrandsManagerProps) {
   const [brands, setBrands] = useState<BrandRecord[]>(initialBrands);
-  const [query, setQuery] = useState("");
+  const { setParams, isPending: isNavigating, refresh } = useListParams();
+  const [query, setQuery] = useDebouncedQueryParam(filters.q, setParams);
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<BrandRecord | null>(null);
   const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
@@ -36,15 +56,11 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
   const [isToggling, startToggleTransition] = useTransition();
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filteredBrands = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return brands;
-    return brands.filter(
-      (brand) =>
-        brand.name.toLowerCase().includes(normalized) ||
-        brand.slug.toLowerCase().includes(normalized)
-    );
-  }, [brands, query]);
+  // A new server page (navigation, filter or refresh) replaces the local copy.
+  useEffect(() => setBrands(initialBrands), [initialBrands]);
+
+  const filteredBrands = brands;
+  const hasFilters = Boolean(filters.q || filters.status);
 
   function showToast(kind: ToastState["kind"], message: string) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -53,8 +69,8 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
   }
 
   function handleCreateSuccess(record: BrandRecord) {
-    setBrands((prev) => [record, ...prev]);
     setModal(null);
+    refresh(); // the new brand belongs to the first page of the server list
     showToast("success", `برند «${record.name}» با موفقیت ایجاد شد.`);
   }
 
@@ -114,6 +130,7 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
       if (result.ok) {
         setBrands((prev) => prev.filter((brand) => brand.id !== target.id));
         showToast("success", `برند «${target.name}» حذف شد.`);
+        refresh(); // pull the next brand up into this page
       } else {
         showToast("error", result.message);
       }
@@ -137,7 +154,7 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
                 مدیریت برندها
               </h1>
               <p className="mt-0.5 text-xs text-[#8B93A1]">
-                {toPersianDigits(brands.length)} برند در کاتالوگ ثبت شده است
+                {toPersianDigits(allCount)} برند در کاتالوگ ثبت شده است
               </p>
             </div>
           </div>
@@ -168,10 +185,29 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
             className="h-11 w-full rounded-xl border border-white/[0.12] bg-[#07090C] pr-12 pl-4 text-sm text-[#F5F5F5] outline-none transition-all placeholder:text-[#5E6672] hover:border-white/20 focus:border-[#FF6A00] focus:ring-4 focus:ring-[#FF6A00]/15"
           />
         </div>
+        <div role="tablist" aria-label="فیلتر وضعیت" className="flex items-center gap-1 rounded-xl border border-white/[0.08] bg-[#0A0D12] p-1">
+          {STATUS_FILTERS.map((item) => (
+            <button
+              key={item.key || "all"}
+              type="button"
+              role="tab"
+              aria-selected={filters.status === item.key}
+              onClick={() => setParams({ status: item.key })}
+              className={cn(
+                "inline-flex h-9 items-center rounded-lg px-3 text-xs font-bold transition-colors",
+                filters.status === item.key ? "bg-[#FF6A00]/15 text-[#FF8A2A]" : "text-[#8B93A1] hover:bg-white/[0.04] hover:text-[#F5F5F5]"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {isNavigating && <Loader2 className="h-4 w-4 animate-spin text-[#FF8A2A]" aria-label="در حال بارگذاری" />}
       </div>
 
       {/* Table / empty state */}
       {filteredBrands.length > 0 ? (
+        <>
         <BrandsTable
           brands={filteredBrands}
           onEdit={(brand) => setModal({ mode: "edit", brand })}
@@ -180,6 +216,8 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
           isDeleting={isDeleting ? deleteTarget?.id ?? null : null}
           isPendingToggle={pendingToggleId}
         />
+        <AdminPagination total={total} page={page} pageCount={pageCount} pageSize={pageSize} unit="برند" />
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/[0.1] bg-[#0A0D12] py-20 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-[#07090C] text-[#42505F]">
@@ -187,17 +225,17 @@ export function BrandsManager({ initialBrands }: BrandsManagerProps) {
           </div>
           <div>
             <p className="text-sm font-bold text-[#F5F5F5]">
-              {brands.length === 0
+              {!hasFilters && allCount === 0
                 ? "هنوز برندی ثبت نشده است"
                 : "برندی مطابق جستجو یافت نشد"}
             </p>
             <p className="mt-1 text-xs text-[#5E6672]">
-              {brands.length === 0
+              {!hasFilters && allCount === 0
                 ? "برای شروع، اولین برند را ایجاد کنید"
                 : "عبارت دیگری را امتحان کنید"}
             </p>
           </div>
-          {brands.length === 0 && (
+          {!hasFilters && allCount === 0 && (
             <button
               type="button"
               onClick={() => setModal({ mode: "create" })}

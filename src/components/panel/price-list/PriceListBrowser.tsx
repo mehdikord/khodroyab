@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+
+import { ProgressiveListMore, useProgressiveList } from "@/components/panel/ProgressiveList";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Search, SearchX, Tags, UsersRound, X } from "lucide-react";
@@ -88,6 +90,9 @@ export function PriceListBrowser({
 
   /** Price columns: every (year, colour) priced for any visible car, oldest year first. */
   const priceColumns = useMemo(() => mergePriceColumns(visibleRows.flatMap((row) => row.columns)), [visibleRows]);
+
+  // Rows are laid out a slice at a time (the list can hold thousands of cars).
+  const progressive = useProgressiveList(visibleRows, `${query}|${brand}|${pricedOnly}`, 40);
 
   function openRow(event: React.MouseEvent<HTMLTableRowElement>, row: PriceListRow) {
     // Let real links inside the row (and text selection) behave natively.
@@ -256,7 +261,7 @@ export function PriceListBrowser({
                 </tr>
               </thead>
               <tbody className="divide-y divide-panel-line/[0.06]">
-                {visibleRows.map((row) => {
+                {progressive.visible.map((row) => {
                   const priced = hasAnyPrice(row);
                   return (
                     <tr
@@ -321,7 +326,7 @@ export function PriceListBrowser({
 
           {/* Mobile / tablet cards */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
-            {visibleRows.map((row, index) => {
+            {progressive.visible.map((row, index) => {
               const priced = hasAnyPrice(row);
               return (
                 <article
@@ -384,6 +389,7 @@ export function PriceListBrowser({
               );
             })}
           </div>
+          <ProgressiveListMore remaining={progressive.remaining} onMore={progressive.showMore} />
         </>
       )}
     </div>

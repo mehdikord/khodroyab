@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Search, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,12 @@ interface SearchableSelectProps {
   hasError?: boolean;
   clearable?: boolean;
   className?: string;
+  /** Options are being fetched: shows a spinner instead of the empty text. */
+  loading?: boolean;
 }
+
+/** Rows rendered at once; longer lists ask the user to narrow the search. */
+const MAX_RENDERED_OPTIONS = 150;
 
 /** Lower-case and fold Persian/Arabic digits so searches match either keyboard. */
 function normalize(input: string): string {
@@ -56,6 +61,7 @@ export function SearchableSelect({
   hasError = false,
   clearable = false,
   className,
+  loading = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -67,13 +73,15 @@ export function SearchableSelect({
 
   const selected = options.find((option) => option.value === value) ?? null;
 
-  const filtered = useMemo(() => {
+  const matches = useMemo(() => {
     const q = normalize(query);
     if (!q) return options;
     return options.filter((option) =>
       normalize(`${option.label} ${option.description ?? ""} ${option.keywords ?? ""}`).includes(q)
     );
   }, [options, query]);
+  const filtered = useMemo(() => matches.slice(0, MAX_RENDERED_OPTIONS), [matches]);
+  const hiddenCount = matches.length - filtered.length;
 
   // Reset search + highlight whenever the menu opens.
   useEffect(() => {
@@ -210,7 +218,12 @@ export function SearchableSelect({
             role="listbox"
             className="admin-scrollbar max-h-64 overflow-y-auto p-1.5"
           >
-            {filtered.length === 0 ? (
+            {loading && filtered.length === 0 ? (
+              <li className="flex items-center justify-center gap-2 px-3 py-6 text-xs font-semibold text-panel-faint">
+                <Loader2 className="h-4 w-4 animate-spin text-panel-accent" />
+                در حال بارگذاری…
+              </li>
+            ) : filtered.length === 0 ? (
               <li className="px-3 py-6 text-center text-xs font-semibold text-panel-faint">{emptyText}</li>
             ) : (
               filtered.map((option, index) => {
@@ -243,6 +256,11 @@ export function SearchableSelect({
               })
             )}
           </ul>
+          {hiddenCount > 0 && (
+            <p className="border-t border-panel-line/[0.07] px-3 py-2 text-center text-[11px] text-panel-faint">
+              {hiddenCount.toLocaleString("fa-IR")} مورد دیگر؛ برای یافتن، عبارت جستجو را دقیق‌تر کنید.
+            </p>
+          )}
         </div>
       )}
     </div>

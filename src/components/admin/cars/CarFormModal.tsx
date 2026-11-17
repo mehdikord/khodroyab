@@ -7,14 +7,15 @@ import { AlertCircle, FileText, Loader2 } from "lucide-react";
 import { Modal } from "@/components/admin/ui/Modal";
 import { createCarAction, getCarDescriptionAction, updateCarAction } from "@/app/admin/(panel)/cars/actions";
 import type { CarRecord } from "@/lib/cars";
-import type { BrandRecord } from "@/lib/brands";
+import { SearchableSelect } from "@/components/admin/ui/SearchableSelect";
 import type { CarTypeRecord } from "@/lib/car-types";
 import { cn } from "@/lib/utils";
 
 interface CarFormModalProps {
   mode: "create" | "edit";
   car: CarRecord | null;
-  brands: BrandRecord[];
+  /** Selectable brands (light list: id + name). */
+  brands: { id: string; name: string }[];
   carTypes: CarTypeRecord[];
   onClose: () => void;
   onSuccess: (record: CarRecord) => void;
@@ -59,6 +60,12 @@ export function CarFormModal({
   const [name, setName] = useState(car?.name ?? "");
   const [slug, setSlug] = useState(car?.slug ?? "");
   const [brandId, setBrandId] = useState(car?.brandId ?? (brands[0]?.id || ""));
+  // The edited car's brand stays selectable even when it is inactive.
+  const brandOptions = React.useMemo(() => {
+    const options = brands.map((brand) => ({ value: brand.id, label: brand.name }));
+    if (car && !brands.some((brand) => brand.id === car.brandId)) options.unshift({ value: car.brandId, label: car.brandName });
+    return options;
+  }, [brands, car]);
   const [carTypeId, setCarTypeId] = useState(car?.carTypeId ?? (carTypes[0]?.id || ""));
   const [model, setModel] = useState(car?.model ?? "");
   // Edit: the description is loaded when the form opens (not part of the cars list).
@@ -189,19 +196,17 @@ export function CarFormModal({
             <label htmlFor={brandIdId} className="block text-xs font-bold text-[#D2D7DF]">
               برند <span className="text-[#FF6A00]">*</span>
             </label>
-            <select
+            <SearchableSelect
               id={brandIdId}
               disabled={isPending}
               value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              className={inputClassName(Boolean(fieldErrors.brandId))}
-            >
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              onChange={setBrandId}
+              options={brandOptions}
+              hasError={Boolean(fieldErrors.brandId)}
+              placeholder="انتخاب برند"
+              searchPlaceholder="جستجوی برند…"
+              emptyText="برندی پیدا نشد"
+            />
           </div>
 
           <div className="space-y-2">

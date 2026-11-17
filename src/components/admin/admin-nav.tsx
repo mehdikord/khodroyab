@@ -226,6 +226,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
             enLabel: "CAR FORM",
             href: "/admin/car-form",
           },
+          {
+            key: "car_import",
+            label: "ورود اطلاعات",
+            enLabel: "IMPORT",
+            href: "/admin/car-import",
+          },
         ],
       },
       {

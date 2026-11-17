@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ProgressiveListMore, useProgressiveList } from "@/components/panel/ProgressiveList";
 import {
   AlertCircle,
   CalendarDays,
@@ -294,6 +295,9 @@ export function MyPriceTableManager({
     });
   }, [cars, drafts, query, filter, colorById]);
 
+  // Cars are laid out a slice at a time; edits keep the slice, a new search resets it.
+  const progressive = useProgressiveList(visibleCars, `${query}|${filter}`, 30);
+
   function showToast(kind: ToastState["kind"], message: string) {
     setToast({ kind, message });
     window.setTimeout(() => setToast(null), 4500);
@@ -565,7 +569,7 @@ export function MyPriceTableManager({
               </p>
             )}
 
-            {visibleCars.map((car) => {
+            {progressive.visible.map((car) => {
               const draft = draftOf(car);
               const dirty = dirtyIds.has(car.id);
               const filled = isFilled(draft);
@@ -905,6 +909,7 @@ export function MyPriceTableManager({
                 </article>
               );
             })}
+            <ProgressiveListMore remaining={progressive.remaining} onMore={progressive.showMore} />
           </div>
         </>
       )}

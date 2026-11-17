@@ -16,7 +16,7 @@ import {
   updateUserCarStatusAction,
 } from "@/app/admin/(panel)/users/[id]/sale-ads/actions";
 import type { UserCarRecord } from "@/lib/user-cars";
-import type { CarRecord } from "@/lib/cars";
+import type { BrandChoice, CarChoice } from "@/lib/catalog-shared";
 import type { SaleTermRecord } from "@/lib/sale-terms";
 import type { ColorRecord } from "@/lib/colors";
 import type { OptionRecord } from "@/lib/options";
@@ -34,7 +34,12 @@ interface AdsManagerProps {
   pageSize: number;
   filters: AdsFilterValues;
   statusCounts: AdsStatusCounts;
-  cars: CarRecord[];
+  /** Brands for the edit form (cars are fetched on demand). */
+  brands: BrandChoice[];
+  /** Brands that have ads, for the filter. */
+  filterBrands: BrandChoice[];
+  /** Cars of the filtered brand that have ads. */
+  filterCars: CarChoice[];
   saleTerms: SaleTermRecord[];
   colors: ColorRecord[];
   options: OptionRecord[];
@@ -49,7 +54,9 @@ export function AdsManager({
   pageSize,
   filters,
   statusCounts,
-  cars,
+  brands,
+  filterBrands,
+  filterCars,
   saleTerms,
   colors,
   options,
@@ -140,7 +147,7 @@ export function AdsManager({
           userId={editTarget.userId}
           userName={editTarget.userName}
           ad={editTarget}
-          cars={cars}
+          brands={brands}
           saleTerms={saleTerms}
           colors={colors}
           options={options}
@@ -195,7 +202,7 @@ export function AdsManager({
         </Link>
       </div>
 
-      <AdsFilters filters={filters} cars={cars} users={users} statusCounts={statusCounts} />
+      <AdsFilters filters={filters} brands={filterBrands} cars={filterCars} users={users} statusCounts={statusCounts} />
 
       {/* Results */}
       {ads.length === 0 ? (

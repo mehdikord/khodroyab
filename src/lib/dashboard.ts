@@ -244,12 +244,15 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       where: { createdAt: { gte: previousStart } },
       select: { createdAt: true },
     }),
+    // Aggregated in the database: one row per brand, never one per car.
     prisma.brand.findMany({
-      select: { id: true, name: true, image: true, isActive: true },
+      select: { id: true, name: true, image: true, isActive: true, _count: { select: { cars: true } } },
     }),
-    prisma.car.findMany({
-      select: { brandId: true, _count: { select: { userCars: true } } },
-    }),
+    prisma.$queryRaw<{ brandId: bigint; ads: bigint }[]>`
+      SELECT c.brand_id AS brandId, COUNT(*) AS ads
+      FROM user_cars uc
+      INNER JOIN cars c ON c.id = uc.car_id
+      GROUP BY c.brand_id`,
     prisma.userCar.findMany({
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 6,
@@ -297,15 +300,13 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       name: brand.name,
       image: brand.image,
       isActive: brand.isActive,
-      cars: 0,
+      cars: brand._count.cars,
       ads: 0,
     });
   }
-  for (const car of carsByBrand) {
-    const stat = brandStats.get(car.brandId.toString());
-    if (!stat) continue;
-    stat.cars += 1;
-    stat.ads += car._count.userCars;
+  for (const row of carsByBrand) {
+    const stat = brandStats.get(row.brandId.toString());
+    if (stat) stat.ads = Number(row.ads);
   }
   const topBrands = Array.from(brandStats.values())
     .filter((brand) => brand.cars > 0 || brand.ads > 0)

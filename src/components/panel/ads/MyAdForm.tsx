@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useId, useMemo, useRef, useState, useTransition } from "react";
+import React, { useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, Clock3, HandCoins, Loader2, Plus, Trash2 } from "lucide-react";
 
-import { SearchableSelect, type SearchableSelectOption } from "@/components/admin/ui/SearchableSelect";
+import { SearchableSelect } from "@/components/admin/ui/SearchableSelect";
+import { useCarSelection } from "@/components/catalog/useCarSelection";
+import type { BrandChoice, CarChoice } from "@/lib/catalog-shared";
 import { AdStatusBadge } from "@/components/admin/ads/AdStatusBadge";
 import { AdImagesField, AdSpecFields } from "@/components/ads/AdExtraFields";
 import { useAdExtras } from "@/components/ads/useAdExtras";
 import { createMyAdAction, updateMyAdAction } from "@/app/panel/(app)/ads/actions";
 import type { UserCarRecord } from "@/lib/user-cars";
-import type { CarRecord } from "@/lib/cars";
 import type { SaleTermRecord } from "@/lib/sale-terms";
 import type { ColorRecord } from "@/lib/colors";
 import type { OptionRecord } from "@/lib/options";
@@ -22,9 +23,10 @@ import { CurrencyToggle } from "@/components/ads/CurrencyToggle";
 interface MyAdFormProps {
   mode: "create" | "edit";
   ad: UserCarRecord | null;
-  /** Car picked in the first step of the create flow. */
-  initialCarId?: string;
-  cars: CarRecord[];
+  /** Car picked in the first step (create) or the ad's current car (edit). */
+  initialCar: CarChoice | null;
+  /** Brands to switch the car (edit only); their cars are fetched on demand. */
+  brands: BrandChoice[];
   saleTerms: SaleTermRecord[];
   colors: ColorRecord[];
   options: OptionRecord[];
@@ -67,7 +69,7 @@ function FieldError({ message }: { message?: string }) {
  * visibility: new ads start pending and every edit returns the ad to the
  * moderation queue.
  */
-export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, options }: MyAdFormProps) {
+export function MyAdForm({ mode, ad, initialCar, brands, saleTerms, colors, options }: MyAdFormProps) {
   const isEdit = mode === "edit";
   const router = useRouter();
   const brandIdId = useId();
@@ -76,9 +78,18 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
   const descriptionId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const initialCar = cars.find((car) => car.id === (ad?.carId ?? initialCarId)) ?? null;
-  const [brandId, setBrandId] = useState(initialCar?.brandId ?? "");
-  const [carId, setCarId] = useState(initialCar?.id ?? "");
+  const {
+    brandId,
+    carId,
+    selectBrand: handleBrandChange,
+    selectCar: setCarId,
+    brandOptions,
+    carOptions,
+    selectedCar,
+    carsLoading,
+    carsError,
+  } = useCarSelection(brands, initialCar);
+  const noCars = !initialCar && brandOptions.length === 0;
   const extras = useAdExtras(ad);
   const [qautity, setQautity] = useState(ad?.qautity ?? "1");
   const [description, setDescription] = useState(ad?.description ?? "");
@@ -100,39 +111,6 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  const brandOptions = useMemo<SearchableSelectOption[]>(() => {
-    const counts = new Map<string, { name: string; count: number }>();
-    for (const car of cars) {
-      const entry = counts.get(car.brandId) ?? { name: car.brandName, count: 0 };
-      entry.count += 1;
-      counts.set(car.brandId, entry);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => a[1].name.localeCompare(b[1].name, "fa"))
-      .map(([id, { name, count }]) => ({ value: id, label: name, description: `${toPersianDigits(count)} خودرو` }));
-  }, [cars]);
-
-  const carOptions = useMemo<SearchableSelectOption[]>(
-    () =>
-      cars
-        .filter((car) => car.brandId === brandId)
-        .map((car) => ({
-          value: car.id,
-          label: car.name,
-          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`,
-          keywords: `${car.model} ${car.slug}`,
-        })),
-    [cars, brandId]
-  );
-
-  const selectedCar = cars.find((car) => car.id === carId);
-  const noCars = cars.length === 0;
-
-  function handleBrandChange(nextBrandId: string) {
-    setBrandId(nextBrandId);
-    setCarId("");
-  }
 
   function addRow() {
     const used = new Set(rows.map((row) => row.saleTermId));
@@ -289,8 +267,9 @@ export function MyAdForm({ mode, ad, initialCarId, cars, saleTerms, colors, opti
                 placeholder={brandId ? "خودرو را انتخاب کنید" : "ابتدا برند را انتخاب کنید"}
                 searchPlaceholder="جستجوی نام یا مدل…"
                 emptyText="خودرویی برای این برند پیدا نشد"
+                loading={carsLoading}
               />
-              <FieldError message={fieldErrors.carId} />
+              <FieldError message={fieldErrors.carId ?? carsError ?? undefined} />
             </div>
           </section>
         ) : (

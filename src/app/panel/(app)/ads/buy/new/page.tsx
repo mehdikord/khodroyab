@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 
 import { requireCollaborator } from "@/lib/auth/user-auth";
-import { listBuyAdCarChoices } from "@/lib/buy-ads";
+import { listBrandChoices, searchCarChoices } from "@/lib/catalog";
 import { AdCarPicker } from "@/components/panel/ads/AdCarPicker";
 import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
@@ -18,9 +18,13 @@ export default async function NewBuyAdCarPage() {
   const user = await requireCollaborator();
   if (!user.isPartner) return <VerificationRequired feature="ثبت آگهی خرید" />;
 
+  // First page only; the picker searches and pages through the rest on demand.
+  const [brands, initialPage] = await Promise.all([listBrandChoices({ carWhere: {} }), searchCarChoices({ page: 1 })]);
+
   return (
     <AdCarPicker
-      cars={await listBuyAdCarChoices()}
+      brands={brands}
+      initialPage={initialPage}
       basePath="/panel/ads/buy/new"
       backHref="/panel/ads/buy"
       backLabel="آگهی‌های خرید من"

@@ -7,7 +7,7 @@ import { ArrowRight, Handshake } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { requireAdminAccess } from "@/lib/auth/guards";
 import { userToRecord } from "@/lib/users";
-import { carRecordInclude, carToRecord } from "@/lib/cars";
+import { listBrandChoices } from "@/lib/catalog";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { colorToRecord } from "@/lib/colors";
 import { optionRecordInclude, optionToRecord } from "@/lib/options";
@@ -65,16 +65,14 @@ export default async function AdminUserSaleAdsPage(props: PageProps) {
     );
   }
 
-  const [userCars, cars, saleTerms, colors, options] = await Promise.all([
+  const [userCars, brands, saleTerms, colors, options] = await Promise.all([
     prisma.userCar.findMany({
       where: { userId },
       include: userCarInclude,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     }),
-    prisma.car.findMany({
-      include: carRecordInclude,
-      orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
-    }),
+    // Brands only: the form fetches the chosen brand's cars on demand.
+    listBrandChoices({ carWhere: {} }),
     prisma.saleTerm.findMany({
       where: { isActive: true },
       orderBy: { title: "asc" },
@@ -87,7 +85,7 @@ export default async function AdminUserSaleAdsPage(props: PageProps) {
     <SaleAdsManager
       user={userToRecord(user)}
       initialAds={userCars.map(userCarToRecord)}
-      cars={cars.map(carToRecord)}
+      brands={brands}
       saleTerms={saleTerms.map(saleTermToRecord)}
       colors={colors.map(colorToRecord)}
       options={options.map(optionToRecord)}

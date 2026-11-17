@@ -1,19 +1,20 @@
 "use client";
 
-import React, { useId, useMemo, useState, useTransition } from "react";
+import React, { useId, useState, useTransition } from "react";
 import { AlertCircle, HandCoins, Hash, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
 
 import { AdImagesField, AdSpecFields } from "@/components/ads/AdExtraFields";
 import { useAdExtras } from "@/components/ads/useAdExtras";
 import { Modal } from "@/components/admin/ui/Modal";
 import { Toggle } from "@/components/admin/ui/Toggle";
-import { SearchableSelect, type SearchableSelectOption } from "@/components/admin/ui/SearchableSelect";
+import { SearchableSelect } from "@/components/admin/ui/SearchableSelect";
+import { useCarSelection } from "@/components/catalog/useCarSelection";
+import { carChoiceFromAd, type BrandChoice } from "@/lib/catalog-shared";
 import {
   createUserCarAction,
   updateUserCarAction,
 } from "@/app/admin/(panel)/users/[id]/sale-ads/actions";
 import type { UserCarRecord } from "@/lib/user-cars";
-import type { CarRecord } from "@/lib/cars";
 import type { SaleTermRecord } from "@/lib/sale-terms";
 import type { ColorRecord } from "@/lib/colors";
 import type { OptionRecord } from "@/lib/options";
@@ -28,7 +29,8 @@ interface SaleAdFormModalProps {
   userId: string;
   userName: string;
   ad: UserCarRecord | null;
-  cars: CarRecord[];
+  /** Light brand list; the cars of the chosen brand are fetched on demand. */
+  brands: BrandChoice[];
   saleTerms: SaleTermRecord[];
   colors: ColorRecord[];
   options: OptionRecord[];
@@ -74,7 +76,7 @@ export function SaleAdFormModal({
   userId,
   userName,
   ad,
-  cars,
+  brands,
   saleTerms,
   colors,
   options,
@@ -88,9 +90,19 @@ export function SaleAdFormModal({
   const qautityId = useId();
   const descriptionId = useId();
 
-  const initialCar = ad ? cars.find((car) => car.id === ad.carId) ?? null : null;
-  const [brandId, setBrandId] = useState(initialCar?.brandId ?? "");
-  const [carId, setCarId] = useState(ad?.carId ?? "");
+  const [initialCar] = useState(() => (ad ? carChoiceFromAd(ad) : null));
+  const {
+    brandId,
+    carId,
+    selectBrand: handleBrandChange,
+    selectCar: setCarId,
+    brandOptions,
+    carOptions,
+    selectedCar,
+    carsLoading,
+    carsError,
+    noBrands: noCars,
+  } = useCarSelection(brands, initialCar);
   const extras = useAdExtras(ad);
   const [qautity, setQautity] = useState(ad?.qautity ?? "1");
   const [description, setDescription] = useState(ad?.description ?? "");
@@ -116,43 +128,7 @@ export function SaleAdFormModal({
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  /** Distinct brands derived from the car catalogue, with their car counts. */
-  const brandOptions = useMemo<SearchableSelectOption[]>(() => {
-    const counts = new Map<string, { name: string; count: number }>();
-    for (const car of cars) {
-      const entry = counts.get(car.brandId) ?? { name: car.brandName, count: 0 };
-      entry.count += 1;
-      counts.set(car.brandId, entry);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => a[1].name.localeCompare(b[1].name, "fa"))
-      .map(([id, { name, count }]) => ({
-        value: id,
-        label: name,
-        description: `${toPersianDigits(count)} خودرو`,
-      }));
-  }, [cars]);
 
-  /** Cars of the selected brand only. */
-  const carOptions = useMemo<SearchableSelectOption[]>(
-    () =>
-      cars
-        .filter((car) => car.brandId === brandId)
-        .map((car) => ({
-          value: car.id,
-          label: car.name,
-          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`,
-          keywords: `${car.model} ${car.slug}`,
-        })),
-    [cars, brandId]
-  );
-
-  function handleBrandChange(nextBrandId: string) {
-    setBrandId(nextBrandId);
-    setCarId(""); // the previous car no longer belongs to the chosen brand
-  }
-
-  const selectedCar = cars.find((car) => car.id === carId);
 
   function addRow() {
     const used = new Set(rows.map((row) => row.saleTermId));
@@ -224,7 +200,6 @@ export function SaleAdFormModal({
     });
   }
 
-  const noCars = cars.length === 0;
 
   return (
     <Modal
@@ -317,8 +292,9 @@ export function SaleAdFormModal({
                 placeholder={brandId ? "خودرو را انتخاب کنید" : "ابتدا برند را انتخاب کنید"}
                 searchPlaceholder="جستجوی نام یا مدل…"
                 emptyText="خودرویی برای این برند پیدا نشد"
+                loading={carsLoading}
               />
-              <FieldError message={fieldErrors.carId} />
+              <FieldError message={fieldErrors.carId ?? carsError ?? undefined} />
             </div>
           </div>
 

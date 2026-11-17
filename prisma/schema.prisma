@@ -140,6 +140,10 @@ model Brand {
 
   cars Car[]
 
+  // Sorting/filtering of the (large) catalogue lists and pickers.
+  @@index([name])
+  @@index([isActive])
+  @@index([createdAt])
   @@map("brands")
 }
 
@@ -203,6 +207,11 @@ model Car {
 
   @@index([brandId])
   @@index([carTypeId])
+  // Sorting/filtering of the (large) catalogue lists and pickers.
+  @@index([brandId, name])
+  @@index([name])
+  @@index([priceTable])
+  @@index([createdAt])
   @@map("cars")
 }
 

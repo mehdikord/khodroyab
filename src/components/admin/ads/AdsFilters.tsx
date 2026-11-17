@@ -5,7 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 
 import { SearchableSelect, type SearchableSelectOption } from "@/components/admin/ui/SearchableSelect";
-import type { CarRecord } from "@/lib/cars";
+import { brandOptionsOf, carOptionOf } from "@/components/catalog/useCarSelection";
+import type { BrandChoice, CarChoice } from "@/lib/catalog-shared";
 import { AD_STATUSES, AD_STATUS_LABELS, type AdStatus } from "@/lib/ad-status";
 import { cn, toPersianDigits } from "@/lib/utils";
 
@@ -26,7 +27,10 @@ export interface AdsUserOption {
 
 interface AdsFiltersProps {
   filters: AdsFilterValues;
-  cars: CarRecord[];
+  /** Brands that have ads. */
+  brands: BrandChoice[];
+  /** Cars (with ads) of the filtered brand; empty until a brand is chosen. */
+  cars: CarChoice[];
   users: AdsUserOption[];
   statusCounts: Record<AdStatus, number>;
 }
@@ -41,7 +45,7 @@ const PARAM_KEYS: Record<keyof AdsFilterValues, string> = {
   active: "active",
 };
 
-export function AdsFilters({ filters, cars, users, statusCounts }: AdsFiltersProps) {
+export function AdsFilters({ filters, brands, cars, users, statusCounts }: AdsFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,28 +81,9 @@ export function AdsFilters({ filters, cars, users, statusCounts }: AdsFiltersPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  const brandOptions = useMemo<SearchableSelectOption[]>(() => {
-    const map = new Map<string, { name: string; count: number }>();
-    for (const car of cars) {
-      const entry = map.get(car.brandId) ?? { name: car.brandName, count: 0 };
-      entry.count += 1;
-      map.set(car.brandId, entry);
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => a[1].name.localeCompare(b[1].name, "fa"))
-      .map(([id, { name, count }]) => ({ value: id, label: name, description: `${toPersianDigits(count)} خودرو` }));
-  }, [cars]);
-
+  const brandOptions = useMemo<SearchableSelectOption[]>(() => brandOptionsOf(brands), [brands]);
   const carOptions = useMemo<SearchableSelectOption[]>(
-    () =>
-      cars
-        .filter((car) => !filters.brandId || car.brandId === filters.brandId)
-        .map((car) => ({
-          value: car.id,
-          label: filters.brandId ? car.name : `${car.brandName} ${car.name}`,
-          description: `${car.carTypeName} · مدل ${toPersianDigits(car.model)}`,
-          keywords: `${car.model} ${car.slug}`,
-        })),
+    () => cars.map((car) => carOptionOf(car, !filters.brandId)),
     [cars, filters.brandId]
   );
 
@@ -179,7 +164,8 @@ export function AdsFilters({ filters, cars, users, statusCounts }: AdsFiltersPro
           onChange={(value) => apply({ carId: value })}
           options={carOptions}
           clearable
-          placeholder={filters.brandId ? "همه خودروهای این برند" : "همه خودروها"}
+          disabled={!filters.brandId && carOptions.length === 0}
+          placeholder={filters.brandId ? "همه خودروهای این برند" : "ابتدا برند را انتخاب کنید"}
           searchPlaceholder="جستجوی خودرو، مدل، سال…"
           emptyText="خودرویی پیدا نشد"
         />

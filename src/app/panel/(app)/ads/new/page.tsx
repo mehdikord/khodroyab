@@ -1,9 +1,9 @@
 import React from "react";
 import type { Metadata } from "next";
 
-import prisma from "@/lib/prisma";
 import { requireCollaborator } from "@/lib/auth/user-auth";
-import { AdCarPicker, type AdCarChoice } from "@/components/panel/ads/AdCarPicker";
+import { listBrandChoices, searchCarChoices } from "@/lib/catalog";
+import { AdCarPicker } from "@/components/panel/ads/AdCarPicker";
 import { VerificationRequired } from "@/components/panel/verification/VerificationRequired";
 
 export const metadata: Metadata = {
@@ -18,24 +18,8 @@ export default async function NewAdCarPage() {
   const user = await requireCollaborator();
   if (!user.isPartner) return <VerificationRequired feature="ثبت آگهی" />;
 
-  const cars = await prisma.car.findMany({
-    include: {
-      brand: { select: { name: true } },
-      carType: { select: { name: true } },
-      carImages: { select: { imageUrl: true }, orderBy: { id: "asc" }, take: 1 },
-    },
-    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
-  });
+  // First page only; the picker searches and pages through the rest on demand.
+  const [brands, initialPage] = await Promise.all([listBrandChoices({ carWhere: {} }), searchCarChoices({ page: 1 })]);
 
-  const choices: AdCarChoice[] = cars.map((car) => ({
-    id: car.id.toString(),
-    name: car.name,
-    model: car.model,
-    brandId: car.brandId.toString(),
-    brandName: car.brand.name,
-    carTypeName: car.carType.name,
-    imageUrl: car.carImages[0]?.imageUrl ?? null,
-  }));
-
-  return <AdCarPicker cars={choices} />;
+  return <AdCarPicker brands={brands} initialPage={initialPage} />;
 }

@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { requireAdminAccess } from "@/lib/auth/guards";
-import { carRecordInclude, carToRecord } from "@/lib/cars";
+import { getCarChoice, listBrandCarChoices, listBrandChoices } from "@/lib/catalog";
 import { saleTermToRecord } from "@/lib/sale-terms";
 import { colorToRecord } from "@/lib/colors";
 import { optionRecordInclude, optionToRecord } from "@/lib/options";
@@ -87,13 +87,19 @@ export default async function AdminAllAdsPage(props: PageProps) {
   if (and.length > 0) where.AND = and;
 
   /* ───── Load everything in parallel ───── */
-  const [total, statusGroups, cars, saleTerms, users, colors, options] = await Promise.all([
+  // Never the whole car table: brands (light) plus, for the car filter, only
+  // the selected brand's cars that have ads. The edit form fetches cars itself.
+  const hasAds = { userCars: { some: {} } };
+  const [total, statusGroups, formBrands, filterBrands, filterCars, saleTerms, users, colors, options] = await Promise.all([
     prisma.userCar.count({ where }),
     prisma.userCar.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.car.findMany({
-      include: carRecordInclude,
-      orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
-    }),
+    listBrandChoices({ carWhere: {} }),
+    listBrandChoices({ carWhere: hasAds }),
+    brandId !== null
+      ? listBrandCarChoices(brandId, hasAds)
+      : carId !== null
+        ? getCarChoice(carId).then((car) => (car ? [car] : []))
+        : Promise.resolve([]),
     prisma.saleTerm.findMany({ where: { isActive: true }, orderBy: { title: "asc" } }),
     prisma.user.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: "asc" } }),
     prisma.color.findMany({ orderBy: { name: "asc" } }),
@@ -129,7 +135,9 @@ export default async function AdminAllAdsPage(props: PageProps) {
       pageSize={ADS_PAGE_SIZE}
       filters={filters}
       statusCounts={statusCounts}
-      cars={cars.map(carToRecord)}
+      brands={formBrands}
+      filterBrands={filterBrands}
+      filterCars={filterCars}
       saleTerms={saleTerms.map(saleTermToRecord)}
       colors={colors.map(colorToRecord)}
       options={options.map(optionToRecord)}

@@ -287,28 +287,6 @@ export async function getBuyAdDetail(idRaw: string, viewer: { id: string; isPart
 
 /* ───────────────────────── Form data ───────────────────────── */
 
-/** Catalogue cars for the picker and the form (one car, or all of them). */
-export async function listBuyAdCarChoices(carId?: bigint) {
-  const cars = await prisma.car.findMany({
-    where: carId === undefined ? undefined : { id: carId },
-    include: {
-      brand: { select: { name: true } },
-      carType: { select: { name: true } },
-      carImages: { select: { imageUrl: true }, orderBy: { id: "asc" }, take: 1 },
-    },
-    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
-  });
-  return cars.map((car) => ({
-    id: car.id.toString(),
-    name: car.name,
-    model: car.model,
-    brandId: car.brandId.toString(),
-    brandName: car.brand.name,
-    carTypeName: car.carType.name,
-    imageUrl: car.carImages[0]?.imageUrl ?? null,
-  }));
-}
-
 export async function listBuyAdColors() {
   const colors = await prisma.color.findMany({ select: { id: true, name: true, code: true }, orderBy: { name: "asc" } });
   return colors.map((color) => ({ id: color.id.toString(), name: color.name, code: color.code }));
